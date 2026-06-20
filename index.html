@@ -9,12 +9,12 @@
     <meta name="apple-mobile-web-app-title" content="Yarncha" />
     <meta name="description" content="Yarncha, your very best yarn craft friend." />
     <title>Yarncha</title>
-    <link rel="manifest" href="/public/manifest.json?v=31" />
+    <link rel="manifest" href="/public/manifest.json?v=35" />
     <link rel="apple-touch-icon" href="/public/icons/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=31" />
+    <link rel="stylesheet" href="styles.css?v=35" />
   </head>
   <body>
     <div class="app-shell">
@@ -25,12 +25,12 @@
         </a>
 
         <nav class="nav-list" aria-label="Main navigation">
-          <button class="nav-item active" data-view="today"><span class="nav-icon">⌂</span>Today</button>
-          <button class="nav-item" data-view="projects"><span class="nav-icon">◇</span>Projects</button>
-          <button class="nav-item" data-view="market"><span class="nav-icon">◫</span>Yarn Stash</button>
-          <button class="nav-item" data-view="library"><span class="nav-icon">▤</span>Library</button>
-          <button class="nav-item" data-view="tools"><span class="nav-icon">＋</span>Tools</button>
-          <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span>Settings</button>
+          <button class="nav-item active" data-view="today"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5v8.25A1.25 1.25 0 0 1 18.75 20H5.25A1.25 1.25 0 0 1 4 18.75Z"></path><path d="M9.5 20v-6h5v6"></path></svg></span>Today</button>
+          <button class="nav-item" data-view="projects"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 5V3.5M16 5V3.5M4 9h16"></path></svg></span>Projects</button>
+          <button class="nav-item" data-view="market"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="12" r="6.5"></circle><path d="M5 8.5c3 1 6.7.8 10.2-.7M4 12c3.6 1.4 7.8 1.5 12 .2M6 17c2.2-3.6 4-7.8 4.8-11.4M13 18.2c.6-4.7.2-8.7-1.2-12M16 15.5l4 3.5"></path></svg></span>Yarn Stash</button>
+          <button class="nav-item" data-view="library"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v13H7a2 2 0 0 1-2-2Z"></path><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H18M9 8h5"></path></svg></span>Library</button>
+          <button class="nav-item" data-view="tools"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14.5 5-9.8 9.8a2.1 2.1 0 0 0 3 3L17.5 8"></path><path d="M14 4.5 19.5 10M5 6h5M7.5 3.5v5"></path></svg></span>Tools</button>
+          <button class="nav-item" data-view="settings"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18"></path></svg></span>Settings</button>
         </nav>
 
         <div class="sidebar-projects">
@@ -46,18 +46,26 @@
 
       <main>
         <header class="topbar">
-          <button class="mobile-menu" id="mobile-menu" aria-label="Open menu">☰</button>
-          <div class="breadcrumb" id="breadcrumb">Today</div>
-          <div class="top-actions">
-            <select id="app-language" class="language-select" aria-label="Language">
-              <option value="en">English</option>
-              <option value="zh-HK">繁體中文（香港）</option>
-            </select>
-            <button class="icon-button account-button" id="account-button" title="Account and sync">♙</button>
-            <button class="icon-button" id="voice-top" title="Voice controls">Voice</button>
-            <button class="primary-button" id="new-project">+ New project</button>
+          <div class="topbar-inner">
+            <button class="mobile-menu" id="mobile-menu" aria-label="Open menu"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+            <div class="header-left">
+              <span class="header-context" id="header-context">Workspace</span>
+              <strong class="breadcrumb" id="breadcrumb">Today</strong>
+            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
+            <div class="header-actions">
+              <select id="app-language" class="language-select" aria-label="Language">
+                <option value="en">English</option>
+                <option value="zh-HK">繁體中文（香港）</option>
+              </select>
+              <button class="icon-button account-button" id="account-button" aria-label="Account and sync" title="Account and sync">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 19c.7-3.4 3-5.2 6.5-5.2s5.8 1.8 6.5 5.2"></path></svg>
+              </button>
+              <button class="secondary-button voice-icon-button header-voice" id="voice-top" aria-label="Voice controls" title="Voice controls"><svg class="button-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path></svg></button>
+              <button class="primary-button header-new-project" id="new-project"><span aria-hidden="true">+</span><span class="header-new-label">New project</span></button>
+              <span class="save-status" id="save-status" aria-live="polite">✓ Saved locally</span>
+            </div>
           </div>
-          <div class="save-status" id="save-status" aria-live="polite">✓ Saved locally</div>
         </header>
 
         <section class="view active" id="today-view">
@@ -82,10 +90,10 @@
             <div>
               <div class="section-heading compact"><div><p class="eyebrow">QUICK ACCESS</p><h2>Maker's toolkit</h2></div></div>
               <div class="tool-grid">
-                <button class="tool-card" data-tool="swatch"><span class="tool-symbol">▦</span><strong>Swatch adapter</strong><small>Resize any pattern</small></button>
-                <button class="tool-card" data-tool="shaping"><span class="tool-symbol">↗</span><strong>Shape evenly</strong><small>Increases & decreases</small></button>
-                <button class="tool-card" data-tool="converter"><span class="tool-symbol">⇄</span><strong>Converters</strong><small>Yarn, needles & units</small></button>
-                <button class="tool-card" data-go="library"><span class="tool-symbol">≡</span><strong>Library</strong><small>Tutorials, patterns & ideas</small></button>
+                <button class="tool-card" data-tool="swatch"><span class="tool-symbol"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M7 3v18M17 3v18"></path></svg></span><strong>Swatch adapter</strong><small>Resize any pattern</small></button>
+                <button class="tool-card" data-tool="shaping"><span class="tool-symbol"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 17 10 12l3 3 6-8"></path><path d="M15 7h4v4"></path></svg></span><strong>Shape evenly</strong><small>Increases & decreases</small></button>
+                <button class="tool-card" data-tool="converter"><span class="tool-symbol"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 8h13M15 5l3 3-3 3M19 16H6M9 13l-3 3 3 3"></path></svg></span><strong>Converters</strong><small>Yarn, needles & units</small></button>
+                <button class="tool-card" data-go="library"><span class="tool-symbol"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v13H7a2 2 0 0 1-2-2Z"></path><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H18M9 8h5"></path></svg></span><strong>Library</strong><small>Tutorials, patterns & ideas</small></button>
               </div>
             </div>
             <div class="daily-note card">
@@ -133,7 +141,7 @@
 
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal" role="dialog" aria-modal="true">
-        <button class="modal-close" id="modal-close">×</button>
+        <button class="modal-close" id="modal-close" aria-label="Close dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button>
         <div id="modal-content"></div>
       </div>
     </div>
@@ -145,9 +153,10 @@
     </div>
 
     <div id="toast" class="toast"></div>
-    <script src="calculator-engine.js?v=31"></script>
-    <script src="app.js?v=31"></script>
-    <script type="module" src="/src/document-tools.js?v=31"></script>
-    <script type="module" src="/src/cloud/bootstrap.js?v=31"></script>
+    <script src="calculator-engine.js?v=35"></script>
+    <script src="symbol-database.js?v=35"></script>
+    <script src="app.js?v=35"></script>
+    <script type="module" src="/src/document-tools.js?v=35"></script>
+    <script type="module" src="/src/cloud/bootstrap.js?v=35"></script>
   </body>
 </html>

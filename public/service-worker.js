@@ -1,5 +1,5 @@
-const CACHE_NAME = "yarncha-shell-v31";
-const APP_SHELL = ["/", "/index.html", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE_NAME = "yarncha-shell-v35";
+const APP_SHELL = ["/", "/index.html", "/styles.css?v=35", "/calculator-engine.js?v=35", "/symbol-database.js?v=35", "/app.js?v=35", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));

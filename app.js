@@ -2,7 +2,8 @@ const STORAGE_KEY = "threadline-data-v1";
 const colors = ["#6f8872", "#b56d52", "#8a7895", "#c19b5b", "#637f91"];
 const APP_NAME = "Yarncha";
 const BACKUP_VERSION = 2;
-const projectTypeOptions = ["Knitting","Crochet","Tunisian Crochet","Mixed / Other"];
+const projectTypeOptions = ["Knitting","Crochet","Tunisian Crochet","Weaving","Other"];
+const projectStatusOptions = ["Planning","In progress","Paused","Finished","Frogged"];
 const themePresets=[
   {id:"creamy-vanilla",name:"Creamy Vanilla",primary:"#D8B899",secondary:"#F4E6D0",background:"#FFF9F0",card:"#FFF3E3",text:"#5A4632",button:"#B68A62",highlight:"#EACB9A"},
   {id:"matcha-latte",name:"Matcha Latte",primary:"#A8BFA3",secondary:"#E3EAD8",background:"#FAF8EF",card:"#FFFFFF",text:"#4E5A46",button:"#7F9A7A",highlight:"#D8C89A"},
@@ -46,6 +47,7 @@ const starterData = {
     { id: "patterns", name: "My Pattern library", icon: "▦", description: "Patterns and charts you want to keep.", items: [] },
     { id: "ideas", name: "My project ideas", icon: "✦", description: "Inspiration, sketches and future makes.", items: [] },
     { id: "materials", name: "Yarn materials", icon: "◌", description: "Natural and synthetic fibres, texture, season and care reference.", items: [] },
+    { id: "symbols", name: "Symbol Database", icon: "", description: "Searchable knitting, crochet and Tunisian symbols, abbreviations, special stitches and chart-reading rules.", items: [] },
     { id: "tool-manual", name: "Tool Manual", icon: "◧", description: "Plain-language guide to every Toolkit calculator.", items: [] },
     { id: "theory", name: "Theory & Foundation", icon: "◎", description: "Structured knitting, crochet and Tunisian crochet learning notes.", items: [] }
   ],
@@ -65,12 +67,15 @@ const starterData = {
   account:{email:"",provider:"local",syncEnabled:false},
   yarnMaterials:[],
   techniqueKnowledge:[],
-  projectIdeas:[]
+  projectIdeas:[],
+  symbolFavorites:[]
 };
 
 let state = loadState();
 let currentProjectId = state.activeProjectId;
 let currentLibrarySection = null;
+let currentSymbolId = null;
+let symbolFilters = { search:"", craft:"All", category:"All", difficulty:"All" };
 let currentProjectTool = "swatch";
 let currentToolCategory = "All";
 let currentToolSearch = "";
@@ -86,6 +91,7 @@ let fxDate="12 June 2026";
 function openAssetDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open("threadline-files",2);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains("files"))db.createObjectStore("files");if(!db.objectStoreNames.contains("state"))db.createObjectStore("state");};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function putAsset(id,file){const db=await openAssetDb();return new Promise((resolve,reject)=>{const tx=db.transaction("files","readwrite");tx.objectStore("files").put(file,id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
 async function getAsset(id){const db=await openAssetDb();return new Promise((resolve,reject)=>{const r=db.transaction("files").objectStore("files").get(id);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
+async function deleteAsset(id){if(!id)return;const db=await openAssetDb();return new Promise((resolve,reject)=>{const tx=db.transaction("files","readwrite");tx.objectStore("files").delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
 async function putProjectStateSnapshot(){const db=await openAssetDb();return new Promise((resolve,reject)=>{const tx=db.transaction("state","readwrite");tx.objectStore("state").put(structuredClone(state),"app-state");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
 async function getAllAssetsByIds(ids){
   const unique=[...new Set(ids.filter(Boolean))],entries=[];
@@ -134,7 +140,7 @@ function loadState() {
     const merged = { ...starterData, ...saved };
     merged.librarySections = saved.librarySections || structuredClone(starterData.librarySections);
     if(!merged.librarySections.some(s=>s.id==="materials"))merged.librarySections.push(structuredClone(starterData.librarySections.find(s=>s.id==="materials")));
-    for(const id of ["tool-manual","theory"]){
+    for(const id of ["symbols","tool-manual","theory"]){
       if(!merged.librarySections.some(s=>s.id===id))merged.librarySections.push(structuredClone(starterData.librarySections.find(s=>s.id===id)));
     }
     const tutorialSection=merged.librarySections.find(s=>s.id==="tutorials");
@@ -155,6 +161,7 @@ function loadState() {
     merged.account = saved.account || structuredClone(starterData.account);
     merged.yarnMaterials = saved.yarnMaterials?.length ? saved.yarnMaterials : defaultYarnMaterials();
     merged.techniqueKnowledge = saved.techniqueKnowledge || [];
+    merged.symbolFavorites = saved.symbolFavorites || [];
     merged.projectIdeas = (saved.projectIdeas || []).map(normalizeProjectIdea);
     merged.ideaFilters = saved.ideaFilters || {search:"",craft:"All",kind:"All",showArchived:false};
     merged.projects = (saved.projects || starterData.projects).map(p => ({
@@ -189,9 +196,14 @@ function loadState() {
       maskLockSize:!!p.maskLockSize,
       maskLockPosition:!!p.maskLockPosition,
       coverAsset:p.coverAsset || null,
+      status:projectStatusOptions.includes(p.status) ? p.status : "In progress",
+      startDate:p.startDate || "",
+      finishDate:p.finishDate || "",
+      patternUrl:p.patternUrl || "",
       yarn:p.yarn || "",
       needles:p.needles || "",
       gauge:p.gauge || "",
+      size:p.size || "",
       sizingNotes:p.sizingNotes || "",
       updatedAt:p.updatedAt || new Date().toISOString(),
       chartAnalysis:p.chartAnalysis ? {
@@ -225,6 +237,34 @@ function updateSaveStatus(text){const el=document.getElementById("save-status");
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
 function getProject(id = currentProjectId) { return state.projects.find(p => p.id === id) || state.projects[0]; }
 function escapeHtml(value = "") { return value.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
+const uiIconPaths={
+  voice:'<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path>',
+  camera:'<rect x="3.5" y="6.5" width="17" height="13" rx="2"></rect><path d="m8 6.5 1.3-2h5.4l1.3 2"></path><circle cx="12" cy="13" r="3.25"></circle>',
+  folder:'<path d="M3.5 7.5h6l2-2h9v13.5h-17Z"></path>',
+  book:'<path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v13H7a2 2 0 0 1-2-2Z"></path><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H18M9 8h5"></path>',
+  pattern:'<path d="M4 6h16M4 12h16M4 18h16M7 3v18M17 3v18"></path>',
+  idea:'<path d="M9 18h6M9.5 21h5"></path><path d="M8 14.5c-1.3-1.1-2-2.6-2-4.4A6 6 0 0 1 18 10c0 1.8-.8 3.4-2.1 4.5-.7.6-.9 1.1-.9 2H9c0-.9-.3-1.5-1-2Z"></path>',
+  fibre:'<circle cx="10" cy="12" r="6.5"></circle><path d="M5 8.5c3 1 6.7.8 10.2-.7M4 12c3.6 1.4 7.8 1.5 12 .2M6 17c2.2-3.6 4-7.8 4.8-11.4M13 18.2c.6-4.7.2-8.7-1.2-12M16 15.5l4 3.5"></path>',
+  manual:'<rect x="4" y="3.5" width="16" height="17" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path>',
+  theory:'<circle cx="12" cy="12" r="8.5"></circle><path d="M9.7 9.2a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1.2 1-1.2 1.8M12 17h.01"></path>',
+  pen:'<path d="m5 19 3.8-1 9.7-9.7-2.8-2.8L6 15.2Z"></path><path d="m14.5 6.7 2.8 2.8"></path>',
+  highlighter:'<path d="m5 16 8.8-8.8 3 3L8 19H5Z"></path><path d="M11 20h8"></path>',
+  eraser:'<path d="m5.2 14.8 8.6-8.6 5 5-7.3 7.3H8.9Z"></path><path d="m11.5 18.5-5-5M12 20h7"></path>',
+  mask:'<rect x="3.5" y="7" width="17" height="10" rx="1.5"></rect><path d="M7 10h10M7 14h7"></path>',
+  text:'<path d="M5 5h14M12 5v14M8.5 19h7"></path>',
+  arrow:'<path d="M5 18 18 5M12 5h6v6"></path>',
+  marker:'<path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle>',
+  close:'<path d="m6 6 12 12M18 6 6 18"></path>',
+  undo:'<path d="M9 7 5 11l4 4"></path><path d="M6 11h7a6 6 0 0 1 6 6"></path>',
+  redo:'<path d="m15 7 4 4-4 4"></path><path d="M18 11h-7a6 6 0 0 0-6 6"></path>',
+  calculator:'<rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M8 7h8M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1M8 18h1M12 18h5"></path>',
+  measure:'<path d="M4 17 17 4l3 3L7 20Z"></path><path d="m9 15-2-2M12 12l-2-2M15 9l-2-2"></path>',
+  garment:'<path d="m8 5 4-2 4 2 4 4-3 2v9H7v-9L4 9Z"></path>',
+  circle:'<circle cx="12" cy="12" r="8"></circle><path d="M12 4v16M4 12h16"></path>',
+  render:'<rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M4 10h16M10 4v16"></path>',
+  exchange:'<path d="M5 8h13M15 5l3 3-3 3M19 16H6M9 13l-3 3 3 3"></path>'
+};
+function uiIcon(name,className="ui-icon"){return `<svg class="${className}" aria-hidden="true" viewBox="0 0 24 24">${uiIconPaths[name]||uiIconPaths.calculator}</svg>`;}
 function toast(message) {
   const el = document.getElementById("toast"); el.textContent = message; el.classList.add("show");
   clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove("show"), 2600);
@@ -271,6 +311,7 @@ function showView(name) {
   const view = document.getElementById(`${name}-view`);
   if (view) view.classList.add("active");
   document.getElementById("breadcrumb").textContent = name === "project-detail" ? getProject()?.name : name[0].toUpperCase() + name.slice(1);
+  document.getElementById("header-context").textContent = name === "project-detail" ? "Projects" : "Workspace";
   document.querySelector(".sidebar").classList.remove("open");
   if (name === "today") renderToday();
   if (name === "projects") renderProjects();
@@ -304,7 +345,7 @@ function rowSummary(project) { return project.totalRows ? `Row ${project.row} of
 function visual(project, compact = false) {
   const cover = project.coverAsset
     ? `<img class="project-cover-img" data-cover-asset="${project.coverAsset}" alt="${escapeHtml(project.name)} cover">`
-    : `<div class="cover-placeholder"><span class="system-icon">▧</span><strong>Add Project Photo</strong><small>Upload or replace cover</small></div>`;
+    : `<div class="cover-placeholder"><span class="system-icon">${uiIcon("camera")}</span><strong>Add Project Photo</strong><small>Upload or replace cover</small></div>`;
   return `<div class="project-visual ${project.coverAsset?"has-cover":"no-cover"}" style="--project-color:${project.color};background:linear-gradient(145deg,${project.color}bb,${project.color})">
     ${cover}
     <span class="project-badge">${escapeHtml(project.type).toUpperCase()}</span>
@@ -363,8 +404,8 @@ function renderProjectDetail() {
     <div class="project-mobile-shell ${p.readingMode?"is-reading":""}">
       <div class="detail-head project-header">
         <button class="project-detail-cover cover-upload-button" id="project-cover-picker" aria-label="Upload or replace project cover photo">${visual(p,true)}</button>
-        <div class="project-title-block"><p class="eyebrow">${escapeHtml(p.type).toUpperCase()}</p><div class="editable-title"><h1>${escapeHtml(p.name)}</h1><button class="mini-button" id="edit-project-name" title="Edit project">Edit Project</button></div><p class="project-type">Row ${p.row}${p.totalRows?` of ${p.totalRows}`:""} · ${progress(p) === null ? "Open-ended" : `${progress(p)}% complete`}</p></div>
-        <div class="detail-actions"><button class="secondary-button" id="speak-row">Read row</button><button class="primary-button" id="voice-project">Voice</button></div>
+        <div class="project-title-block"><p class="eyebrow">${escapeHtml(p.type).toUpperCase()}</p><div class="editable-title"><h1>${escapeHtml(p.name)}</h1></div><p class="project-type">${escapeHtml(p.status||"In progress")} · Row ${p.row}${p.totalRows?` of ${p.totalRows}`:""} · ${progress(p) === null ? "Open-ended" : `${progress(p)}% complete`}</p></div>
+        <div class="detail-actions project-actions"><button class="project-action-button ghost" id="edit-project-name">Edit Project</button><button class="project-action-button secondary" id="speak-row">Read row</button><button class="project-action-button primary voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","button-icon")}</button></div>
       </div>
       <div class="project-tabs" role="tablist" aria-label="Project sections">
         ${["track","chart","project","assistant"].map(id=>`<button class="${tab===id?"active":""}" data-project-tab="${id}">${id[0].toUpperCase()+id.slice(1)}</button>`).join("")}
@@ -392,7 +433,7 @@ function projectTrackHtml(p){
       <div class="card mobile-card"><div class="section-heading compact-row"><h3>Repeat counters</h3><button class="mini-button" id="add-sub-counter">+ Add</button></div><div id="sub-counters">${p.subCounters.length?p.subCounters.map(s => subCounterHtml(s)).join(""):`<p class="muted-copy">Add repeats, sleeves, pattern sections or lace repeats here.</p>`}</div></div>
       <div class="notes-card card"><div class="section-heading compact-row"><h3>Project notes</h3><button class="mini-button" id="add-marker">+ Marker</button></div>
         <textarea id="project-notes" placeholder="Modifications, reminders, yarn details...">${escapeHtml(p.notes)}</textarea>
-        <div class="markers">${p.markers.map(m => `<span class="marker-line" style="border-left:5px solid ${markerColor(m.color)}">Row ${m.row} · ${escapeHtml(m.label||m.color)} <button data-edit-marker="${m.id||`${m.row}-${m.color}`}">Edit</button><button data-delete-marker="${m.id||`${m.row}-${m.color}`}">×</button></span>`).join("")}</div>
+        <div class="markers">${p.markers.map(m => `<span class="marker-line" style="border-left:5px solid ${markerColor(m.color)}">Row ${m.row} · ${escapeHtml(m.label||m.color)} <button data-edit-marker="${m.id||`${m.row}-${m.color}`}">Edit</button><button class="minimal-icon-button" aria-label="Delete marker" data-delete-marker="${m.id||`${m.row}-${m.color}`}">${uiIcon("close")}</button></span>`).join("")}</div>
       </div>
     </div>
   </div>`;
@@ -418,7 +459,7 @@ function projectChartHtml(p){
       <button data-counter="1">+</button>
       <label>Rows <input id="chart-rows" type="number" min="1" value="${p.chartRows || p.totalRows || ""}" placeholder="Planned"></label>
       <button class="mini-button" id="reset-main">Reset</button>
-      <button class="mini-button" id="voice-project">Voice</button>
+      <button class="mini-button voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","button-icon")}</button>
     </div>
     <div class="annotation-toolbar card ${hasChart?"":"is-disabled"}" role="toolbar" aria-label="Annotation tools" aria-disabled="${!hasChart}">
       ${["pen","highlighter","eraser","rowMask","text","arrow","marker"].map(tool=>`<button class="${activeAnnotationTool===tool?"active":""}" data-annotation-tool="${tool}" ${hasChart?"":"disabled"}>${toolIcon(tool)}<span>${toolLabel(tool)}</span></button>`).join("")}
@@ -429,7 +470,7 @@ function projectChartHtml(p){
       <label class="annotation-control">Eraser <select id="eraser-mode" ${hasChart?"":"disabled"}>${["standard","precise","stroke"].map(v=>`<option value="${v}" ${p.eraserMode===v?"selected":""}>${v[0].toUpperCase()+v.slice(1)}</option>`).join("")}</select></label>
       <label class="annotation-control">Eraser size <input id="eraser-size" type="range" min="8" max="80" step="2" value="${p.eraserSize||28}" ${hasChart?"":"disabled"}></label>
       <button id="toggle-mask-position-lock" ${hasChart?"":"disabled"}>${p.maskLockPosition?"Unlock position":"Lock position"}</button><button id="toggle-mask-size-lock" ${hasChart?"":"disabled"}>${p.maskLockSize?"Unlock size":"Lock size"}</button><button id="toggle-mask-lock" ${hasChart?"":"disabled"}>${p.rowMask?.locked?"Unlock all":"Lock all"}</button><button id="mask-up" ${hasChart?"":"disabled"}>Mask ↑</button><button id="mask-down" ${hasChart?"":"disabled"}>Mask ↓</button><button id="mask-cover-done" ${hasChart?"":"disabled"}>Cover done</button><button class="danger-button" id="clear-mask" ${hasChart?"":"disabled"}>Clear mask</button>
-      <button id="undo-annotation" ${hasChart?"":"disabled"}>↶<span>undo</span></button><button id="redo-annotation" ${hasChart?"":"disabled"}>↷<span>redo</span></button><button class="danger-button" id="clear-annotations" ${hasChart?"":"disabled"}>clear</button>
+      <button id="undo-annotation" ${hasChart?"":"disabled"}>${uiIcon("undo","annotation-button-icon")}<span>Undo</span></button><button id="redo-annotation" ${hasChart?"":"disabled"}>${uiIcon("redo","annotation-button-icon")}<span>Redo</span></button><button class="danger-button" id="clear-annotations" ${hasChart?"":"disabled"}>Clear</button>
       <div class="zoom-tools"><button data-zoom="-0.15">−</button><strong>${Math.round((p.chartZoom||1)*100)}%</strong><button data-zoom="0.15">+</button></div>
     </div>
     <div class="chart-reader card">
@@ -479,7 +520,7 @@ function annotationSvg(a,selected=false){
   }
   return `<circle class="annotation-object" data-ann-id="${a.id}" cx="${a.x||0}" cy="${a.y||0}" r="${Math.max(8,Number(a.width)||12)}" fill="${escapeHtml(a.color||"#d96572")}" opacity=".9"></circle>`;
 }
-function toolIcon(tool){return ({pen:"P",highlighter:"H",text:"T",arrow:"A",marker:"M",eraser:"E",rowMask:"R"}[tool]||"·");}
+function toolIcon(tool){return uiIcon(({pen:"pen",highlighter:"highlighter",text:"text",arrow:"arrow",marker:"marker",eraser:"eraser",rowMask:"mask"})[tool]||"calculator","annotation-button-icon");}
 function toolLabel(tool){return ({rowMask:"Row Mask",highlighter:"Highlighter"}[tool]||tool);}
 
 function friendlyChartBetaHtml(p){
@@ -1577,31 +1618,83 @@ async function hydrateIdeaImages(){
 }
 function librarySectionCount(section){
   if(section.id==="materials")return state.yarnMaterials.length;
+  if(section.id==="symbols")return window.YarnchaSymbolDatabase?.entries.length||0;
   if(section.id==="tool-manual")return toolkitToolDefs.length;
   if(section.id==="theory")return Object.values(theoryTopics).reduce((sum,items)=>sum+items.length,0);
   if(section.id==="ideas")return (state.projectIdeas||[]).length;
   return (section.items||[]).length;
 }
+function librarySectionIcon(sectionId){return uiIcon(({tutorials:"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
+function symbolDatabaseHtml(){
+  const database=window.YarnchaSymbolDatabase;
+  if(!database)return `<div class="empty-state"><h3>Symbol Database could not load</h3><p>Refresh after confirming symbol-database.js is available.</p></div>`;
+  if(currentSymbolId){
+    const entry=database.entries.find(item=>item.id===currentSymbolId);
+    if(!entry){currentSymbolId=null;return symbolDatabaseHtml();}
+    const favorite=(state.symbolFavorites||[]).includes(entry.id);
+    return `<section class="symbol-detail card">
+      <button class="text-button symbol-detail-back" id="symbol-detail-back">← Symbol Database</button>
+      <div class="symbol-detail-hero"><div class="symbol-glyph">${escapeHtml(entry.symbol)}</div><div><p class="eyebrow">${escapeHtml(entry.craft)} · ${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}</p><h2>${escapeHtml(entry.fullName)}</h2><p class="symbol-abbreviation">${escapeHtml(entry.abbreviation||"No standard abbreviation")}</p></div></div>
+      <div class="symbol-detail-actions"><button class="secondary-button" id="copy-symbol-meaning">Copy Meaning</button><button class="secondary-button" id="save-symbol-project">Save to Project Notes</button><button class="primary-button" id="favorite-symbol">${favorite?"Remove Favorite":"Add to Favorites"}</button></div>
+      <div class="symbol-detail-grid">
+        <article><h3>Meaning</h3><p>${escapeHtml(entry.description)}</p></article>
+        <article><h3>How To</h3><p>${escapeHtml(entry.howTo)}</p></article>
+        <article><h3>Beginner Notes</h3><p>${escapeHtml(entry.beginnerExplanation)}</p></article>
+        <article><h3>Common Mistakes</h3><ul>${entry.commonMistakes.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></article>
+        <article><h3>Related Symbols</h3><p>${entry.relatedSymbols.length?entry.relatedSymbols.map(escapeHtml).join(" · "):"Use craft and category filters to find related entries."}</p></article>
+        <article><h3>Language Names</h3><dl>${Object.entries(entry.languageVariants).map(([language,name])=>`<dt>${escapeHtml(language)}</dt><dd>${escapeHtml(name)}</dd>`).join("")}</dl></article>
+      </div>
+      <section class="flow-reference-note"><p class="eyebrow">FLOW MODE REFERENCE</p><h3>Candidate matching notes</h3><p><strong>Possible meanings:</strong> ${entry.possibleMeanings.map(escapeHtml).join(" · ")}</p><p><strong>Recognition aliases:</strong> ${entry.recognitionAliases.map(escapeHtml).join(" · ")}</p><p><strong>OCR keywords:</strong> ${entry.ocrKeywords.map(escapeHtml).join(" · ")}</p><p><strong>Chart examples:</strong> ${entry.chartExamples.map(escapeHtml).join(" · ")}</p><p><strong>Ambiguity:</strong> ${entry.ambiguityWarnings.map(escapeHtml).join(" ")}</p><p><strong>Confidence:</strong> ${escapeHtml(entry.confidenceHint)}</p><span class="analysis-badge review">${entry.requiresLegendCheck?"Legend check required":"Context check required"}</span></section>
+    </section>`;
+  }
+  const entries=database.search(symbolFilters.search,symbolFilters);
+  const sections=["Knitting Symbols & Abbreviations","Crochet Symbols & Abbreviations","Tunisian Crochet Symbols & Abbreviations","Special Stitches","Chart Reading Rules"];
+  const craftOptions=["All","Knitting","Crochet","Tunisian","Shared"],categoryOptions=["All",...database.categoryOrder],difficultyOptions=["All","Beginner","Intermediate","Advanced"];
+  return `<section class="symbol-database-shell">
+    <div class="symbol-database-intro card"><p class="eyebrow">FLOW MODE FOUNDATION</p><h2>Symbols are candidates, not assumptions</h2><p>Search abbreviations, chart marks, aliases and reading rules. Every symbol keeps ambiguity and legend-check guidance for future reviewed recognition.</p></div>
+    <div class="symbol-filter-bar card"><label class="symbol-search"><span>Search</span><input id="symbol-search" type="search" value="${escapeHtml(symbolFilters.search)}" placeholder="Symbol, abbreviation, name or OCR keyword"></label><label><span>Craft</span><select id="symbol-craft-filter">${craftOptions.map(value=>`<option ${symbolFilters.craft===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Category</span><select id="symbol-category-filter">${categoryOptions.map(value=>`<option ${symbolFilters.category===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Difficulty</span><select id="symbol-difficulty-filter">${difficultyOptions.map(value=>`<option ${symbolFilters.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></label></div>
+    <p class="symbol-result-count">${entries.length} matching entries · ${(state.symbolFavorites||[]).length} favorites</p>
+    ${entries.length?sections.map(section=>{const items=entries.filter(entry=>entry.section===section);return items.length?`<section class="symbol-section"><div class="section-heading"><div><p class="eyebrow">SYMBOL DATABASE</p><h2>${escapeHtml(section)}</h2></div><span>${items.length} entries</span></div><div class="symbol-grid">${items.map(entry=>`<button class="symbol-card card" data-symbol-id="${entry.id}"><span class="symbol-card-mark">${escapeHtml(entry.symbol)}</span><span class="symbol-card-copy"><strong>${escapeHtml(entry.abbreviation||entry.fullName)}</strong><small>${escapeHtml(entry.fullName)}</small><em>${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}</em></span>${(state.symbolFavorites||[]).includes(entry.id)?`<span class="symbol-favorite" aria-label="Favorite">Saved</span>`:""}</button>`).join("")}</div></section>`:"";}).join(""):`<div class="empty-state"><h3>No symbols match these filters</h3><p>Try a different craft, category, difficulty or search term.</p></div>`}
+  </section>`;
+}
+function symbolMeaningText(entry){return `${entry.fullName}${entry.abbreviation?` (${entry.abbreviation})`:""}\nSymbol: ${entry.symbol}\nMeaning: ${entry.description}\nHow to: ${entry.howTo}\nFlow Mode note: ${entry.confidenceHint}`;}
+function openSymbolProjectModal(entry){
+  if(!state.projects.length)return toast("Create a project before saving notes.");
+  openModal(`<p class="eyebrow">SYMBOL DATABASE</p><h2>Save to Project Notes</h2><p>${escapeHtml(entry.fullName)} will be added as a reference note.</p><div class="field"><label for="symbol-project-select">Project</label><select id="symbol-project-select">${state.projects.map(project=>`<option value="${project.id}" ${project.id===state.activeProjectId?"selected":""}>${escapeHtml(project.name)}</option>`).join("")}</select></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="confirm-symbol-project">Save note</button></div>`);
+  document.getElementById("confirm-symbol-project").onclick=()=>{const project=state.projects.find(item=>item.id===document.getElementById("symbol-project-select").value);if(!project)return;project.notes=`${project.notes||""}${project.notes?"\n\n":""}[Symbol Database]\n${symbolMeaningText(entry)}`;saveProjectTouch(project);closeModal(true);toast("Symbol saved to project notes");};
+}
+function bindSymbolDatabase(){
+  const database=window.YarnchaSymbolDatabase;if(!database)return;
+  document.getElementById("symbol-search")?.addEventListener("input",event=>{symbolFilters.search=event.target.value;renderLibrary();requestAnimationFrame(()=>document.getElementById("symbol-search")?.focus());});
+  [["symbol-craft-filter","craft"],["symbol-category-filter","category"],["symbol-difficulty-filter","difficulty"]].forEach(([id,key])=>document.getElementById(id)?.addEventListener("change",event=>{symbolFilters[key]=event.target.value;renderLibrary();}));
+  document.querySelectorAll("[data-symbol-id]").forEach(button=>button.onclick=()=>{currentSymbolId=button.dataset.symbolId;renderLibrary();});
+  document.getElementById("symbol-detail-back")?.addEventListener("click",()=>{currentSymbolId=null;renderLibrary();});
+  const entry=database.entries.find(item=>item.id===currentSymbolId);if(!entry)return;
+  document.getElementById("copy-symbol-meaning")?.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(symbolMeaningText(entry));toast("Meaning copied");}catch{toast("Copy is blocked in this browser.");}});
+  document.getElementById("save-symbol-project")?.addEventListener("click",()=>openSymbolProjectModal(entry));
+  document.getElementById("favorite-symbol")?.addEventListener("click",()=>{const favorites=new Set(state.symbolFavorites||[]);favorites.has(entry.id)?favorites.delete(entry.id):favorites.add(entry.id);state.symbolFavorites=[...favorites];saveState();renderLibrary();});
+}
 function renderLibrary() {
   const host=document.getElementById("library-content");
   if(!currentLibrarySection){
     host.innerHTML=`<div class="page-title split-title"><div><p class="eyebrow">YOUR MAKING WIKI</p><h1>Library</h1><p>A flexible home for tutorials, pattern files and ideas.</p></div><button class="secondary-button" id="add-library-space">+ Custom space</button></div>
-      <div class="library-home-grid">${state.librarySections.map(s=>`<button class="library-space card" data-library-space="${s.id}"><span class="library-space-count">${librarySectionCount(s)} items</span><div class="library-space-icon">${s.icon}</div><h2>${escapeHtml(s.name)}</h2><p>${escapeHtml(s.description)}</p></button>`).join("")}</div>`;
+      <div class="library-home-grid">${state.librarySections.map(s=>`<button class="library-space card" data-library-space="${s.id}"><span class="library-space-count">${librarySectionCount(s)} items</span><div class="library-space-icon">${librarySectionIcon(s.id)}</div><h2>${escapeHtml(s.name)}</h2><p>${escapeHtml(s.description)}</p></button>`).join("")}</div>`;
     document.getElementById("add-library-space").onclick=()=>openLibrarySpaceModal();
   } else {
     const section=state.librarySections.find(s=>s.id===currentLibrarySection);
     if(!section){currentLibrarySection=null;return renderLibrary();}
-    host.innerHTML=`<button class="text-button library-back" id="library-back">← All library spaces</button><div class="page-title split-title"><div><p class="eyebrow">PERSONAL LIBRARY</p><h1>${escapeHtml(section.name)}</h1><p>${escapeHtml(section.description)}</p></div><div><button class="secondary-button" id="rename-library">Rename</button> <button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button></div></div>
-      ${section.id==="materials"?yarnMaterialReferenceHtml():section.id==="tool-manual"?toolManualHtml():section.id==="theory"?theoryFoundationHtml():section.id==="ideas"?projectIdeasHtml():""}
-      <div class="notion-list">${section.id==="ideas"?"":section.items.length?section.items.map(item=>`<div class="notion-row"><div>${item.fileData||item.assets?.length?"▧":"□"}</div><div><h3>${escapeHtml(item.name)}</h3><p>${item.craft?`${escapeHtml(item.craft)} · `:""}${escapeHtml(item.notes||"No notes")}${item.assets?.length?` · ${item.assets.length} files`:item.fileName?` · ${escapeHtml(item.fileName)}`:""}</p></div><div class="row-actions">${item.fileData||item.assets?.length?`<button class="mini-button" data-open-item="${item.id}">Open files</button>`:""}<button class="mini-button danger-button" data-delete-item="${item.id}">Delete</button></div></div>`).join(""):["materials","tool-manual","theory","ideas"].includes(section.id)?"":`<div class="empty-state"><h3>This space is ready for your own pages</h3><p>Add a named section, note or PDF tutorial.</p></div>`}</div>`;
+    host.innerHTML=`<button class="text-button library-back" id="library-back">← All library spaces</button><div class="page-title split-title"><div><p class="eyebrow">PERSONAL LIBRARY</p><h1>${escapeHtml(section.name)}</h1><p>${escapeHtml(section.description)}</p></div>${section.id==="symbols"?"":`<div><button class="secondary-button" id="rename-library">Rename</button> <button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button></div>`}</div>
+      ${section.id==="materials"?yarnMaterialReferenceHtml():section.id==="symbols"?symbolDatabaseHtml():section.id==="tool-manual"?toolManualHtml():section.id==="theory"?theoryFoundationHtml():section.id==="ideas"?projectIdeasHtml():""}
+      <div class="notion-list">${["symbols","ideas"].includes(section.id)?"":section.items.length?section.items.map(item=>`<div class="notion-row"><div>${item.fileData||item.assets?.length?"▧":"□"}</div><div><h3>${escapeHtml(item.name)}</h3><p>${item.craft?`${escapeHtml(item.craft)} · `:""}${escapeHtml(item.notes||"No notes")}${item.assets?.length?` · ${item.assets.length} files`:item.fileName?` · ${escapeHtml(item.fileName)}`:""}</p></div><div class="row-actions">${item.fileData||item.assets?.length?`<button class="mini-button" data-open-item="${item.id}">Open files</button>`:""}<button class="mini-button danger-button" data-delete-item="${item.id}">Delete</button></div></div>`).join(""):["materials","tool-manual","theory","ideas"].includes(section.id)?"":`<div class="empty-state"><h3>This space is ready for your own pages</h3><p>Add a named section, note or PDF tutorial.</p></div>`}</div>`;
     document.getElementById("library-back").onclick=()=>{currentLibrarySection=null;renderLibrary();};
-    document.getElementById("add-library-item").onclick=()=>section.id==="materials"?openYarnMaterialModal():section.id==="ideas"?openProjectIdeaModal():openLibraryItemModal(section.id);
-    document.getElementById("rename-library").onclick=()=>openLibrarySpaceModal(section.id);
+    document.getElementById("add-library-item")?.addEventListener("click",()=>section.id==="materials"?openYarnMaterialModal():section.id==="ideas"?openProjectIdeaModal():openLibraryItemModal(section.id));
+    document.getElementById("rename-library")?.addEventListener("click",()=>openLibrarySpaceModal(section.id));
     document.querySelectorAll("[data-delete-item]").forEach(b=>b.onclick=()=>{section.items=section.items.filter(i=>i.id!==b.dataset.deleteItem);saveState();renderLibrary();});
     document.querySelectorAll("[data-open-item]").forEach(b=>b.onclick=()=>openLibraryAssets(section.items.find(i=>i.id===b.dataset.openItem)));
     document.querySelectorAll("[data-edit-material]").forEach(b=>b.onclick=()=>openYarnMaterialModal(b.dataset.editMaterial));
     document.querySelectorAll("[data-delete-material]").forEach(b=>b.onclick=()=>{state.yarnMaterials=state.yarnMaterials.filter(m=>m.id!==b.dataset.deleteMaterial);saveState();renderLibrary();});
     bindProjectIdeas();
+    bindSymbolDatabase();
     hydrateMaterialImages();
   }
   queueMicrotask(applyLanguage);
@@ -1821,6 +1914,7 @@ function toolsPageCards(){
   const virtual={id:"rendering-studio",name:"Project Rendering Studio",category:"Rendering",crafts:["all"],desc:"Plan grids, stripes and colour pooling in one tidy visual workspace."};
   return toolkitToolDefs.filter(t=>!["budget","grid","stripe","pooling"].includes(t.id)).concat(virtual);
 }
+Object.assign(toolIconMap,{swatch:"measure","tool-adjust":"measure",garment:"garment",blocking:"measure","size-reference":"manual",hat:"garment",sock:"garment",sleeve:"garment",raglan:"garment",blanket:"pattern",circle:"circle",amigurumi:"circle",granny:"render",c2c:"render","rendering-studio":"render","yarn-estimator":"fibre","yarn-leftover":"fibre",substitution:"exchange","yarn-weight":"fibre",repeat:"pattern","row-helper":"manual","cast-on":"pattern",basic:"calculator",unit:"exchange",shaping:"measure"});
 function toolsPageCategoryForTool(tool){
   if(["swatch","tool-adjust","garment","blocking","size-reference"].includes(tool.id))return "Core";
   if(["hat","sock","sleeve","raglan","blanket"].includes(tool.id))return "Project sizing";
@@ -1835,7 +1929,7 @@ function toolsPageDetailTool(tool){
 }
 function toolCardHtml(tool,selected){
   const status=tool.id==="pooling"||tool.id==="rendering-studio"?"Planning":Number(tool.confidence||0)<0?"Beta":"";
-  return `<button class="toolbox-card card ${selected===tool.id?"active":""}" data-open-tool="${escapeHtml(tool.id)}"><span class="toolbox-icon">${toolIconMap[tool.id]||"□"}</span><span class="toolbox-copy"><strong>${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
+  return `<button class="toolbox-card card ${selected===tool.id?"active":""}" data-open-tool="${escapeHtml(tool.id)}"><span class="toolbox-icon">${uiIcon(toolIconMap[tool.id]||"calculator","toolbox-card-icon")}</span><span class="toolbox-copy"><strong>${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
 }
 function renderTool(tool=currentProjectTool) {
   const panel=document.getElementById("tool-panel");
@@ -1957,8 +2051,26 @@ function updateConversion() {
   document.getElementById("conversion-result").innerHTML = `<table class="conversion-table"><thead><tr><th>Unit</th><th>Converted amount</th></tr></thead><tbody>${Object.entries(table).filter(([u])=>u!==from).map(([u,f])=>`<tr><td>${u}</td><td>${Number((base/f).toPrecision(7))}</td></tr>`).join("")}</tbody></table>`;
 }
 
-function openModal(html) { document.getElementById("modal-content").innerHTML = html; document.getElementById("modal-backdrop").classList.add("open"); }
-function closeModal() { document.getElementById("modal-backdrop").classList.remove("open"); }
+let modalBeforeClose=null;
+let modalLastFocus=null;
+function openModal(html,options={}) {
+  modalLastFocus=document.activeElement;
+  const content=document.getElementById("modal-content"),modal=content.closest(".modal");
+  content.innerHTML=html;
+  modalBeforeClose=options.beforeClose||null;
+  modal.classList.toggle("edit-project-modal",!!content.querySelector(".edit-project-form"));
+  modal.setAttribute("aria-label",options.label||content.querySelector("h2")?.textContent||"Dialog");
+  document.getElementById("modal-backdrop").classList.add("open");
+  requestAnimationFrame(()=>content.querySelector("input:not([type=hidden]),select,textarea,button")?.focus());
+}
+function closeModal(force=false) {
+  if(!force&&modalBeforeClose&&modalBeforeClose()===false)return false;
+  document.getElementById("modal-backdrop").classList.remove("open");
+  modalBeforeClose=null;
+  const target=modalLastFocus;modalLastFocus=null;
+  requestAnimationFrame(()=>target?.isConnected&&target.focus?.());
+  return true;
+}
 function openAccountModal(){
   if(window.YarnchaCloud?.openAccountModal)return window.YarnchaCloud.openAccountModal();
   const a=state.account||starterData.account;
@@ -2049,6 +2161,8 @@ function openProjectCoverPicker(){
   input.onchange=async()=>{
     const file=input.files?.[0];
     if(!file)return;
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type))return toast("Choose a JPG, PNG or WebP image.");
+    if(file.size>10*1024*1024)return toast("Choose a project photo smaller than 10 MB.");
     const id=`cover${Date.now()}`;
     await putAsset(id,file);
     p.coverAsset=id;
@@ -2069,7 +2183,7 @@ function openProjectModal() {
     const name = document.getElementById("new-name").value.trim();
     if (!name) return toast("Give your project a name.");
     const files=document.getElementById("new-chart").files;
-    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null };
+    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
     state.projects.push(p); saveState(); closeModal(); openProject(p.id); if(files.length)handleChartFiles(files);
   };
 }
@@ -2096,11 +2210,92 @@ function openSubCounterActionsModal(id){
   document.getElementById("counter-delete-action").onclick=()=>{if(!confirm(`Delete "${counter.name}"? This cannot be undone.`))return;p.subCounters=p.subCounters.filter(s=>s.id!==id);saveProjectTouch(p);closeModal();renderProjectDetail();};
 }
 function openRowPlanModal(){const p=getProject();openModal(`<p class="eyebrow">OPTIONAL PLAN</p><h2>Set planned rows</h2><p>Leave blank to keep this project open-ended.</p><div class="field"><label>Planned total rows</label><input id="planned-rows" type="number" value="${p.totalRows||""}" placeholder="No fixed total"></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-row-plan">Save</button></div>`);document.getElementById("save-row-plan").onclick=()=>{p.totalRows=Math.max(1,+document.getElementById("planned-rows").value||0)||null;saveState();closeModal();renderProjectDetail();};}
-function openDeleteProjectModal(){const p=getProject();if(!confirm(`Delete "${p.name}"? This cannot be undone.`))return;window.YarnchaCloud?.deleteCloudProject?.(p.id);state.projects=state.projects.filter(x=>x.id!==p.id);state.activeProjectId=state.projects[0]?.id||null;currentProjectId=state.activeProjectId;saveState();closeModal();showView("projects");}
-function openEditProjectModal(){const p=getProject();openModal(`<p class="eyebrow">PROJECT DETAILS</p><h2>Edit project</h2><div class="form-grid"><div class="field full"><label>Project name</label><input id="edit-project-name-input" value="${escapeHtml(p.name)}"></div><div class="field full"><label>Craft</label><select id="edit-project-type">${projectTypeOptions.map(t=>`<option ${normalizeProjectType(p.type)===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="field full upload-drop"><label>Project cover photo</label><input id="project-cover-file" type="file" accept="image/*"><small>${p.coverAsset?"Choose a new photo to replace the current cover.":"Optional. This appears in project cards and Reading Mode."}</small></div></div><div class="cover-actions">${p.coverAsset?`<button class="secondary-button" id="remove-project-cover">Remove cover image</button>`:""}</div><div class="danger-zone"><strong>Danger zone</strong><p>Deleting this project removes its counters, notes, annotations and progress from this device. This cannot be undone.</p><button class="danger-button secondary-button" id="delete-project-inside-edit">Delete Project</button></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-project-details">Save</button></div>`);
-  document.getElementById("remove-project-cover")?.addEventListener("click",()=>{p.coverAsset=null;saveProjectTouch(p);closeModal();renderProjectDetail();toast("Cover image removed");});
-  document.getElementById("delete-project-inside-edit").onclick=openDeleteProjectModal;
-  document.getElementById("save-project-details").onclick=async()=>{const name=document.getElementById("edit-project-name-input").value.trim();if(!name)return toast("Give the project a name.");p.name=name;p.type=document.getElementById("edit-project-type").value;const cover=document.getElementById("project-cover-file").files[0];if(cover){const id=`cover${Date.now()}`;await putAsset(id,cover);p.coverAsset=id;window.YarnchaCloud?.queueCoverUpload?.(p.id,id,cover);}saveState();document.getElementById("breadcrumb").textContent=p.name;closeModal();renderProjectDetail();};
+function editProjectField(id){return document.getElementById(id);}
+function editProjectError(id,message=""){
+  const node=document.getElementById(`error-${id}`);if(node)node.textContent=message;
+  editProjectField(id)?.setAttribute("aria-invalid",message?"true":"false");
+}
+function validProjectUrl(value){if(!value)return true;try{const url=new URL(value);return ["http:","https:"].includes(url.protocol);}catch{return false;}}
+async function deleteProjectAndAssets(p){
+  await Promise.allSettled(assetIdsForProject(p).map(deleteAsset));
+  await window.YarnchaCloud?.deleteCloudProject?.(p.id);
+  state.projects=state.projects.filter(x=>x.id!==p.id);
+  state.activeProjectId=state.projects[0]?.id||null;
+  currentProjectId=state.activeProjectId;
+  saveState();closeModal(true);showView("projects");toast("Project deleted");
+}
+function openEditProjectModal(){
+  const p=getProject();if(!p)return;
+  const currentType=projectTypeOptions.includes(p.type)?p.type:(normalizeProjectType(p.type)==="Mixed / Other"?"Other":normalizeProjectType(p.type));
+  let dirty=false,removeCover=false;
+  openModal(`<form class="edit-project-form" id="edit-project-form" novalidate>
+    <div class="edit-project-heading"><p class="eyebrow">PROJECT DETAILS</p><h2>Edit Project</h2><p>Keep the project information that helps you return to your work quickly.</p></div>
+    <section class="edit-project-section"><h3>Basic details</h3><div class="form-grid">
+      <div class="field full"><label for="edit-project-name-input">Project name</label><input id="edit-project-name-input" maxlength="80" required value="${escapeHtml(p.name)}"><small class="form-error" id="error-edit-project-name-input" aria-live="polite"></small></div>
+      <div class="field"><label for="edit-project-type">Craft type</label><select id="edit-project-type">${projectTypeOptions.map(t=>`<option ${currentType===t?"selected":""}>${t}</option>`).join("")}</select></div>
+      <div class="field"><label for="edit-project-status">Project status</label><select id="edit-project-status">${projectStatusOptions.map(s=>`<option ${(p.status||"In progress")===s?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="field"><label for="edit-project-start-date">Start date</label><input id="edit-project-start-date" type="date" value="${escapeHtml(p.startDate||"")}"></div>
+      <div class="field"><label for="edit-project-finish-date">Finish date</label><input id="edit-project-finish-date" type="date" value="${escapeHtml(p.finishDate||"")}"><small class="form-error" id="error-edit-project-finish-date" aria-live="polite"></small></div>
+    </div></section>
+    <section class="edit-project-section"><h3>Materials</h3><div class="form-grid">
+      <div class="field full"><label for="edit-project-yarn">Yarn</label><input id="edit-project-yarn" value="${escapeHtml(p.yarn||"")}" placeholder="Fibre, weight, colourway, dye lot"></div>
+      <div class="field"><label for="edit-project-tools">Needle / hook</label><input id="edit-project-tools" value="${escapeHtml(p.needles||"")}" placeholder="e.g. 4 mm circular"></div>
+      <div class="field"><label for="edit-project-gauge">Gauge</label><input id="edit-project-gauge" value="${escapeHtml(p.gauge||"")}" placeholder="e.g. 22 sts × 30 rows / 10 cm"></div>
+      <div class="field full"><label for="edit-project-size">Size</label><input id="edit-project-size" value="${escapeHtml(p.size||p.sizingNotes||"")}" placeholder="Finished size or fitting notes"></div>
+    </div></section>
+    <section class="edit-project-section"><h3>Progress</h3><div class="form-grid">
+      <div class="field"><label for="edit-project-current-row">Current row</label><input id="edit-project-current-row" type="number" min="0" step="1" value="${Number(p.row)||0}"><small class="form-error" id="error-edit-project-current-row" aria-live="polite"></small></div>
+      <div class="field"><label for="edit-project-total-rows">Total rows</label><input id="edit-project-total-rows" type="number" min="0" step="1" value="${p.totalRows??""}" placeholder="Optional"><small class="form-error" id="error-edit-project-total-rows" aria-live="polite"></small></div>
+      <div class="field full"><label for="edit-project-markers">Stitch markers</label><input id="edit-project-markers" type="number" min="0" step="1" value="${p.markers.length}"><small>Changing this count keeps existing markers first and adds new markers at the current row.</small></div>
+    </div></section>
+    <section class="edit-project-section"><h3>Pattern & notes</h3><div class="form-grid">
+      <div class="field full"><label for="edit-project-pattern-url">Pattern source / URL</label><input id="edit-project-pattern-url" type="url" value="${escapeHtml(p.patternUrl||"")}" placeholder="https://"><small class="form-error" id="error-edit-project-pattern-url" aria-live="polite"></small></div>
+      <div class="field full"><label for="edit-project-notes">Notes</label><textarea id="edit-project-notes" rows="6">${escapeHtml(p.notes||"")}</textarea></div>
+    </div></section>
+    <section class="edit-project-section"><h3>Cover image</h3><div class="cover-editor">
+      <div class="cover-editor-preview">${p.coverAsset?`<img data-cover-asset="${p.coverAsset}" alt="Current cover for ${escapeHtml(p.name)}">`:`<span class="system-icon">${uiIcon("camera")}</span><strong>Add Project Photo</strong>`}</div>
+      <div class="field"><label for="project-cover-file">Upload or replace cover</label><input id="project-cover-file" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP, up to 10 MB.</small><small class="form-error" id="error-project-cover-file" aria-live="polite"></small>${p.coverAsset?`<button type="button" class="secondary-button" id="remove-project-cover">Remove cover image</button>`:""}</div>
+    </div></section>
+    <section class="danger-zone"><strong>Danger zone</strong><p>Deleting this project permanently removes its progress, notes, chart settings, annotations, counters, and local files.</p><button type="button" class="danger-button secondary-button" id="delete-project-inside-edit">Delete Project</button><div class="delete-confirmation" id="delete-project-confirmation" hidden><h3>Delete this project?</h3><p>This action cannot be undone. Type <strong>DELETE</strong> to confirm.</p><label for="delete-project-confirm-text">Confirmation</label><input id="delete-project-confirm-text" autocomplete="off"><button type="button" class="danger-button" id="confirm-delete-project" disabled>Delete permanently</button></div></section>
+    <div class="modal-actions edit-project-footer"><button type="button" class="secondary-button" id="cancel-project-edit">Cancel</button><button type="submit" class="primary-button" id="save-project-details">Save Changes</button></div>
+  </form>`,{label:"Edit Project",beforeClose:()=>!dirty||confirm("Discard changes?")});
+  hydrateProjectCovers();
+  const form=editProjectField("edit-project-form");
+  form.addEventListener("input",()=>{dirty=true;});
+  form.addEventListener("change",()=>{dirty=true;});
+  editProjectField("cancel-project-edit").onclick=()=>closeModal();
+  editProjectField("remove-project-cover")?.addEventListener("click",()=>{removeCover=true;dirty=true;document.querySelector(".cover-editor-preview").innerHTML=`<span class="system-icon">${uiIcon("camera")}</span><strong>Cover will be removed</strong>`;editProjectField("remove-project-cover").disabled=true;});
+  editProjectField("project-cover-file").addEventListener("change",event=>{
+    const file=event.target.files?.[0];editProjectError("project-cover-file");if(!file)return;
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type)){event.target.value="";return editProjectError("project-cover-file","Choose a JPG, PNG or WebP image.");}
+    if(file.size>10*1024*1024){event.target.value="";return editProjectError("project-cover-file","Choose an image smaller than 10 MB.");}
+    removeCover=false;const preview=document.querySelector(".cover-editor-preview");preview.innerHTML=`<img alt="New project cover preview">`;preview.querySelector("img").src=URL.createObjectURL(file);
+  });
+  editProjectField("delete-project-inside-edit").onclick=()=>{const box=editProjectField("delete-project-confirmation");box.hidden=false;editProjectField("delete-project-confirm-text").focus();};
+  editProjectField("delete-project-confirm-text").oninput=event=>{editProjectField("confirm-delete-project").disabled=event.target.value!=="DELETE";};
+  editProjectField("confirm-delete-project").onclick=()=>deleteProjectAndAssets(p);
+  form.onsubmit=async event=>{
+    event.preventDefault();
+    ["edit-project-name-input","edit-project-finish-date","edit-project-current-row","edit-project-total-rows","edit-project-pattern-url","project-cover-file"].forEach(id=>editProjectError(id));
+    const name=editProjectField("edit-project-name-input").value.trim(),currentRaw=editProjectField("edit-project-current-row").value,totalRaw=editProjectField("edit-project-total-rows").value;
+    const currentRow=Number(currentRaw),totalRows=totalRaw===""?null:Number(totalRaw),startDate=editProjectField("edit-project-start-date").value,finishDate=editProjectField("edit-project-finish-date").value,patternUrl=editProjectField("edit-project-pattern-url").value.trim(),cover=editProjectField("project-cover-file").files?.[0];
+    let invalid=false;
+    if(!name||name.length>80){editProjectError("edit-project-name-input","Enter a project name of 80 characters or fewer.");invalid=true;}
+    if(currentRaw===""||!Number.isInteger(currentRow)||currentRow<0){editProjectError("edit-project-current-row","Current row must be a whole number of zero or more.");invalid=true;}
+    if(totalRows!==null&&(!Number.isInteger(totalRows)||totalRows<0)){editProjectError("edit-project-total-rows","Total rows must be a whole number of zero or more.");invalid=true;}
+    if(totalRows!==null&&currentRow>totalRows){editProjectError("edit-project-current-row","Current row cannot exceed total rows.");invalid=true;}
+    if(startDate&&finishDate&&finishDate<startDate){editProjectError("edit-project-finish-date","Finish date cannot be before the start date.");invalid=true;}
+    if(!validProjectUrl(patternUrl)){editProjectError("edit-project-pattern-url","Enter a complete http:// or https:// URL.");invalid=true;}
+    if(invalid)return form.querySelector('[aria-invalid="true"]')?.focus();
+    const oldCover=p.coverAsset;
+    Object.assign(p,{name,type:editProjectField("edit-project-type").value,status:editProjectField("edit-project-status").value,startDate,finishDate,row:currentRow,totalRows,yarn:editProjectField("edit-project-yarn").value.trim(),needles:editProjectField("edit-project-tools").value.trim(),gauge:editProjectField("edit-project-gauge").value.trim(),size:editProjectField("edit-project-size").value.trim(),sizingNotes:editProjectField("edit-project-size").value.trim(),patternUrl,notes:editProjectField("edit-project-notes").value});
+    const markerCount=Math.max(0,Number(editProjectField("edit-project-markers").value)||0);
+    p.markers=p.markers.slice(0,markerCount);while(p.markers.length<markerCount)p.markers.push({id:`marker${Date.now()}-${p.markers.length}`,row:p.row,color:"#577fa8",label:`Marker ${p.markers.length+1}`});
+    if(cover){const id=`cover${Date.now()}`;await putAsset(id,cover);p.coverAsset=id;window.YarnchaCloud?.queueCoverUpload?.(p.id,id,cover);if(oldCover&&oldCover!==id)await deleteAsset(oldCover);}
+    else if(removeCover){p.coverAsset=null;if(oldCover)await deleteAsset(oldCover);}
+    if(startDate)p.started=new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"});
+    dirty=false;saveProjectTouch(p);document.getElementById("breadcrumb").textContent=p.name;closeModal(true);renderToday();renderProjects();renderProjectDetail();toast("✓ Project updated");
+  };
 }
 function openEditRowModal(){const p=getProject();openModal(`<p class="eyebrow">ROW COUNTER</p><h2>Set exact row</h2><div class="field"><label>Current row</label><input id="exact-row" type="number" min="0" value="${p.row}"></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-exact-row">Set row</button></div>`);document.getElementById("save-exact-row").onclick=()=>{p.row=Math.max(0,+document.getElementById("exact-row").value||0);if(p.totalRows)p.row=Math.min(p.totalRows,p.row);saveState();closeModal();renderProjectDetail();};}
 function openMarkerModal(markerId=null){const p=getProject(),marker=p.markers.find(m=>m.id===markerId);openModal(`<p class="eyebrow">STITCH MARKER</p><h2>${marker?"Edit":"Add"} marker</h2><div class="form-grid"><div class="field"><label>Row</label><input id="marker-row" type="number" min="0" value="${marker?.row??p.row}"></div><div class="field"><label>HEX color</label><input id="marker-color" type="color" value="${validHex(marker?.color)?marker.color:"#577fa8"}"></div><div class="field full"><label>Label</label><input id="marker-label" value="${escapeHtml(marker?.label||"")}" placeholder="e.g. sleeve join"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-marker">Save marker</button></div>`);document.getElementById("save-marker").onclick=()=>{const values={row:Math.max(0,+document.getElementById("marker-row").value||0),color:document.getElementById("marker-color").value,label:document.getElementById("marker-label").value.trim()||document.getElementById("marker-color").value};if(marker)Object.assign(marker,values);else p.markers.push({id:`marker${Date.now()}`,...values});saveState();closeModal();renderProjectDetail();};}
@@ -2204,8 +2399,18 @@ document.getElementById("app-language").onchange=e=>{state.language=e.target.val
 document.querySelectorAll(".nav-item").forEach(button => {
   button.onclick = () => showView(button.dataset.view);
 });
-document.getElementById("modal-close").onclick = closeModal;
+document.getElementById("modal-close").onclick = () => closeModal();
 document.getElementById("modal-backdrop").onclick = e => { if (e.target.id === "modal-backdrop") closeModal(); };
+document.addEventListener("keydown",event=>{
+  const backdrop=document.getElementById("modal-backdrop");if(!backdrop.classList.contains("open"))return;
+  if(event.key==="Escape"){event.preventDefault();closeModal();return;}
+  if(event.key!=="Tab")return;
+  const focusable=[...backdrop.querySelectorAll('button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),a[href]')].filter(node=>!node.hidden&&node.offsetParent!==null);
+  if(!focusable.length)return;
+  const first=focusable[0],last=focusable.at(-1);
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+});
 document.getElementById("mobile-menu").onclick = () => document.querySelector(".sidebar").classList.toggle("open");
 document.getElementById("phone-help").onclick=()=>openModal(`<p class="eyebrow">DEVICE ACCESS</p><h2>Open Yarncha on your phone</h2><p><strong>On this Mac:</strong> open <code>http://localhost:4183/</code> while the Yarncha preview server is running.</p><p><strong>On your phone:</strong> localhost points to the phone itself, so it will not open Yarncha. Connect the phone and Mac to the same Wi-Fi, then open <code>http://MAC_LOCAL_IP:4183/</code> using the Mac's local network address.</p><p><strong>If it still does not connect:</strong> allow incoming connections through the Mac firewall and try another available port such as 4184 or 5173.</p><p><strong>Deployed website:</strong> once Yarncha is deployed, use its hosted address instead of a local network address.</p><div class="privacy-note">Local browser storage does not automatically sync between devices or browsers. Export a backup before switching browser, clearing data, or moving device.</div><div class="modal-actions"><button class="primary-button" onclick="closeModal()">Close</button></div>`);
 document.getElementById("account-button").onclick=openAccountModal;
