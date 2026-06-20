@@ -1,0 +1,21 @@
+{
+  "name": "yarncha",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 4183",
+    "build": "vite build && node scripts/copy-static.mjs",
+    "preview": "vite preview --host 0.0.0.0 --port 4183",
+    "start": "vite --host 0.0.0.0 --port 4183",
+    "start:4184": "python3 -m http.server 4184 --bind 0.0.0.0",
+    "start:5173": "python3 -m http.server 5173 --bind 0.0.0.0",
+    "test:calculators": "node tests/run-calculator-tests.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4"
+  },
+  "devDependencies": {
+    "vite": "^7.1.7"
+  }
+}
