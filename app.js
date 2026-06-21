@@ -43,7 +43,6 @@ const starterData = {
     }
   ],
   librarySections: [
-    { id: "tutorials", name: "Stitch Technique Refresher", icon: "⌁", description: "Your own named sections, PDFs and technique notes.", items: [] },
     { id: "patterns", name: "My Pattern library", icon: "▦", description: "Patterns and charts you want to keep.", items: [] },
     { id: "ideas", name: "My project ideas", icon: "✦", description: "Inspiration, sketches and future makes.", items: [] },
     { id: "materials", name: "Yarn materials", icon: "◌", description: "Natural and synthetic fibres, texture, season and care reference.", items: [] },
@@ -60,6 +59,7 @@ const starterData = {
   purchaseHistory:[],
   language:"en",
   unitSystem:"metric",
+  appPreferences:{notifications:false,voice:true},
   theme:{name:"creamy-vanilla",style:"original-classic",mode:"system"},
   onboardingComplete:false,
   onboardingStep:0,
@@ -68,14 +68,16 @@ const starterData = {
   yarnMaterials:[],
   techniqueKnowledge:[],
   projectIdeas:[],
-  symbolFavorites:[]
+  symbolFavorites:[],
+  userTechniqueReferences:{},
+  userSymbolsOverride:{}
 };
 
 let state = loadState();
 let currentProjectId = state.activeProjectId;
 let currentLibrarySection = null;
 let currentSymbolId = null;
-let symbolFilters = { search:"", craft:"All", category:"All", difficulty:"All" };
+let symbolFilters = { search:"", craft:"All", category:"All", difficulty:"All", terminology:"All", verification:"All", sort:"Default" };
 let currentProjectTool = "swatch";
 let currentToolCategory = "All";
 let currentToolSearch = "";
@@ -144,7 +146,13 @@ function loadState() {
       if(!merged.librarySections.some(s=>s.id===id))merged.librarySections.push(structuredClone(starterData.librarySections.find(s=>s.id===id)));
     }
     const tutorialSection=merged.librarySections.find(s=>s.id==="tutorials");
-    if(tutorialSection&&/Stitch\s+tutorial\s+aids/i.test(tutorialSection.name))tutorialSection.name="Stitch Technique Refresher";
+    if(tutorialSection){
+      if((tutorialSection.items||[]).length){
+        tutorialSection.id="personal-references";
+        tutorialSection.name="Personal References (legacy)";
+        tutorialSection.description="Your existing personal uploads from an earlier Yarncha version.";
+      }else merged.librarySections=merged.librarySections.filter(section=>section.id!=="tutorials");
+    }
     merged.inventory = saved.inventory || structuredClone(starterData.inventory);
     merged.cart = saved.cart || [];
     merged.marketBudget = Number(saved.marketBudget) || starterData.marketBudget;
@@ -152,6 +160,7 @@ function loadState() {
     merged.purchaseHistory = saved.purchaseHistory || [];
     merged.language = saved.language || "en";
     merged.unitSystem = saved.unitSystem || "metric";
+    merged.appPreferences = {...starterData.appPreferences,...(saved.appPreferences||{})};
     merged.theme = {...structuredClone(starterData.theme), ...(saved.theme || {})};
     merged.theme.name = normalizeThemeName(merged.theme.name);
     merged.theme.style = normalizeDesignStyle(merged.theme.style);
@@ -162,6 +171,8 @@ function loadState() {
     merged.yarnMaterials = saved.yarnMaterials?.length ? saved.yarnMaterials : defaultYarnMaterials();
     merged.techniqueKnowledge = saved.techniqueKnowledge || [];
     merged.symbolFavorites = saved.symbolFavorites || [];
+    merged.userTechniqueReferences = saved.userTechniqueReferences || {};
+    merged.userSymbolsOverride = saved.userSymbolsOverride || {};
     merged.projectIdeas = (saved.projectIdeas || []).map(normalizeProjectIdea);
     merged.ideaFilters = saved.ideaFilters || {search:"",craft:"All",kind:"All",showArchived:false};
     merged.projects = (saved.projects || starterData.projects).map(p => ({
@@ -240,6 +251,7 @@ function escapeHtml(value = "") { return value.replace(/[&<>"']/g, c => ({ "&":"
 const uiIconPaths={
   voice:'<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path>',
   camera:'<rect x="3.5" y="6.5" width="17" height="13" rx="2"></rect><path d="m8 6.5 1.3-2h5.4l1.3 2"></path><circle cx="12" cy="13" r="3.25"></circle>',
+  image:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="m5.5 17 4.5-4 3 2.5 2.5-2 3 3.5"></path>',
   folder:'<path d="M3.5 7.5h6l2-2h9v13.5h-17Z"></path>',
   book:'<path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v13H7a2 2 0 0 1-2-2Z"></path><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H18M9 8h5"></path>',
   pattern:'<path d="M4 6h16M4 12h16M4 18h16M7 3v18M17 3v18"></path>',
@@ -257,12 +269,17 @@ const uiIconPaths={
   close:'<path d="m6 6 12 12M18 6 6 18"></path>',
   undo:'<path d="M9 7 5 11l4 4"></path><path d="M6 11h7a6 6 0 0 1 6 6"></path>',
   redo:'<path d="m15 7 4 4-4 4"></path><path d="M18 11h-7a6 6 0 0 0-6 6"></path>',
+  edit:'<path d="m5 19 3.8-1 9.7-9.7-2.8-2.8L6 15.2Z"></path><path d="m14.5 6.7 2.8 2.8M5 21h14"></path>',
   calculator:'<rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M8 7h8M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1M8 18h1M12 18h5"></path>',
   measure:'<path d="M4 17 17 4l3 3L7 20Z"></path><path d="m9 15-2-2M12 12l-2-2M15 9l-2-2"></path>',
   garment:'<path d="m8 5 4-2 4 2 4 4-3 2v9H7v-9L4 9Z"></path>',
   circle:'<circle cx="12" cy="12" r="8"></circle><path d="M12 4v16M4 12h16"></path>',
   render:'<rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M4 10h16M10 4v16"></path>',
   exchange:'<path d="M5 8h13M15 5l3 3-3 3M19 16H6M9 13l-3 3 3 3"></path>'
+  ,appearance:'<circle cx="12" cy="12" r="8"></circle><path d="M12 4a8 8 0 0 0 0 16c2 0 2.5-2.2 1-3.4-1.2-1-.5-2.6 1-2.6h2.5A3.5 3.5 0 0 0 20 10.5"></path><circle cx="9" cy="8" r=".7"></circle><circle cx="6.8" cy="11.5" r=".7"></circle>',
+  preferences:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle>',
+  storage:'<ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path>',
+  info:'<circle cx="12" cy="12" r="9"></circle><path d="M12 10v6M12 7h.01"></path>'
 };
 function uiIcon(name,className="ui-icon"){return `<svg class="${className}" aria-hidden="true" viewBox="0 0 24 24">${uiIconPaths[name]||uiIconPaths.calculator}</svg>`;}
 function toast(message) {
@@ -271,7 +288,7 @@ function toast(message) {
 }
 const hkTranslations={
   "Today":"今日","Projects":"專案","Yarn Stash":"毛線庫存","Library":"資料庫","Tools":"工具","Your projects":"你的專案",
-  "Settings":"設定","Stitch Technique Refresher":"針法技巧溫習","Reading Mode":"閱讀模式","Exit Reading":"離開閱讀模式",
+  "Settings":"設定","Reading Mode":"閱讀模式","Exit Reading":"離開閱讀模式",
   "My workspace":"我的工作區","Saved on this device":"已儲存在此裝置","New project":"新增專案","Good afternoon, maker.":"午安，手作人。",
   "Everything is right where you left it.":"所有內容都停留在你上次離開的位置。","In progress":"進行中","View all projects →":"查看所有專案 →",
   "Maker's toolkit":"手作工具箱","Swatch adapter":"織片調整器","Shape evenly":"平均加減針","Converters":"換算工具",
@@ -279,7 +296,7 @@ const hkTranslations={
   "Next row":"下一行","Project notes":"專案筆記","Stitch marker":"記號扣","Ask about this chart":"詢問此圖解","Buy list":"購買清單",
   "Ask about the current row, abbreviations, repeats, translation, or where you are stuck. Visual symbol recognition is paused; verify chart symbols manually.":"你可以詢問目前行數、縮寫、重複段落、翻譯，或卡住的位置。視覺符號辨識已暫停；請手動核對圖解符號。",
   "AI chart reader beta is paused. Manual OG Chart Mode is the reliable daily workflow right now.":"AI 圖解閱讀 Beta 已暫停。現階段最可靠的日常流程是手動 OG 圖解模式。",
-  "The assistant can use your uploaded text, project notes, and Stitch Technique Refresher notes, but it should never guess an unclear symbol.":"助理可以參考你上載的文字、專案筆記及針法技巧溫習筆記，但不應猜測不清楚的符號。",
+  "The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.":"助理可以參考你上載的文字、專案筆記及個人符號參考，但不應猜測不清楚的符號。",
   "OG Mode":"OG 模式","Flow Mode (Beta)":"Flow 模式（Beta）","Manual chart reading":"手動圖解閱讀","Manual Reading Mode is recommended for accurate tracking.":"建議使用手動閱讀模式作準確追蹤。",
   "Flow Mode is paused. It will return later as a reviewed AI-assisted workflow.":"Flow 模式已暫停。稍後會以經審核的 AI 輔助流程回歸。",
   "Row Mask":"行遮罩","Lock mask":"鎖定遮罩","Unlock mask":"解鎖遮罩","Clear mask":"清除遮罩","Cover done":"遮住已完成行","Edit Counter":"編輯計數器","Reset Progress":"重設進度",
@@ -360,6 +377,7 @@ async function hydrateProjectCovers(){
 }
 
 function renderToday() {
+  renderTimeGreeting();
   const p = getProject(state.activeProjectId);
   const host = document.getElementById("active-project-card");
   if (!p) {
@@ -377,6 +395,26 @@ function renderToday() {
     </div>
   </article>`;
   hydrateProjectCovers();
+}
+
+function localCraftGreeting(){
+  const hour=new Date().getHours();
+  if(state.language==="zh-HK"){
+    if(hour>=5&&hour<12)return"早晨！準備好開始今日的新一行嗎？";
+    if(hour<17)return"午安！你的手作專案正在等你。";
+    if(hour<22)return"晚安！來織幾針，輕鬆一下吧。";
+    return"夜深了！睡前記得保存進度。";
+  }
+  if(hour>=5&&hour<12)return"Good morning! Ready to start a fresh row today?";
+  if(hour<17)return"Good afternoon! Your project is waiting for you.";
+  if(hour<22)return"Good evening! A few relaxing stitches sound nice.";
+  return"Good night! Remember to save your progress before bed.";
+}
+function renderTimeGreeting(){
+  const title=document.getElementById("today-greeting");
+  if(title)title.textContent=localCraftGreeting();
+  const date=document.getElementById("today-date");
+  if(date)date.textContent=new Intl.DateTimeFormat(state.language==="zh-HK"?"zh-HK":"en-AU",{weekday:"long",month:"long",day:"numeric"}).format(new Date()).toUpperCase();
 }
 
 function renderProjects() {
@@ -553,7 +591,7 @@ function openToolHistoryModal(id){
   document.getElementById("save-history-modal").onclick=()=>{item.notes=document.getElementById("history-modal-notes").value;saveProjectTouch(p);closeModal();renderProjectDetail();};
 }
 function projectAssistantTabHtml(p){
-  return `<div class="assistant-tab-grid">${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Automatic Flow Mode remains paused. The optional signed-in cloud chart reader produces an editable draft; Manual OG Chart Mode remains the reliable daily workflow.</p><p>The assistant can use your uploaded text, project notes, and Stitch Technique Refresher notes, but it should never guess an unclear symbol.</p></div></div>`;
+  return `<div class="assistant-tab-grid">${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Automatic Flow Mode remains paused. The optional signed-in cloud chart reader produces an editable draft; Manual OG Chart Mode remains the reliable daily workflow.</p><p>The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.</p></div></div>`;
 }
 function themeLabel(t){return themePresets.find(theme=>theme.id===normalizeThemeName(t))?.name||t;}
 function styleLabel(s){return designStyles.find(style=>style.id===normalizeDesignStyle(s))?.name||s;}
@@ -1353,8 +1391,8 @@ function findPdfReference(text,question,row){
   return ranked[0]?.score>0?ranked[0].s.slice(0,600):"";
 }
 function techniqueKnowledgeText(){
-  const tutorial=state.librarySections.find(s=>s.id==="tutorials");
-  const items=(tutorial?.items||[]).map(i=>`Technique sheet: ${i.name}. ${i.craft||""}. ${i.notes||""}`).join("\n");
+  const legacy=state.librarySections.find(s=>s.id==="personal-references");
+  const items=(legacy?.items||[]).map(i=>`Personal reference: ${i.name}. ${i.craft||""}. ${i.notes||""}`).join("\n");
   const saved=(state.techniqueKnowledge||[]).map(i=>`${i.name}: ${i.text}`).join("\n");
   return [items,saved].filter(Boolean).join("\n");
 }
@@ -1618,46 +1656,269 @@ async function hydrateIdeaImages(){
 }
 function librarySectionCount(section){
   if(section.id==="materials")return state.yarnMaterials.length;
-  if(section.id==="symbols")return window.YarnchaSymbolDatabase?.entries.length||0;
+  if(section.id==="symbols")return window.YarnchaSymbolDatabase?mergedSymbolEntries().length:0;
   if(section.id==="tool-manual")return toolkitToolDefs.length;
   if(section.id==="theory")return Object.values(theoryTopics).reduce((sum,items)=>sum+items.length,0);
   if(section.id==="ideas")return (state.projectIdeas||[]).length;
   return (section.items||[]).length;
 }
-function librarySectionIcon(sectionId){return uiIcon(({tutorials:"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
+function librarySectionIcon(sectionId){return uiIcon(({"personal-references":"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
+function symbolRegionBadges(entry){return (entry.regionTags||[]).map(tag=>`<span class="symbol-region-badge">${escapeHtml(tag)}</span>`).join("");}
+const symbolSvgPaths={
+  knit:'<path d="M32 10v44"></path>',
+  purl:'<path d="M10 32h44"></path>',
+  slip:'<path d="m14 42 12-20 12 20 12-20"></path>',
+  "yarn-over":'<circle cx="32" cy="32" r="17"></circle>',
+  "double-yarn-over":'<circle cx="23" cy="32" r="12"></circle><circle cx="41" cy="32" r="12"></circle>',
+  "knit-twisted":'<path d="M32 8v48"></path><path d="M21 23c0-10 22-10 22 0s-22 10-22 20 22 10 22 0"></path>',
+  "purl-twisted":'<path d="M9 32h46"></path><path d="M22 18c-9 0-9 20 0 20s9-20 20-20 11 20 0 20"></path>',
+  increase:'<path d="M12 14 32 52 52 14"></path>',
+  "increase-kfb":'<path d="M32 54V31M32 31 18 12M32 31 46 12M18 12h10"></path>',
+  "increase-left":'<path d="M12 14 32 52 52 14"></path><path d="M19 41 13 51"></path>',
+  "increase-right":'<path d="M12 14 32 52 52 14"></path><path d="m45 41 6 10"></path>',
+  "purl-increase":'<path d="M12 14 32 52 52 14M15 27h34"></path>',
+  "decrease-right":'<path d="m16 52 32-40"></path>',
+  "decrease-left":'<path d="m16 12 32 40"></path>',
+  "purl-decrease-right":'<path d="m16 52 32-40M11 32h42"></path>',
+  "purl-decrease-left":'<path d="m16 12 32 40M11 32h42"></path>',
+  "decrease-centred":'<path d="m12 18 20 34 20-34M32 52V10"></path>',
+  "decrease-joined":'<path d="m12 50 20-36 20 36M18 42h28"></path>',
+  "crochet-chain":'<ellipse cx="32" cy="32" rx="22" ry="12"></ellipse>',
+  "crochet-slip":'<circle class="symbol-svg-fill" cx="32" cy="32" r="10"></circle>',
+  "crochet-sc":'<path d="m14 14 36 36M50 14 14 50"></path>',
+  "crochet-hdc":'<path d="M10 15h44M32 15v40"></path>',
+  "crochet-dc":'<path d="M10 15h44M32 15v40M24 31l16-9"></path>',
+  "crochet-tr":'<path d="M10 15h44M32 15v40M23 29l18-10M23 39l18-10"></path>',
+  "crochet-dtr":'<path d="M10 15h44M32 15v40M23 27l18-10M23 37l18-10M23 47l18-10"></path>',
+  chain:'<ellipse cx="32" cy="32" rx="22" ry="12"></ellipse>',
+  "slip-stitch-crochet":'<circle class="symbol-svg-fill" cx="32" cy="32" r="9"></circle>',
+  "single-crochet":'<path d="m14 14 36 36M50 14 14 50"></path>',
+  "half-double-crochet":'<path d="M10 15h44M32 15v40"></path>',
+  "double-crochet":'<path d="M10 15h44M32 15v40M23 31l18-10"></path>',
+  "treble-crochet":'<path d="M10 15h44M32 15v40M23 28l18-9M23 39l18-9"></path>',
+  "double-treble-crochet":'<path d="M10 15h44M32 15v40M23 25l18-8M23 35l18-8M23 45l18-8"></path>',
+  "single-crochet-increase":'<path d="M32 52 16 16M32 52 48 16M10 24l14-7M40 17l14 7"></path>',
+  "half-double-crochet-increase":'<path d="M32 52 18 15M32 52 46 15M9 15h18M37 15h18"></path>',
+  "double-crochet-increase":'<path d="M32 52 18 15M32 52 46 15M9 15h18M37 15h18M14 32l12-7M38 25l12 7"></path>',
+  "single-crochet-decrease":'<path d="M16 50 32 13 48 50M10 42l13 6M41 48l13-6"></path>',
+  "half-double-crochet-decrease":'<path d="M17 52 32 15 47 52M22 52H8M42 52h14M24 15h16"></path>',
+  "double-crochet-decrease":'<path d="M17 52 32 15 47 52M22 52H8M42 52h14M24 15h16M18 39l12-7M34 32l12 7"></path>',
+  "front-loop":'<path d="M10 39c11-22 33-22 44 0"></path>',
+  "back-loop":'<path d="M10 25c11 22 33 22 44 0"></path>',
+  "front-post":'<path d="M18 12h30M33 12v43M25 30l16-9M33 44c-18 0-18-18 0-18"></path>',
+  "back-post":'<path d="M16 12h30M31 12v43M23 30l16-9M31 26c18 0 18 18 0 18"></path>',
+  "cable-left":'<path d="M14 52 50 12"></path><path class="symbol-svg-under" d="M14 12 50 52"></path><path d="M14 12 50 52"></path>',
+  "cable-right":'<path d="M14 12 50 52"></path><path class="symbol-svg-under" d="M14 52 50 12"></path><path d="M14 52 50 12"></path>',
+  "cable-left-wide":'<path d="M8 52 44 12M20 52 56 12"></path><path class="symbol-svg-under" d="M8 12 44 52M20 12 56 52"></path><path d="M8 12 44 52M20 12 56 52"></path>',
+  "cable-right-wide":'<path d="M8 12 44 52M20 12 56 52"></path><path class="symbol-svg-under" d="M8 52 44 12M20 52 56 12"></path><path d="M8 52 44 12M20 52 56 12"></path>',
+  "cable-left-3-3":'<path d="M4 54 38 10M14 54 48 10M24 54 58 10"></path><path class="symbol-svg-under" d="M4 10 38 54M14 10 48 54M24 10 58 54"></path><path d="M4 10 38 54M14 10 48 54M24 10 58 54"></path>',
+  "cable-right-3-3":'<path d="M4 10 38 54M14 10 48 54M24 10 58 54"></path><path class="symbol-svg-under" d="M4 54 38 10M14 54 48 10M24 54 58 10"></path><path d="M4 54 38 10M14 54 48 10M24 54 58 10"></path>',
+  "cable-left-purl":'<path d="M14 52 50 12"></path><path class="symbol-svg-under" d="M14 12 50 52"></path><path d="M14 12 50 52M20 56h24"></path>',
+  "cable-right-purl":'<path d="M14 12 50 52"></path><path class="symbol-svg-under" d="M14 52 50 12"></path><path d="M14 52 50 12M20 56h24"></path>',
+  "cable-twisted":'<path d="M14 52 50 12M14 12 50 52"></path><circle cx="32" cy="32" r="7"></circle>',
+  "cable-cross":'<path d="M13 13 51 51M51 13 13 51"></path>',
+  cluster:'<path d="M13 50 28 17M24 50l8-33M40 50l-8-33M51 50 36 17M24 17h16M17 35l12-6M35 29l12 6"></path>',
+  "cluster-decrease":'<path d="M13 50 29 18M25 50l7-32M39 50l-7-32M51 50 35 18M25 18h14"></path><circle class="symbol-svg-fill" cx="32" cy="16" r="3"></circle>',
+  puff:'<path d="M32 50C10 44 12 19 32 14M32 50c22-6 20-31 0-36M32 50c-10-10-10-26 0-36M32 50c10-10 10-26 0-36"></path><path d="M25 14h14M25 50h14"></path>',
+  "cyc-hdc-cluster":'<path d="M32 52C12 45 13 21 32 13M32 52c20-7 19-31 0-39M32 52c-9-11-9-28 0-39M32 52c9-11 9-28 0-39"></path><path d="M22 13h20M22 52h20"></path>',
+  bobble:'<path d="M32 51c-20 0-21-35 0-38 21 3 20 38 0 38ZM24 17c7 8 7 22 0 30M40 17c-7 8-7 22 0 30"></path>',
+  "knit-bobble":'<circle cx="32" cy="32" r="15" class="symbol-svg-fill"></circle>',
+  popcorn:'<path d="M16 48 26 18M24 50l8-34M40 50l-8-34M48 48 38 18M12 47c12 8 28 8 40 0M22 18h20"></path>',
+  shell:'<path d="M32 52 12 18M32 52 22 16M32 52V15M32 52 42 16M32 52 52 18M8 18h9M18 16h9M28 15h8M37 16h9M47 18h9"></path>',
+  "v-stitch":'<path d="M32 52 18 15M32 52 46 15M9 15h18M37 15h18M14 32l12-7M38 25l12 7"></path>',
+  "y-stitch":'<path d="M32 54V31M32 31 16 12M32 31 48 12"></path>',
+  "crochet-cross":'<path d="M16 51 45 15M48 51 19 15M10 15h18M36 15h18M23 37l13-8M28 29l13 8"></path>',
+  picot:'<path d="M32 52V35"></path><ellipse cx="24" cy="27" rx="8" ry="5"></ellipse><ellipse cx="32" cy="18" rx="8" ry="5"></ellipse><ellipse cx="40" cy="27" rx="8" ry="5"></ellipse>',
+  "crochet-generic":'<path d="M12 50 32 14 52 50"></path><circle cx="32" cy="14" r="5"></circle>',
+  "special-stitch":'<path d="m32 10 20 22-20 22L12 32Z"></path>',
+  "chart-rule":'<path d="M8 21h48M8 43h48M19 13l-9 8 9 8M45 35l9 8-9 8"></path>',
+  "legend-specific":'<rect x="9" y="10" width="46" height="44" rx="4"></rect><path d="M17 21h30M17 31h20M17 41h26"></path>'
+};
+const symbolVerificationOptions=["To Be Confirmed","Confirmed","Manually Verified"];
+const symbolCraftOptions=["Knitting","Crochet","Tunisian","Shared"];
+const symbolDifficultyOptions=["Beginner","Intermediate","Advanced"];
+const symbolSourceOptions=["CYC","common-knitting","jp-cn-chart","needs-review"];
+function loadSymbolOverrides(){return state.userSymbolsOverride&&typeof state.userSymbolsOverride==="object"?state.userSymbolsOverride:{};}
+function symbolSectionForCraft(craft){return ({Knitting:"Knitting Symbols & Abbreviations",Crochet:"Crochet Symbols & Abbreviations",Tunisian:"Tunisian Crochet Symbols & Abbreviations",Shared:"Special Stitches"})[craft]||"Special Stitches";}
+function normalizeEditableSymbol(raw={}){
+  const database=window.YarnchaSymbolDatabase;
+  const normalized=database.normalizeEntry({...raw,fullName:raw.nameEn||raw.nameEnglish||raw.fullName,nameEnglish:raw.nameEn||raw.nameEnglish||raw.fullName,nameTraditionalChinese:raw.nameZh||raw.nameTraditionalChinese||"需核對"});
+  const status=symbolVerificationOptions.includes(raw.verificationStatus)?raw.verificationStatus:"To Be Confirmed";
+  const needsReview=raw.needsReview===undefined?status==="To Be Confirmed":!!raw.needsReview;
+  return {...normalized,...raw,nameEn:raw.nameEn||normalized.nameEn,nameEnglish:raw.nameEn||normalized.nameEnglish,fullName:raw.nameEn||normalized.fullName,nameZh:raw.nameZh||normalized.nameZh,nameTraditionalChinese:raw.nameZh||normalized.nameTraditionalChinese,symbolType:raw.symbolType||raw.symbolIcon||normalized.symbolType,symbolIcon:raw.symbolType||raw.symbolIcon||normalized.symbolIcon,section:symbolSectionForCraft(raw.craft||normalized.craft),tags:Array.isArray(raw.tags)?raw.tags:typeof raw.tags==="string"?raw.tags.split(",").map(tag=>tag.trim()).filter(Boolean):normalized.tags||[],notes:raw.notes||"",customSvg:raw.customSvg||"",verificationStatus:status,verifiedDate:raw.verifiedDate||"",verifiedBy:raw.verifiedBy||"",verificationNotes:raw.verificationNotes||"",needsReview,flowModeReady:!needsReview,reviewStatus:needsReview?"needs-review":"reviewed-foundation"};
+}
+function mergedSymbolEntries(){
+  const database=window.YarnchaSymbolDatabase,overrides=loadSymbolOverrides(),defaultIds=new Set(database.defaultSymbols.map(entry=>entry.id));
+  const merged=database.defaultSymbols.flatMap(entry=>{const override=overrides[entry.id];if(override?.deleted)return[];return[normalizeEditableSymbol(override?{...entry,...override}:entry)];});
+  for(const [id,override] of Object.entries(overrides)){if(!defaultIds.has(id)&&!override?.deleted)merged.push(normalizeEditableSymbol({...override,id,isCustom:true}));}
+  return merged;
+}
+function saveSymbolOverride(entry){
+  const normalized=normalizeEditableSymbol(entry);
+  state.userSymbolsOverride={...loadSymbolOverrides(),[normalized.id]:structuredClone(normalized)};
+  saveState();return normalized;
+}
+function resetSymbolOverride(id){const overrides={...loadSymbolOverrides()};delete overrides[id];state.userSymbolsOverride=overrides;saveState();}
+function sanitizeCustomSymbolSvg(input=""){
+  const text=String(input).trim();if(!text)return{ok:true,value:""};
+  if(text.length>12000)return{ok:false,error:"Custom SVG is too large."};
+  try{
+    const wrapped=/^<svg[\s>]/i.test(text)?text:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${text}</svg>`;
+    const doc=new DOMParser().parseFromString(wrapped,"image/svg+xml"),root=doc.documentElement;
+    if(root.tagName.toLowerCase()!=="svg"||doc.querySelector("parsererror"))return{ok:false,error:"SVG markup could not be parsed."};
+    const allowedElements=new Set(["svg","g","path","circle","ellipse","line","polyline","polygon","rect"]),allowedAttributes=new Set(["xmlns","viewBox","d","cx","cy","r","rx","ry","x","y","x1","y1","x2","y2","width","height","points","transform","fill","stroke","stroke-width","stroke-linecap","stroke-linejoin","class"]);
+    for(const element of root.querySelectorAll("*")){
+      if(!allowedElements.has(element.tagName.toLowerCase()))return{ok:false,error:`SVG element <${element.tagName}> is not allowed.`};
+      for(const attribute of [...element.attributes]){
+        if(!allowedAttributes.has(attribute.name)||/^on/i.test(attribute.name)||/url\s*\(|javascript:/i.test(attribute.value))return{ok:false,error:`SVG attribute ${attribute.name} is not allowed.`};
+      }
+    }
+    for(const attribute of [...root.attributes])if(!allowedAttributes.has(attribute.name))return{ok:false,error:`SVG attribute ${attribute.name} is not allowed.`};
+    return{ok:true,value:root.innerHTML};
+  }catch{return{ok:false,error:"SVG markup is invalid."};}
+}
+function validateSymbolEntry(entry){
+  const errors=[];
+  if(!String(entry.nameEn||"").trim())errors.push("English name is required.");
+  if(!String(entry.abbreviation||"").trim()&&!String(entry.symbolType||"").trim()&&!String(entry.customSvg||"").trim())errors.push("Add an abbreviation, symbol type, or custom SVG.");
+  if(!symbolCraftOptions.includes(entry.craft))errors.push("Choose a valid craft type.");
+  if(!window.YarnchaSymbolDatabase.categoryOrder.includes(entry.category))errors.push("Choose a valid category.");
+  if(!symbolDifficultyOptions.includes(entry.difficulty))errors.push("Choose a valid difficulty.");
+  if(!symbolSourceOptions.includes(entry.sourceType))errors.push("Choose a valid source type.");
+  if(!symbolVerificationOptions.includes(entry.verificationStatus))errors.push("Choose a valid verification status.");
+  if(!["High","Medium","Low"].includes(entry.confidence))errors.push("Choose a valid confidence level.");
+  if(entry.confidence!=="High"){entry.verificationStatus="To Be Confirmed";entry.needsReview=true;entry.flowModeReady=false;}
+  if(entry.sourceUrl&&!/^https:\/\//i.test(entry.sourceUrl))errors.push("Source URL must begin with https://.");
+  if(entry.customSvg){const result=sanitizeCustomSymbolSvg(entry.customSvg);if(!result.ok)errors.push(result.error);else entry.customSvg=result.value;}
+  return{valid:errors.length===0,errors,entry};
+}
+function safeSourceLink(entry){return /^https:\/\//i.test(entry.sourceUrl||"")?`<a href="${escapeHtml(entry.sourceUrl)}" target="_blank" rel="noopener noreferrer">Open source</a>`:"Uploaded or pattern-specific reference";}
+function exportSymbolsJson(){
+  const payload={app:"Yarncha",kind:"symbol-database-overrides",schemaVersion:5,exportedAt:new Date().toISOString(),overrides:loadSymbolOverrides(),symbols:mergedSymbolEntries()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download=`yarncha-symbols-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(url);toast("Symbol database exported");
+}
+async function importSymbolsJson(file){
+  try{
+    const parsed=JSON.parse(await file.text()),incoming=parsed.overrides&&typeof parsed.overrides==="object"?Object.values(parsed.overrides):Array.isArray(parsed)?parsed:Array.isArray(parsed.symbols)?parsed.symbols:[];
+    if(!incoming.length)throw new Error("No symbol entries found");
+    const next={...loadSymbolOverrides()};let imported=0,skipped=0;
+    for(const raw of incoming){
+      if(raw?.deleted&&raw.id){next[raw.id]={id:raw.id,deleted:true};imported++;continue;}
+      const candidate=normalizeEditableSymbol({...raw,id:raw.id||`custom-symbol-${Date.now()}-${imported}`,verificationStatus:raw.verificationStatus||"To Be Confirmed",isCustom:raw.isCustom!==false});
+      const result=validateSymbolEntry(candidate);if(!result.valid){skipped++;continue;}next[candidate.id]=structuredClone(result.entry);imported++;
+    }
+    if(!imported)throw new Error("No valid entries found");
+    state.userSymbolsOverride=next;saveState();renderLibrary();toast(`${imported} symbol entries imported${skipped?` · ${skipped} skipped`:""}`);
+  }catch(error){toast(`Symbol import failed: ${error.message}`);}
+}
+function symbolIconSvg(entry,className="symbol-svg-icon"){
+  const custom=entry.customSvg?sanitizeCustomSymbolSvg(entry.customSvg):{ok:true,value:""};
+  const icon=custom.ok&&custom.value?custom.value:symbolSvgPaths[entry.symbolType]||symbolSvgPaths[entry.category==="Cable"?"cable-cross":entry.category==="Increase"?"increase":entry.category==="Decrease"?"decrease-joined":"special-stitch"];
+  return `<svg class="${className}" viewBox="0 0 64 64" aria-hidden="true">${icon}</svg>`;
+}
+function techniqueReferenceHtml(entry){
+  const reference=(state.userTechniqueReferences||{})[entry.id];
+  return `<section class="technique-reference" aria-labelledby="technique-reference-title"><div class="section-heading compact-row"><div><p class="eyebrow">PERSONAL, LOCAL REFERENCE</p><h3 id="technique-reference-title">Technique Reference</h3></div></div>${reference?`<div class="technique-reference-saved">${uiIcon("image","ui-icon")}<div><strong>Personal reference saved</strong><p>${escapeHtml(reference.fileName||"Personal reference image")}</p></div></div><div class="button-row"><button class="secondary-button" id="replace-symbol-technique">Replace Image</button><button class="secondary-button danger-button" id="remove-symbol-technique">Remove Image</button></div>`:`<div class="empty-state technique-reference-empty"><p>No technique reference added yet.<br>Upload your own image, diagram, or note for this symbol.</p><button class="primary-button" id="upload-symbol-technique">Upload Image</button></div>`}<input id="symbol-technique-file" type="file" accept="image/*" hidden><p class="privacy-note">User-supplied image only. Stored locally in this browser; the reference image is not displayed in the symbol glossary.</p></section>`;
+}
+async function saveSymbolTechniqueReference(entry,file){
+  if(!file?.type?.startsWith("image/"))return toast("Choose an image file.");
+  const previous=(state.userTechniqueReferences||{})[entry.id],assetId=`symbol-reference-${entry.id}-${Date.now()}`;
+  await putAsset(assetId,file);
+  state.userTechniqueReferences={...(state.userTechniqueReferences||{}),[entry.id]:{symbolId:entry.id,assetId,fileName:file.name,mediaType:file.type,updatedAt:new Date().toISOString(),syncVersion:1}};
+  if(previous?.assetId&&previous.assetId!==assetId)await deleteAsset(previous.assetId);
+  saveState();renderLibrary();toast(previous?"Technique reference replaced":"Technique reference added");
+}
+function symbolVerificationBadge(entry){
+  const status=symbolVerificationOptions.includes(entry.verificationStatus)?entry.verificationStatus:"To Be Confirmed",className=status==="Confirmed"?"confirmed":status==="Manually Verified"?"manual":"pending";
+  return `<span class="symbol-verification-badge ${className}"><i aria-hidden="true"></i>${escapeHtml(status)}</span>`;
+}
+function symbolEditFormBaseHtml(entry,isNew=false){
+  const symbolTypes=[...new Set([...Object.keys(symbolSvgPaths),entry.symbolType].filter(Boolean))].sort();
+  return `<form class="symbol-edit-form edit-project-form" id="symbol-edit-form" novalidate><p class="eyebrow">SYMBOL DATABASE</p><h2>${isNew?"Add Symbol":"Edit Symbol"}</h2><p class="muted-copy">Defaults remain unchanged. Saving creates a local override that can be reset later.</p><div id="symbol-edit-errors" class="form-error-list" role="alert" hidden></div><div class="symbol-editor-layout"><div class="form-grid"><div class="field"><label>English name *</label><input id="symbol-edit-name-en" value="${escapeHtml(entry.nameEn||"")}"></div><div class="field"><label>Chinese name</label><input id="symbol-edit-name-zh" value="${escapeHtml(entry.nameZh||"")}"></div><div class="field"><label>Abbreviation</label><input id="symbol-edit-abbreviation" value="${escapeHtml(entry.abbreviation||"")}"></div><div class="field"><label>Chart symbol / character</label><input id="symbol-edit-visual" value="${escapeHtml(entry.visualSymbol||entry.symbol||"")}" placeholder="e.g. ○, ×, /, \\" maxlength="24"><small>Paste or type the mark shown in the chart legend.</small></div><div class="field"><label>Craft type *</label><select id="symbol-edit-craft">${symbolCraftOptions.map(value=>`<option ${entry.craft===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Category</label><select id="symbol-edit-category">${window.YarnchaSymbolDatabase.categoryOrder.map(value=>`<option ${entry.category===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Difficulty</label><select id="symbol-edit-difficulty">${symbolDifficultyOptions.map(value=>`<option ${entry.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field full"><label>Tags</label><input id="symbol-edit-tags" value="${escapeHtml((entry.tags||[]).join(", "))}" placeholder="lace, shaping, beginner"></div><div class="field"><label>Symbol type / icon key</label><select id="symbol-edit-type">${symbolTypes.map(value=>`<option ${entry.symbolType===value?"selected":""}>${escapeHtml(value)}</option>`).join("")}</select></div><div class="field symbol-edit-preview-field"><label>Live icon preview</label><div class="symbol-edit-preview" id="symbol-edit-preview">${symbolIconSvg(entry,"symbol-svg-icon")}<span>${escapeHtml(entry.visualSymbol||entry.symbol||"")}</span></div></div><div class="field full"><label>Custom SVG fragment</label><textarea id="symbol-edit-svg" rows="5" placeholder='Optional: &lt;path d="..."&gt;&lt;/path&gt;'>${escapeHtml(entry.customSvg||"")}</textarea><small>Safe SVG shapes only. Coordinates should use the 0–64 view box.</small><span id="symbol-svg-error" class="field-error"></span></div><div class="field full"><label>Explanation</label><textarea id="symbol-edit-explanation" rows="4">${escapeHtml(entry.explanation||"")}</textarea></div><div class="field full"><label>Notes</label><textarea id="symbol-edit-notes" rows="3">${escapeHtml(entry.notes||"")}</textarea></div><div class="field"><label>Source type</label><select id="symbol-edit-source">${symbolSourceOptions.map(value=>`<option ${entry.sourceType===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Verification status</label><select id="symbol-edit-verification">${symbolVerificationOptions.map(value=>`<option ${entry.verificationStatus===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field full"><label>Source note</label><textarea id="symbol-edit-source-note" rows="3">${escapeHtml(entry.sourceNote||"")}</textarea></div><label class="check-row field full"><input id="symbol-edit-needs-review" type="checkbox" ${entry.needsReview?"checked":""}><span>Needs review</span></label><div class="field"><label>Verified date</label><input id="symbol-edit-verified-date" type="date" value="${escapeHtml(entry.verifiedDate||"")}"></div><div class="field"><label>Verified by</label><input id="symbol-edit-verified-by" value="${escapeHtml(entry.verifiedBy||"")}"></div><div class="field full"><label>Verification notes</label><textarea id="symbol-edit-verification-notes" rows="3">${escapeHtml(entry.verificationNotes||"")}</textarea></div></div></div><div class="symbol-editor-secondary-actions">${!isNew&&window.YarnchaSymbolDatabase.defaultSymbols.some(item=>item.id===entry.id)?`<button class="secondary-button" type="button" id="reset-symbol-default">Reset to default</button>`:""}${!isNew?`<button class="secondary-button" type="button" id="duplicate-symbol">Duplicate symbol</button><button class="secondary-button danger-button" type="button" id="delete-symbol">Delete symbol</button>`:""}</div><div class="modal-actions"><button class="secondary-button" type="button" id="cancel-symbol-edit">Cancel</button><button class="primary-button" type="submit">Save Symbol</button></div></form>`;
+}
+function symbolEditFormHtml(entry,isNew=false){
+  const base=symbolEditFormBaseHtml(entry,isNew);
+  const auditFields=`<div class="field"><label>Confidence</label><select id="symbol-edit-confidence">${["High","Medium","Low"].map(value=>`<option ${entry.confidence===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Source name</label><input id="symbol-edit-source-name" value="${escapeHtml(entry.sourceName||"")}"></div><div class="field full"><label>Source URL</label><input id="symbol-edit-source-url" type="url" value="${escapeHtml(entry.sourceUrl||"")}" placeholder="https://"></div><div class="field"><label>Last verified date</label><input id="symbol-edit-last-verified" type="date" value="${escapeHtml(entry.lastVerifiedDate||"")}"></div>`;
+  return base.replace('<div class="field full"><label>Source note</label>',`${auditFields}<div class="field full"><label>Source note</label>`);
+}
+function symbolEntryFromEditForm(base){
+  const visualSymbol=document.getElementById("symbol-edit-visual").value.trim();
+  return normalizeEditableSymbol({...base,nameEn:document.getElementById("symbol-edit-name-en").value.trim(),nameZh:document.getElementById("symbol-edit-name-zh").value.trim(),abbreviation:document.getElementById("symbol-edit-abbreviation").value.trim(),symbol:visualSymbol,visualSymbol,craft:document.getElementById("symbol-edit-craft").value,category:document.getElementById("symbol-edit-category").value,difficulty:document.getElementById("symbol-edit-difficulty").value,tags:document.getElementById("symbol-edit-tags").value, symbolType:document.getElementById("symbol-edit-type").value,symbolIcon:document.getElementById("symbol-edit-type").value,customSvg:document.getElementById("symbol-edit-svg").value.trim(),explanation:document.getElementById("symbol-edit-explanation").value.trim(),notes:document.getElementById("symbol-edit-notes").value.trim(),sourceType:document.getElementById("symbol-edit-source").value,sourceName:document.getElementById("symbol-edit-source-name").value.trim(),sourceUrl:document.getElementById("symbol-edit-source-url").value.trim(),sourceNote:document.getElementById("symbol-edit-source-note").value.trim(),lastVerifiedDate:document.getElementById("symbol-edit-last-verified").value,confidence:document.getElementById("symbol-edit-confidence").value,needsReview:document.getElementById("symbol-edit-needs-review").checked,verificationStatus:document.getElementById("symbol-edit-verification").value,verifiedDate:document.getElementById("symbol-edit-verified-date").value,verifiedBy:document.getElementById("symbol-edit-verified-by").value.trim(),verificationNotes:document.getElementById("symbol-edit-verification-notes").value.trim()});
+}
+function updateSymbolEditPreview(base){
+  const preview=document.getElementById("symbol-edit-preview"),error=document.getElementById("symbol-svg-error");if(!preview||!error)return;
+  const customSvg=document.getElementById("symbol-edit-svg").value.trim(),result=sanitizeCustomSymbolSvg(customSvg);error.textContent=result.ok?"":result.error;
+  const visualSymbol=document.getElementById("symbol-edit-visual").value.trim();
+  preview.innerHTML=(result.ok?symbolIconSvg({...base,symbolType:document.getElementById("symbol-edit-type").value,customSvg:result.value},"symbol-svg-icon"):symbolIconSvg({...base,customSvg:""},"symbol-svg-icon"))+`<span>${escapeHtml(visualSymbol)}</span>`;
+}
+function deleteSymbolEntry(entry){
+  if(!confirm(`Delete “${entry.nameEn}”? You can restore a default entry by resetting its override.`))return;
+  const overrides={...loadSymbolOverrides()},isDefault=window.YarnchaSymbolDatabase.defaultSymbols.some(item=>item.id===entry.id);
+  if(isDefault)overrides[entry.id]={id:entry.id,deleted:true};else delete overrides[entry.id];
+  state.userSymbolsOverride=overrides;state.symbolFavorites=(state.symbolFavorites||[]).filter(id=>id!==entry.id);currentSymbolId=null;saveState();closeModal(true);renderLibrary();toast("Symbol deleted");
+}
+function duplicateSymbolEntry(entry){
+  const duplicate=normalizeEditableSymbol({...entry,id:`custom-symbol-${Date.now()}-${Math.random().toString(16).slice(2)}`,nameEn:`${entry.nameEn} Copy`,nameEnglish:`${entry.nameEn} Copy`,fullName:`${entry.nameEn} Copy`,verificationStatus:"To Be Confirmed",verifiedDate:"",verifiedBy:"",verificationNotes:"",needsReview:true,isCustom:true});
+  saveSymbolOverride(duplicate);closeModal(true);currentSymbolId=duplicate.id;renderLibrary();toast("Symbol duplicated");
+}
+function openSymbolEditModal(entry=null){
+  const isNew=!entry,base=entry||normalizeEditableSymbol({id:`custom-symbol-${Date.now()}-${Math.random().toString(16).slice(2)}`,nameEn:"",nameZh:"",abbreviation:"",craft:"Knitting",category:"Basic",difficulty:"Beginner",tags:[],symbolType:"knit",explanation:"",notes:"",sourceType:"needs-review",sourceNote:"User-created symbol. Confirm against the pattern legend.",needsReview:true,verificationStatus:"To Be Confirmed",verifiedDate:"",verifiedBy:"",verificationNotes:"",isCustom:true});
+  openModal(symbolEditFormHtml(base,isNew),{label:isNew?"Add Symbol":"Edit Symbol"});
+  document.getElementById("symbol-edit-type").addEventListener("change",()=>updateSymbolEditPreview(base));
+  document.getElementById("symbol-edit-svg").addEventListener("input",()=>updateSymbolEditPreview(base));
+  document.getElementById("symbol-edit-visual").addEventListener("input",()=>updateSymbolEditPreview(base));
+  document.getElementById("cancel-symbol-edit").onclick=()=>closeModal();
+  document.getElementById("symbol-edit-form").onsubmit=event=>{event.preventDefault();const candidate=symbolEntryFromEditForm(base),result=validateSymbolEntry(candidate),errorHost=document.getElementById("symbol-edit-errors");if(!result.valid){errorHost.hidden=false;errorHost.innerHTML=`<strong>Please fix:</strong><ul>${result.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join("")}</ul>`;return;}const saved=saveSymbolOverride(result.entry);currentSymbolId=saved.id;closeModal(true);renderLibrary();toast("Symbol saved");};
+  document.getElementById("reset-symbol-default")?.addEventListener("click",()=>{if(!confirm(`Reset “${base.nameEn}” to the Yarncha default?`))return;resetSymbolOverride(base.id);closeModal(true);currentSymbolId=base.id;renderLibrary();toast("Symbol reset to default");});
+  document.getElementById("duplicate-symbol")?.addEventListener("click",()=>duplicateSymbolEntry(base));
+  document.getElementById("delete-symbol")?.addEventListener("click",()=>deleteSymbolEntry(base));
+}
+function resetAllSymbolOverrides(){if(!confirm("Reset every Symbol Database edit, addition, deletion and verification status to Yarncha defaults?"))return;state.userSymbolsOverride={};saveState();currentSymbolId=null;renderLibrary();toast("All symbols reset to defaults");}
 function symbolDatabaseHtml(){
   const database=window.YarnchaSymbolDatabase;
   if(!database)return `<div class="empty-state"><h3>Symbol Database could not load</h3><p>Refresh after confirming symbol-database.js is available.</p></div>`;
+  const allEntries=mergedSymbolEntries();
   if(currentSymbolId){
-    const entry=database.entries.find(item=>item.id===currentSymbolId);
+    const entry=allEntries.find(item=>item.id===currentSymbolId);
     if(!entry){currentSymbolId=null;return symbolDatabaseHtml();}
     const favorite=(state.symbolFavorites||[]).includes(entry.id);
     return `<section class="symbol-detail card">
       <button class="text-button symbol-detail-back" id="symbol-detail-back">← Symbol Database</button>
-      <div class="symbol-detail-hero"><div class="symbol-glyph">${escapeHtml(entry.symbol)}</div><div><p class="eyebrow">${escapeHtml(entry.craft)} · ${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}</p><h2>${escapeHtml(entry.fullName)}</h2><p class="symbol-abbreviation">${escapeHtml(entry.abbreviation||"No standard abbreviation")}</p></div></div>
-      <div class="symbol-detail-actions"><button class="secondary-button" id="copy-symbol-meaning">Copy Meaning</button><button class="secondary-button" id="save-symbol-project">Save to Project Notes</button><button class="primary-button" id="favorite-symbol">${favorite?"Remove Favorite":"Add to Favorites"}</button></div>
+      <div class="symbol-detail-hero"><div class="symbol-glyph">${symbolIconSvg(entry,"symbol-svg-icon symbol-svg-icon-large")}</div><div><p class="eyebrow">${escapeHtml(entry.craft)} · ${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}</p><h2>${escapeHtml(entry.nameEn)}</h2><p class="symbol-chinese-name">${escapeHtml(entry.nameZh)}</p><p class="symbol-abbreviation">${entry.craft==="Crochet"?`US ${escapeHtml(entry.abbreviationUS||"—")} · UK ${escapeHtml(entry.abbreviationUK||"—")} · CN ${escapeHtml(entry.abbreviationChinese||"—")}`:escapeHtml(entry.abbreviation||"No universal abbreviation")}</p>${symbolVerificationBadge(entry)}<div class="symbol-region-badges">${symbolRegionBadges(entry)}</div>${entry.needsReview?`<span class="analysis-badge review">Needs review</span>`:""}</div></div>
+      <div class="symbol-detail-actions"><button class="secondary-button" id="edit-symbol-detail">Edit Symbol</button><button class="secondary-button" id="copy-symbol-meaning">Copy Meaning</button><button class="secondary-button" id="save-symbol-project">Save to Project Notes</button><button class="primary-button" id="favorite-symbol">${favorite?"Remove Favorite":"Add to Favorites"}</button></div>
+      <p class="symbol-global-warning">${escapeHtml(entry.chartLegendWarning)}</p>
       <div class="symbol-detail-grid">
-        <article><h3>Meaning</h3><p>${escapeHtml(entry.description)}</p></article>
+        <article><h3>Meaning</h3><p>${escapeHtml(entry.explanation)}</p></article>
         <article><h3>How To</h3><p>${escapeHtml(entry.howTo)}</p></article>
         <article><h3>Beginner Notes</h3><p>${escapeHtml(entry.beginnerExplanation)}</p></article>
         <article><h3>Common Mistakes</h3><ul>${entry.commonMistakes.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></article>
         <article><h3>Related Symbols</h3><p>${entry.relatedSymbols.length?entry.relatedSymbols.map(escapeHtml).join(" · "):"Use craft and category filters to find related entries."}</p></article>
         <article><h3>Language Names</h3><dl>${Object.entries(entry.languageVariants).map(([language,name])=>`<dt>${escapeHtml(language)}</dt><dd>${escapeHtml(name)}</dd>`).join("")}</dl></article>
+        <article><h3>Source</h3><p><strong>${escapeHtml(entry.sourceName||entry.sourceType)}</strong></p><p>${safeSourceLink(entry)}</p><p>${escapeHtml(entry.sourceNote)}</p></article>
+        <article><h3>Verification</h3>${symbolVerificationBadge(entry)}<p><strong>Confidence: ${escapeHtml(entry.confidence||"Low")}</strong></p><p>Last verified: ${escapeHtml(entry.lastVerifiedDate||entry.verifiedDate||"Not recorded")}${entry.verifiedBy?` · ${escapeHtml(entry.verifiedBy)}`:""}</p><p>${escapeHtml(entry.verificationNotes||"No verification notes yet.")}</p></article>
       </div>
       <section class="flow-reference-note"><p class="eyebrow">FLOW MODE REFERENCE</p><h3>Candidate matching notes</h3><p><strong>Possible meanings:</strong> ${entry.possibleMeanings.map(escapeHtml).join(" · ")}</p><p><strong>Recognition aliases:</strong> ${entry.recognitionAliases.map(escapeHtml).join(" · ")}</p><p><strong>OCR keywords:</strong> ${entry.ocrKeywords.map(escapeHtml).join(" · ")}</p><p><strong>Chart examples:</strong> ${entry.chartExamples.map(escapeHtml).join(" · ")}</p><p><strong>Ambiguity:</strong> ${entry.ambiguityWarnings.map(escapeHtml).join(" ")}</p><p><strong>Confidence:</strong> ${escapeHtml(entry.confidenceHint)}</p><span class="analysis-badge review">${entry.requiresLegendCheck?"Legend check required":"Context check required"}</span></section>
+      ${techniqueReferenceHtml(entry)}
     </section>`;
   }
-  const entries=database.search(symbolFilters.search,symbolFilters);
+  let entries=database.searchEntries(allEntries,symbolFilters.search,symbolFilters);
+  if(symbolFilters.sort==="Verification status"){
+    const rank={"To Be Confirmed":0,"Manually Verified":1,"Confirmed":2};
+    entries=[...entries].sort((a,b)=>(rank[a.verificationStatus]??0)-(rank[b.verificationStatus]??0)||a.nameEn.localeCompare(b.nameEn));
+  }
   const sections=["Knitting Symbols & Abbreviations","Crochet Symbols & Abbreviations","Tunisian Crochet Symbols & Abbreviations","Special Stitches","Chart Reading Rules"];
-  const craftOptions=["All","Knitting","Crochet","Tunisian","Shared"],categoryOptions=["All",...database.categoryOrder],difficultyOptions=["All","Beginner","Intermediate","Advanced"];
+  const craftOptions=["All","Knitting","Crochet","Tunisian","Shared"],categoryOptions=["All",...database.categoryOrder],difficultyOptions=["All","Beginner","Intermediate","Advanced"],terminologyOptions=["All","US","UK","CN","Chart Symbol"],verificationOptions=["All",...symbolVerificationOptions],sortOptions=["Default","Verification status"];
   return `<section class="symbol-database-shell">
     <div class="symbol-database-intro card"><p class="eyebrow">FLOW MODE FOUNDATION</p><h2>Symbols are candidates, not assumptions</h2><p>Search abbreviations, chart marks, aliases and reading rules. Every symbol keeps ambiguity and legend-check guidance for future reviewed recognition.</p></div>
-    <div class="symbol-filter-bar card"><label class="symbol-search"><span>Search</span><input id="symbol-search" type="search" value="${escapeHtml(symbolFilters.search)}" placeholder="Symbol, abbreviation, name or OCR keyword"></label><label><span>Craft</span><select id="symbol-craft-filter">${craftOptions.map(value=>`<option ${symbolFilters.craft===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Category</span><select id="symbol-category-filter">${categoryOptions.map(value=>`<option ${symbolFilters.category===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Difficulty</span><select id="symbol-difficulty-filter">${difficultyOptions.map(value=>`<option ${symbolFilters.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></label></div>
+    <div class="symbol-admin-toolbar card" aria-label="Symbol Database controls"><div><strong>Manage your symbol database</strong><p>Edits are saved locally without changing Yarncha's recoverable defaults.</p></div><div class="button-row"><button class="secondary-button" id="add-symbol">Add new symbol</button><button class="secondary-button" id="export-symbols">Export JSON</button><button class="secondary-button" id="import-symbols">Import JSON</button><button class="secondary-button danger-button" id="reset-all-symbols">Reset all to default</button><input id="symbol-import-file" type="file" accept="application/json,.json" hidden></div></div>
+    <div class="symbol-quick-filters" aria-label="Quick symbol filters"><button class="secondary-button" data-symbol-quick="All">All</button><button class="secondary-button" data-symbol-quick="Knitting">Knitting</button><button class="secondary-button" data-symbol-quick="Crochet">Crochet</button><button class="secondary-button" data-symbol-quick="Cable">Cable</button><button class="secondary-button" data-symbol-quick="Increase">Increase</button><button class="secondary-button" data-symbol-quick="Decrease">Decrease</button><button class="secondary-button" data-symbol-quick="Basic">Basic</button></div>
+    <div class="symbol-filter-bar card"><label class="symbol-search"><span>Search</span><input id="symbol-search" type="search" value="${escapeHtml(symbolFilters.search)}" placeholder="Symbol, US/UK abbreviation, 中文名稱 or alias"></label><label><span>Craft</span><select id="symbol-craft-filter">${craftOptions.map(value=>`<option ${symbolFilters.craft===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Category</span><select id="symbol-category-filter">${categoryOptions.map(value=>`<option ${symbolFilters.category===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Difficulty</span><select id="symbol-difficulty-filter">${difficultyOptions.map(value=>`<option ${symbolFilters.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Terminology</span><select id="symbol-terminology-filter">${terminologyOptions.map(value=>`<option ${symbolFilters.terminology===value?"selected":""}>${value==="US"?"US terms":value==="UK"?"UK terms":value==="CN"?"Chinese terms":value}</option>`).join("")}</select></label><label><span>Verification</span><select id="symbol-verification-filter">${verificationOptions.map(value=>`<option ${symbolFilters.verification===value?"selected":""}>${value}</option>`).join("")}</select></label><label><span>Sort</span><select id="symbol-sort">${sortOptions.map(value=>`<option ${symbolFilters.sort===value?"selected":""}>${value}</option>`).join("")}</select></label></div>
     <p class="symbol-result-count">${entries.length} matching entries · ${(state.symbolFavorites||[]).length} favorites</p>
-    ${entries.length?sections.map(section=>{const items=entries.filter(entry=>entry.section===section);return items.length?`<section class="symbol-section"><div class="section-heading"><div><p class="eyebrow">SYMBOL DATABASE</p><h2>${escapeHtml(section)}</h2></div><span>${items.length} entries</span></div><div class="symbol-grid">${items.map(entry=>`<button class="symbol-card card" data-symbol-id="${entry.id}"><span class="symbol-card-mark">${escapeHtml(entry.symbol)}</span><span class="symbol-card-copy"><strong>${escapeHtml(entry.abbreviation||entry.fullName)}</strong><small>${escapeHtml(entry.fullName)}</small><em>${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}</em></span>${(state.symbolFavorites||[]).includes(entry.id)?`<span class="symbol-favorite" aria-label="Favorite">Saved</span>`:""}</button>`).join("")}</div></section>`:"";}).join(""):`<div class="empty-state"><h3>No symbols match these filters</h3><p>Try a different craft, category, difficulty or search term.</p></div>`}
+    ${entries.length?sections.map(section=>{const items=entries.filter(entry=>entry.section===section);return items.length?`<section class="symbol-section"><div class="section-heading"><div><p class="eyebrow">SYMBOL DATABASE</p><h2>${escapeHtml(section)}</h2></div><span>${items.length} entries</span></div><div class="symbol-grid">${items.map(entry=>`<article class="symbol-card card"><button class="symbol-card-open" data-symbol-id="${entry.id}" aria-label="Open ${escapeHtml(entry.nameEn)} details"><span class="symbol-card-mark">${symbolIconSvg(entry)}</span><span class="symbol-card-copy"><strong>${escapeHtml(entry.nameEn)}</strong><small>${escapeHtml(entry.nameZh)}</small><span class="symbol-card-abbreviation">${entry.craft==="Crochet"?`US ${escapeHtml(entry.abbreviationUS||"—")} · UK ${escapeHtml(entry.abbreviationUK||"—")}`:escapeHtml(entry.abbreviation||entry.category)}</span>${symbolVerificationBadge(entry)}<span class="symbol-region-badges">${symbolRegionBadges(entry)}</span><em>${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}${entry.needsReview?" · Needs review":""}</em></span></button><button class="symbol-card-edit" data-edit-symbol="${entry.id}" aria-label="Edit ${escapeHtml(entry.nameEn)}" title="Edit symbol">${uiIcon("edit","ui-icon")}</button>${(state.symbolFavorites||[]).includes(entry.id)?`<span class="symbol-favorite" aria-label="Favorite">Saved</span>`:""}</article>`).join("")}</div></section>`:"";}).join(""):`<div class="empty-state"><h3>No symbols match these filters</h3><p>Try a different craft, category, terminology or search term.</p></div>`}
   </section>`;
 }
-function symbolMeaningText(entry){return `${entry.fullName}${entry.abbreviation?` (${entry.abbreviation})`:""}\nSymbol: ${entry.symbol}\nMeaning: ${entry.description}\nHow to: ${entry.howTo}\nFlow Mode note: ${entry.confidenceHint}`;}
+function symbolMeaningText(entry){return `${entry.nameEnglish}${entry.abbreviation?` (${entry.abbreviation})`:""}\nTraditional Chinese: ${entry.nameTraditionalChinese}\nChart symbol: ${entry.visualSymbol}\n${entry.craft==="Crochet"?`US: ${entry.abbreviationUS||"—"} · UK: ${entry.abbreviationUK||"—"} · CN: ${entry.abbreviationChinese||"—"}\n`:""}Meaning: ${entry.explanation}\nHow to: ${entry.howTo}\n${entry.chartLegendWarning}\nFlow Mode note: ${entry.confidenceHint}`;}
 function openSymbolProjectModal(entry){
   if(!state.projects.length)return toast("Create a project before saving notes.");
   openModal(`<p class="eyebrow">SYMBOL DATABASE</p><h2>Save to Project Notes</h2><p>${escapeHtml(entry.fullName)} will be added as a reference note.</p><div class="field"><label for="symbol-project-select">Project</label><select id="symbol-project-select">${state.projects.map(project=>`<option value="${project.id}" ${project.id===state.activeProjectId?"selected":""}>${escapeHtml(project.name)}</option>`).join("")}</select></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="confirm-symbol-project">Save note</button></div>`);
@@ -1666,18 +1927,33 @@ function openSymbolProjectModal(entry){
 function bindSymbolDatabase(){
   const database=window.YarnchaSymbolDatabase;if(!database)return;
   document.getElementById("symbol-search")?.addEventListener("input",event=>{symbolFilters.search=event.target.value;renderLibrary();requestAnimationFrame(()=>document.getElementById("symbol-search")?.focus());});
-  [["symbol-craft-filter","craft"],["symbol-category-filter","category"],["symbol-difficulty-filter","difficulty"]].forEach(([id,key])=>document.getElementById(id)?.addEventListener("change",event=>{symbolFilters[key]=event.target.value;renderLibrary();}));
+  [["symbol-craft-filter","craft"],["symbol-category-filter","category"],["symbol-difficulty-filter","difficulty"],["symbol-terminology-filter","terminology"],["symbol-verification-filter","verification"],["symbol-sort","sort"]].forEach(([id,key])=>document.getElementById(id)?.addEventListener("change",event=>{symbolFilters[key]=event.target.value;renderLibrary();}));
+  document.querySelectorAll("[data-symbol-quick]").forEach(button=>button.addEventListener("click",()=>{const value=button.dataset.symbolQuick;symbolFilters.craft=["Knitting","Crochet"].includes(value)?value:"All";symbolFilters.category=["Cable","Increase","Decrease","Basic"].includes(value)?value:"All";renderLibrary();}));
   document.querySelectorAll("[data-symbol-id]").forEach(button=>button.onclick=()=>{currentSymbolId=button.dataset.symbolId;renderLibrary();});
+  document.querySelectorAll("[data-edit-symbol]").forEach(button=>button.onclick=()=>openSymbolEditModal(mergedSymbolEntries().find(entry=>entry.id===button.dataset.editSymbol)));
+  document.getElementById("add-symbol")?.addEventListener("click",()=>openSymbolEditModal());
+  document.getElementById("export-symbols")?.addEventListener("click",exportSymbolsJson);
+  const importInput=document.getElementById("symbol-import-file");
+  document.getElementById("import-symbols")?.addEventListener("click",()=>importInput?.click());
+  importInput?.addEventListener("change",event=>{const file=event.target.files?.[0];if(file)importSymbolsJson(file);});
+  document.getElementById("reset-all-symbols")?.addEventListener("click",resetAllSymbolOverrides);
   document.getElementById("symbol-detail-back")?.addEventListener("click",()=>{currentSymbolId=null;renderLibrary();});
-  const entry=database.entries.find(item=>item.id===currentSymbolId);if(!entry)return;
+  const entry=mergedSymbolEntries().find(item=>item.id===currentSymbolId);if(!entry)return;
+  document.getElementById("edit-symbol-detail")?.addEventListener("click",()=>openSymbolEditModal(entry));
   document.getElementById("copy-symbol-meaning")?.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(symbolMeaningText(entry));toast("Meaning copied");}catch{toast("Copy is blocked in this browser.");}});
   document.getElementById("save-symbol-project")?.addEventListener("click",()=>openSymbolProjectModal(entry));
   document.getElementById("favorite-symbol")?.addEventListener("click",()=>{const favorites=new Set(state.symbolFavorites||[]);favorites.has(entry.id)?favorites.delete(entry.id):favorites.add(entry.id);state.symbolFavorites=[...favorites];saveState();renderLibrary();});
+  const fileInput=document.getElementById("symbol-technique-file");
+  const openPicker=()=>fileInput?.click();
+  document.getElementById("upload-symbol-technique")?.addEventListener("click",openPicker);
+  document.getElementById("replace-symbol-technique")?.addEventListener("click",openPicker);
+  fileInput?.addEventListener("change",event=>saveSymbolTechniqueReference(entry,event.target.files?.[0]));
+  document.getElementById("remove-symbol-technique")?.addEventListener("click",async()=>{if(!confirm("Remove this personal technique reference?"))return;const reference=(state.userTechniqueReferences||{})[entry.id];if(reference?.assetId)await deleteAsset(reference.assetId);const references={...(state.userTechniqueReferences||{})};delete references[entry.id];state.userTechniqueReferences=references;saveState();renderLibrary();toast("Technique reference removed");});
 }
 function renderLibrary() {
   const host=document.getElementById("library-content");
   if(!currentLibrarySection){
-    host.innerHTML=`<div class="page-title split-title"><div><p class="eyebrow">YOUR MAKING WIKI</p><h1>Library</h1><p>A flexible home for tutorials, pattern files and ideas.</p></div><button class="secondary-button" id="add-library-space">+ Custom space</button></div>
+    host.innerHTML=`<div class="page-title split-title"><div><p class="eyebrow">YOUR MAKING WIKI</p><h1>Library</h1><p>A flexible home for your symbols, pattern files, notes and ideas.</p></div><button class="secondary-button" id="add-library-space">+ Custom space</button></div>
       <div class="library-home-grid">${state.librarySections.map(s=>`<button class="library-space card" data-library-space="${s.id}"><span class="library-space-count">${librarySectionCount(s)} items</span><div class="library-space-icon">${librarySectionIcon(s.id)}</div><h2>${escapeHtml(s.name)}</h2><p>${escapeHtml(s.description)}</p></button>`).join("")}</div>`;
     document.getElementById("add-library-space").onclick=()=>openLibrarySpaceModal();
   } else {
@@ -1775,26 +2051,30 @@ function renderSettings(){
     ["Local preview availability may depend on the development environment.","A deployed website will be more stable than a temporary local preview server."]
   ];
   const activeTheme=normalizeThemeName(state.theme?.name),activeStyle=normalizeDesignStyle(state.theme?.style);
-  host.innerHTML=`<div class="page-title"><p class="eyebrow">YARNCHA SETTINGS</p><h1>Settings</h1><p>Theme, local-first storage notes, and honest limits for this MVP.</p></div>
-    <div class="settings-grid">
-      <section class="card mobile-card settings-panel settings-wide appearance-panel"><p class="eyebrow">APPEARANCE</p><h2>Theme & design style</h2><p class="muted-copy">Pick a colour mood and an interface style independently. Changes preview immediately and are saved on this device.</p>
+  const preferences=state.appPreferences||starterData.appPreferences;
+  host.innerHTML=`<div class="page-title"><p class="eyebrow">YOUR YARNCHA</p><h1>Settings</h1><p>Personalise your workspace and keep your projects safely within reach.</p></div>
+    <div class="settings-page-shell">
+      <section class="card mobile-card settings-panel appearance-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("appearance","ui-icon")}</span><div><p class="eyebrow">APPEARANCE</p><h2>Make Yarncha feel like yours</h2><p>Choose a colour mood, design style, display mode, and language.</p></div></div>
         <div class="appearance-heading"><h3>Colour theme</h3><button class="mini-button" id="reset-appearance">Reset default</button></div>
         <div class="appearance-grid theme-preview-grid">${themePresets.map(t=>`<button class="theme-preview-card ${activeTheme===t.id?"active":""}" data-theme-name="${t.id}" style="--preview-primary:${t.primary};--preview-secondary:${t.secondary};--preview-bg:${t.background};--preview-card:${t.card};--preview-text:${t.text};--preview-button:${t.button};--preview-highlight:${t.highlight};"><span class="theme-preview-surface"><i></i><b></b></span><strong>${escapeHtml(t.name)}</strong><small>${escapeHtml(t.background)} · ${escapeHtml(t.button)}</small><span class="swatch-row"><em></em><em></em><em></em><em></em></span></button>`).join("")}</div>
         <div class="appearance-heading"><h3>Design style</h3><span class="muted-copy">Style affects spacing, card shape, shadows, texture and overall feel.</span></div>
         <div class="appearance-grid style-preview-grid">${designStyles.map(s=>`<button class="style-preview-card ${activeStyle===s.id?"active":""}" data-style-name="${s.id}"><span class="style-sample ${s.id}"><i></i><i></i><i></i></span><strong>${escapeHtml(s.name)}</strong><small>${escapeHtml(s.desc)}</small></button>`).join("")}</div>
         <div class="appearance-heading"><h3>Mode</h3><span class="muted-copy">System follows your device setting.</span></div>
         <div class="theme-grid mode-grid">${["light","dark","system"].map(m=>`<button class="theme-choice ${state.theme.mode===m?"active":""}" data-theme-mode="${m}">${m}</button>`).join("")}</div>
+        <div class="settings-divider"></div><div class="settings-form-row"><div><strong>Language</strong><p>Choose the language used across Yarncha.</p></div><select id="settings-language" aria-label="App language"><option value="en" ${state.language==="en"?"selected":""}>English</option><option value="zh-HK" ${state.language==="zh-HK"?"selected":""}>繁體中文（香港）</option></select></div>
       </section>
-      <section class="card mobile-card settings-panel"><p class="eyebrow">UNITS</p><h2>Preferred units</h2><p class="muted-copy">Choose the unit system calculators should prefer by default.</p><div class="theme-grid mode-grid"><button class="theme-choice ${state.unitSystem!=="imperial"?"active":""}" data-unit-system="metric">UK / Metric<br><small>cm · mm · metres · grams</small></button><button class="theme-choice ${state.unitSystem==="imperial"?"active":""}" data-unit-system="imperial">US / Imperial<br><small>inches · yards · ounces</small></button></div></section>
-      <section class="card mobile-card settings-panel"><p class="eyebrow">LOCAL-FIRST MVP</p><h2>Storage</h2><p>Projects, row counts, chart file references, notes, annotations, theme and onboarding state are saved locally with localStorage and IndexedDB.</p><div class="storage-status-panel"><span>Projects: <strong>${projectCount}</strong></span><span>Storage: <strong>IndexedDB + localStorage</strong></span><span>Autosave: <strong>Enabled</strong></span><span>Last saved: <strong>${lastSaved}</strong></span><span>Cloud Sync: <strong>Not Enabled</strong></span></div><div class="privacy-note">Cloud sync, auth and domain setup are deliberately paused for this production MVP pass.</div></section>
-      <section class="card mobile-card settings-panel settings-wide"><p class="eyebrow">PROJECT BACKUP & MIGRATION</p><h2>Move projects manually</h2><p class="muted-copy">Use these files to move Yarncha from Safari to Chrome, another device, or a future deployed site. Backup before clearing browser data or changing devices.</p><div class="backup-actions"><select id="backup-project-select"><option value="">All projects</option>${state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("")}</select><button class="secondary-button" id="export-selected-project">Export selected</button><button class="primary-button" id="export-all-projects">Export all projects</button><button class="secondary-button" id="import-project-backup">Import backup</button><input id="settings-backup-file" type="file" accept=".json,application/json" hidden></div><div class="backup-mode"><label class="check-row"><input type="radio" name="import-mode" value="merge" checked><span>Merge imported projects with current projects</span></label><label class="check-row"><input type="radio" name="import-mode" value="replace"><span>Replace all local projects with imported backup</span></label></div></section>
-      <section class="card mobile-card settings-panel settings-wide"><p class="eyebrow">UPDATES & KNOWN LIMITATIONS LOGBOOK</p><h2>Current limits and paths forward</h2><div class="limitations-list">${limitations.map(([limit,fix])=>`<article><strong>${escapeHtml(limit)}</strong><p>${escapeHtml(fix)}</p></article>`).join("")}</div></section>
+      <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("preferences","ui-icon")}</span><div><p class="eyebrow">APP PREFERENCES</p><h2>Making preferences</h2><p>Set the defaults Yarncha uses while you work.</p></div></div><div class="settings-form-row settings-form-row-stack"><div><strong>Preferred units</strong><p>Calculators use this system by default.</p></div><div class="theme-grid mode-grid"><button class="theme-choice ${state.unitSystem!=="imperial"?"active":""}" data-unit-system="metric">UK / Metric<br><small>cm · mm · metres · grams</small></button><button class="theme-choice ${state.unitSystem==="imperial"?"active":""}" data-unit-system="imperial">US / Imperial<br><small>inches · yards · ounces</small></button></div></div><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Voice controls</strong><small>Allow hands-free row and note commands.</small></span><input type="checkbox" id="settings-voice" ${preferences.voice!==false?"checked":""}><i aria-hidden="true"></i></label><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Notification prompts</strong><small>Remember whether Yarncha may offer browser reminders later.</small></span><input type="checkbox" id="settings-notifications" ${preferences.notifications?"checked":""}><i aria-hidden="true"></i></label></section>
+      <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">PROJECTS & BACKUP</p><h2>Your saved work</h2><p>Review local storage and move projects using a Yarncha backup.</p></div></div><div class="storage-status-panel"><span>Projects <strong>${projectCount}</strong></span><span>Autosave <strong>Enabled</strong></span><span>Last saved <strong>${lastSaved}</strong></span><span>Storage <strong>Local-first</strong></span></div><div class="settings-divider"></div><div class="settings-form-row settings-form-row-stack"><div><strong>Export or import projects</strong><p>Backup before clearing browser data, changing browsers, or moving devices.</p></div><div class="backup-actions"><select id="backup-project-select" aria-label="Project to export"><option value="">All projects</option>${state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("")}</select><button class="secondary-button" id="export-selected-project">Export selected</button><button class="primary-button" id="export-all-projects">Export all projects</button><button class="secondary-button" id="import-project-backup">Import backup</button><input id="settings-backup-file" type="file" accept=".json,application/json" hidden></div></div><div class="backup-mode"><label class="check-row"><input type="radio" name="import-mode" value="merge" checked><span>Merge with current projects</span></label><label class="check-row"><input type="radio" name="import-mode" value="replace"><span>Replace all local projects</span></label></div><div class="privacy-note">Local drafts belong to this browser and device. Export a backup before moving elsewhere.</div></section>
+      <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("info","ui-icon")}</span><div><p class="eyebrow">UPDATES & LIMITATIONS</p><h2>What to know</h2><p>Honest notes about the current Yarncha build.</p></div></div><div class="limitations-list">${limitations.map(([limit,fix])=>`<article><strong>${escapeHtml(limit)}</strong><p>${escapeHtml(fix)}</p></article>`).join("")}</div></section>
     </div>`;
   document.querySelectorAll("[data-theme-name]").forEach(b=>b.onclick=()=>{state.theme.name=b.dataset.themeName;saveState();renderSettings();});
   document.querySelectorAll("[data-style-name]").forEach(b=>b.onclick=()=>{state.theme.style=b.dataset.styleName;saveState();renderSettings();});
   document.querySelectorAll("[data-theme-mode]").forEach(b=>b.onclick=()=>{state.theme.mode=b.dataset.themeMode;saveState();renderSettings();});
   document.getElementById("reset-appearance").onclick=()=>{state.theme=structuredClone(starterData.theme);saveState();renderSettings();};
   document.querySelectorAll("[data-unit-system]").forEach(b=>b.onclick=()=>{state.unitSystem=b.dataset.unitSystem;saveState();renderSettings();});
+  document.getElementById("settings-language").onchange=event=>{state.language=event.target.value;document.getElementById("app-language").value=state.language;saveState();applyLanguage();renderTimeGreeting();};
+  document.getElementById("settings-voice").onchange=event=>{state.appPreferences={...(state.appPreferences||starterData.appPreferences),voice:event.target.checked};saveState();};
+  document.getElementById("settings-notifications").onchange=event=>{state.appPreferences={...(state.appPreferences||starterData.appPreferences),notifications:event.target.checked};saveState();};
   document.getElementById("export-selected-project").onclick=()=>exportBackup(document.getElementById("backup-project-select").value||null);
   document.getElementById("export-all-projects").onclick=()=>exportBackup(null);
   document.getElementById("import-project-backup").onclick=()=>document.getElementById("settings-backup-file").click();
@@ -2094,6 +2374,7 @@ function allAssetIdsForState(snapshot){
     ...(snapshot.cart||[]).map(i=>i.imageAsset),
     ...(snapshot.yarnMaterials||[]).map(m=>m.imageAsset),
     ...(snapshot.projectIdeas||[]).map(i=>i.referenceImageAsset),
+    ...Object.values(snapshot.userTechniqueReferences||{}).map(reference=>reference.assetId),
     ...(snapshot.librarySections||[]).flatMap(s=>(s.items||[]).flatMap(i=>(i.assets||[]).map(a=>a.id)))
   ].filter(Boolean);
 }
@@ -2136,6 +2417,8 @@ async function importBackup(event,mode="merge"){
       state.librarySections=mergeLibrarySections(state.librarySections,imported.librarySections||[]);
       state.yarnMaterials=[...(state.yarnMaterials||[]),...(imported.yarnMaterials||[])];
       state.techniqueKnowledge=[...(state.techniqueKnowledge||[]),...(imported.techniqueKnowledge||[])];
+      state.userTechniqueReferences={...(state.userTechniqueReferences||{}),...(imported.userTechniqueReferences||{})};
+      state.userSymbolsOverride={...(state.userSymbolsOverride||{}),...(imported.userSymbolsOverride||{})};
       state.activeProjectId=projects[0]?.id||state.activeProjectId;
     }
     localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
@@ -2335,6 +2618,7 @@ function markerColor(name) {
 }
 function speak(text) { if (!("speechSynthesis" in window)) return toast("Speech is not supported in this browser."); speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }
 function startVoice() {
+  if(state.appPreferences?.voice===false)return toast("Voice controls are turned off in Settings.");
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return toast("Voice control works best in Chrome or Edge.");
   recognition = new SpeechRecognition(); recognition.continuous = true; recognition.interimResults = false; recognition.maxAlternatives=1; recognition.lang = state.language==="zh-HK"?"yue-Hant-HK":"en-AU";
@@ -2395,7 +2679,7 @@ document.addEventListener("click", e => {
 });
 document.getElementById("new-project").onclick = openProjectModal;
 document.getElementById("quick-add-project").onclick = openProjectModal;
-document.getElementById("app-language").onchange=e=>{state.language=e.target.value;saveState();applyLanguage();};
+document.getElementById("app-language").onchange=e=>{state.language=e.target.value;saveState();applyLanguage();renderTimeGreeting();};
 document.querySelectorAll(".nav-item").forEach(button => {
   button.onclick = () => showView(button.dataset.view);
 });
@@ -2442,7 +2726,8 @@ window.YarnchaLocal={
   openModal,
   closeModal,
   toast,
-  escapeHtml
+  escapeHtml,
+  uiIcon
 };
 
 renderSidebar();

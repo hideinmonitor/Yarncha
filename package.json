@@ -13,7 +13,10 @@
     "start:5173": "python3 -m http.server 5173 --bind 0.0.0.0",
     "test:calculators": "node tests/run-calculator-tests.cjs",
     "test:project-editor": "node tests/project-editor-contract.test.cjs",
-    "test:symbols": "node tests/symbol-database.test.mjs"
+    "test:symbols": "node tests/symbol-database.test.mjs",
+    "test:symbol-audit": "node tests/symbol-database-audit.mjs",
+    "test:symbol-editor": "node tests/symbol-editor-contract.test.mjs",
+    "test:settings": "node tests/settings-contract.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
