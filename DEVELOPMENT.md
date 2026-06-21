@@ -99,6 +99,8 @@ Local-only saving is per browser and per device. Signed-in beta users can explic
 
 Current actual structure:
 
+The Git repository root is the application root. Vercel Root Directory must be blank (`.`). A nested `/Yarncha` application copy is invalid and is ignored to prevent production from deploying stale files.
+
 - `/index.html`
   - Static app shell, sidebar navigation, views, modal root, toast root, script/style links.
 - `/app.js`
