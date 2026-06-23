@@ -82,7 +82,7 @@ function openAccountModal() {
     return;
   }
   if (cloud.user) {
-    api.openModal(`<p class="eyebrow">YARNCHA ACCOUNT</p><h2>${api.escapeHtml(cloud.user.email || "Signed in")}</h2><div class="sync-status"><strong id="cloud-sync-status">Cloud sync ready</strong><p>Local drafts stay on this device. Your owned cloud projects are protected by account-level database policies.</p></div><div class="modal-actions"><button class="secondary-button" id="cloud-migrate-now">Move my local projects to cloud</button><button class="secondary-button" id="cloud-refresh-now">Refresh from cloud</button><button class="danger-button" id="cloud-sign-out">Sign out</button></div>`);
+    api.openModal(`<p class="eyebrow">YARNCHA ACCOUNT</p><h2>${api.escapeHtml(cloud.user.email || "Signed in")}</h2><div class="sync-status"><strong id="cloud-sync-status">Cloud sync ready</strong><p>Local drafts stay on this device. Your owned cloud projects are protected by account-level database policies.</p></div><div class="modal-actions"><button class="secondary-button" id="cloud-migrate-now">Move my local projects to cloud</button><button class="secondary-button" id="cloud-refresh-now">Refresh from cloud</button><button class="secondary-button" id="cloud-sign-out">Sign out</button></div>`);
     document.getElementById("cloud-migrate-now").onclick = migrateLocalProjects;
     document.getElementById("cloud-refresh-now").onclick = async () => {
       await runBusy("Refreshing…", restoreCloudProjects, "Cloud projects restored");
@@ -415,16 +415,68 @@ function renderSettingsSection(host) {
   if (!host || document.getElementById("cloud-beta-settings")) return;
   const grid = host.querySelector(".settings-page-shell");
   if (!grid) return;
+  const anchor = host.querySelector("#cloud-settings-anchor") || grid.lastElementChild;
+  const email = cloud.user?.email || "";
+  const accountTitle = document.createElement("div");
+  accountTitle.className = "settings-group-title";
+  accountTitle.innerHTML = `<p class="eyebrow">ACCOUNT & SYNC</p><h2>Account & Sync</h2>`;
   const section = document.createElement("section");
   section.id = "cloud-beta-settings";
   section.className = "card mobile-card settings-panel";
-  section.innerHTML = `<div class="settings-section-heading"><span class="settings-section-icon">${local().uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">PRIVATE BETA CLOUD</p><h2>${cloud.user ? "Cloud account and sync" : "Sign in and cloud backup"}</h2><p>${cloud.configured ? (cloud.user ? `Signed in as <strong>${local().escapeHtml(cloud.user.email || "Yarncha user")}</strong>. Local drafts remain available offline.` : "Create an email account to keep private projects across devices.") : "Supabase environment variables have not been configured for this build."}</p></div></div><div class="storage-status-panel"><span>Local save <strong>Enabled</strong></span><span>Cloud <strong>${cloud.user ? "Connected" : cloud.configured ? "Sign-in required" : "Not configured"}</strong></span><span id="cloud-sync-status">${cloud.lastError || (cloud.user ? "Ready" : "Local-only")}</span></div><div class="button-row"><button class="primary-button" id="settings-cloud-account">${cloud.user ? "Account & sync" : "Sign in / create account"}</button>${cloud.user ? `<button class="secondary-button" id="settings-cloud-migrate">Move my local projects to cloud</button><button class="danger-button" id="settings-delete-account">Delete account and cloud data</button>` : ""}<a class="secondary-button button-link" href="mailto:feedback@yarncha.app?subject=Yarncha%20private%20beta%20feedback">Send beta feedback</a></div><div class="privacy-note"><strong>Privacy:</strong> Projects, charts and generated patterns are private to your account. Charts are sent to the configured server-side AI provider only when you press Analyse. AI output is a draft: unclear symbols remain uncertain and require your review.</div>`;
-  grid.insertBefore(section,grid.lastElementChild);
+  section.innerHTML = `<div class="settings-section-heading"><span class="settings-section-icon">${local().uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">PRIVATE BETA CLOUD</p><h2>${cloud.user ? "Cloud account" : "Sign in and cloud backup"}</h2><p>${cloud.configured ? (cloud.user ? "Cloud sync is connected. Local drafts remain available offline." : "Create an email account to keep private projects across devices.") : "Supabase environment variables have not been configured for this build."}</p></div></div>
+    <div class="settings-account-summary">
+      <div><span>Email</span><strong>${cloud.user ? local().escapeHtml(email || "Yarncha user") : "Not signed in"}</strong></div>
+      <div><span>Sync status</span><strong id="cloud-sync-status">${local().escapeHtml(cloud.lastError || (cloud.user ? "Ready" : cloud.configured ? "Sign-in required" : "Not configured"))}</strong></div>
+    </div>
+    <div class="settings-divider"></div>
+    <div class="settings-form-row settings-form-row-stack">
+      <div><strong>Sync preferences</strong><p>${cloud.user ? "Choose when to move local drafts into your private cloud account or refresh cloud projects." : "Cloud sync starts after sign-in."}</p></div>
+      <div class="button-row settings-button-row">
+        <button class="${cloud.user ? "secondary-button" : "primary-button"}" id="settings-cloud-account">${cloud.user ? "Account details" : "Sign in / create account"}</button>
+        ${cloud.user ? `<button class="secondary-button" id="settings-cloud-migrate">Move local projects to cloud</button><button class="secondary-button" id="settings-cloud-refresh">Refresh from cloud</button><button class="secondary-button" id="settings-cloud-sign-out">Sign out</button>` : ""}
+      </div>
+    </div>
+    <div class="privacy-note"><strong>Privacy:</strong> Projects, charts and generated patterns are private to your account. Charts are sent for analysis only when you press Analyse.</div>`;
+  grid.insertBefore(accountTitle, anchor);
+  grid.insertBefore(section, anchor);
   document.getElementById("settings-cloud-account").onclick = openAccountModal;
   document.getElementById("settings-cloud-migrate")?.addEventListener("click", migrateLocalProjects);
-  document.getElementById("settings-delete-account")?.addEventListener("click", async () => {
+  document.getElementById("settings-cloud-refresh")?.addEventListener("click", async () => {
+    await runBusy("Refreshing…", restoreCloudProjects, "Cloud projects restored");
+  });
+  document.getElementById("settings-cloud-sign-out")?.addEventListener("click", async () => {
+    await signOut();
+    cloud.user = null;
+    local().toast("Signed out. Local drafts remain on this device.");
+    local().rerenderSettings();
+  });
+  if (!cloud.user) return;
+  const dangerTitle = document.createElement("div");
+  dangerTitle.className = "settings-group-title settings-danger-title";
+  dangerTitle.innerHTML = `<p class="eyebrow">DANGER ZONE</p><h2>Danger Zone</h2>`;
+  const danger = document.createElement("section");
+  danger.id = "cloud-danger-zone";
+  danger.className = "card mobile-card settings-panel settings-danger-zone";
+  danger.innerHTML = `<div class="settings-section-heading"><span class="settings-section-icon danger-icon">${local().uiIcon("warning","ui-icon")}</span><div><p class="eyebrow">DANGER ZONE</p><h2>Danger Zone</h2><p>Keep permanent account actions separate from everyday sync settings.</p></div></div>
+    <div class="danger-zone-copy"><strong>Delete account and cloud data</strong><p>This action cannot be undone.</p><p>Deleting your cloud account removes cloud projects, charts, generated patterns, and private storage. Local browser drafts are not deleted.</p></div>
+    <div class="delete-confirmation">
+      <label for="settings-delete-confirm">Type <strong>DELETE</strong> or confirm your email address</label>
+      <input id="settings-delete-confirm" autocomplete="off" inputmode="email" placeholder="DELETE or ${local().escapeHtml(email)}">
+      <button type="button" class="danger-button secondary-button" id="settings-delete-account" disabled>Delete account and cloud data</button>
+    </div>`;
+  grid.insertBefore(dangerTitle, anchor);
+  grid.insertBefore(danger, anchor);
+  const confirmInput = document.getElementById("settings-delete-confirm");
+  const deleteButton = document.getElementById("settings-delete-account");
+  const syncDeleteState = () => {
+    const value = confirmInput.value.trim();
+    deleteButton.disabled = !(value === "DELETE" || (email && value.toLowerCase() === email.toLowerCase()));
+  };
+  confirmInput.addEventListener("input", syncDeleteState);
+  deleteButton.addEventListener("click", async () => {
+    syncDeleteState();
+    if (deleteButton.disabled) return;
     if (!confirm("Delete your Yarncha account and all cloud projects, charts and patterns? This cannot be undone. Local browser drafts are not deleted.")) return;
-    if (prompt('Type DELETE to confirm permanent cloud deletion.') !== "DELETE") return;
     try {
       await deleteAccountAndData();
       cloud.user = null;

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import "../symbol-database.js";
 
 const database = globalThis.YarnchaSymbolDatabase;
-const requiredFields = ["id","craft","category","symbol","visualSymbol","symbolIcon","symbolType","abbreviation","abbreviationChinese","nameEnglish","nameTraditionalChinese","nameEn","nameZh","explanation","fullName","description","howTo","beginnerExplanation","difficulty","aliases","languageVariants","relatedSymbols","commonMistakes","chartExamples","recognitionAliases","ocrKeywords","possibleMeanings","ambiguityWarnings","confidenceHint","requiresLegendCheck","chartLegendWarning","flowModeReady","needsReview","sourceType","sourceName","sourceUrl","sourceNote","lastVerifiedDate","confidence","tags","notes","customSvg","verificationStatus","verifiedDate","verifiedBy","verificationNotes"];
+const requiredFields = ["id","craft","category","symbol","visualSymbol","symbolIcon","symbolType","abbreviation","abbreviationChinese","nameEnglish","nameTraditionalChinese","nameEn","nameZh","explanation","fullName","description","howTo","beginnerExplanation","difficulty","aliases","languageVariants","relatedSymbols","commonMistakes","chartExamples","recognitionAliases","ocrKeywords","possibleMeanings","ambiguityWarnings","confidenceHint","requiresLegendCheck","chartLegendWarning","flowModeReady","needsReview","sourceType","sourceName","sourceUrl","sourceNote","sourceReferences","variationNotes","matchedUploadedReference","lastVerifiedDate","confidence","tags","notes","customSvg","verificationStatus","verifiedDate","verifiedBy","verificationNotes"];
 
 assert.ok(database, "database is exposed for the UI and future Flow Mode");
 assert.ok(database.entries.length >= 80, "database contains the requested foundation entries");
@@ -44,16 +44,36 @@ for(const abbreviation of ["K","P","YO","Sl","K2TOG","SSK","KFB","PFB","KTBL","P
   const entry=database.entries.find(item=>item.craft==="Knitting"&&item.abbreviation===abbreviation);
   assert.ok(entry?.symbolIcon,`${abbreviation} has a reusable chart icon`);
 }
-for(const [abbreviation,symbolType] of [["CH","chain"],["SL ST","slip-stitch-crochet"],["SC","single-crochet"],["HDC","half-double-crochet"],["DC","double-crochet"],["TR","treble-crochet"],["PC","popcorn"],["Puff","cyc-hdc-cluster"],["Bobble","cyc-hdc-cluster"],["CL","cluster"],["Shell","shell"],["Picot","picot"],["FPDC","front-post"],["BPDC","back-post"]]){
+for(const [abbreviation,symbolType] of [["CH","chain"],["SL ST","slip-stitch-crochet"],["SC","single-crochet"],["HDC","half-double-crochet"],["DC","double-crochet"],["TR","treble-crochet"],["PC","popcorn"],["Puff","legend-specific"],["Bobble","legend-specific"],["CL","cluster"],["Shell","shell"],["Picot","picot"],["FPDC","front-post"],["BPDC","back-post"]]){
   const entry=database.entries.find(item=>item.craft==="Crochet"&&item.abbreviation===abbreviation);
   assert.equal(entry?.symbolType,symbolType,`${abbreviation} uses its own crochet symbol family`);
 }
 assert.equal(database.entries.find(entry=>entry.craft==="Knitting"&&entry.abbreviation==="3/3 LC")?.symbolType,"cable-left-3-3","3/3 left cable has a six-stitch SVG rather than the 2/2 icon");
 assert.equal(database.entries.find(entry=>entry.craft==="Knitting"&&entry.abbreviation==="3/3 RC")?.symbolType,"cable-right-3-3","3/3 right cable has a six-stitch SVG rather than the 2/2 icon");
+const tunisianRequired=["TSS","TKS","TPS","TRS","TFS","TDC","TYO","TYO-FS","T INC 1→3","T2TOG","T3TOG","T4TOG","T5TOG","TC-A","TC-B","TDC-X","T3-LC"];
+for(const abbreviation of tunisianRequired){
+  const entry=database.entries.find(item=>item.craft==="Tunisian"&&item.abbreviation===abbreviation);
+  assert.ok(entry,`Tunisian database contains ${abbreviation}`);
+  assert.match(entry.symbolType,/^(tunisian-|legend-specific$)/,`${abbreviation} never reuses a regular knitting or crochet icon`);
+  assert.ok(entry.nameTraditionalChinese&&entry.nameTraditionalChinese!=="需核對",`${abbreviation} has a Chinese reference name`);
+  assert.ok(entry.sourceName.includes("IMG_4154–IMG_4165"),`${abbreviation} cites the uploaded Tunisian reference set`);
+}
+for(const abbreviation of ["TRS","TFS","TYO","TYO-FS"]){
+  const entry=database.entries.find(item=>item.craft==="Tunisian"&&item.abbreviation===abbreviation);
+  assert.equal(entry.verificationStatus,"To Be Confirmed",`${abbreviation} remains unconfirmed because its modern-label mapping is not universal`);
+  assert.equal(entry.flowModeReady,false,`${abbreviation} cannot be auto-confirmed by future Flow Mode`);
+}
+for(const abbreviation of ["TSS","TPS","TKS","TDC","TSLST"]){
+  const entry=database.entries.find(item=>item.craft==="Tunisian"&&item.abbreviation===abbreviation);
+  assert.equal(entry.confidence,"High",`${abbreviation} operation is confirmed by the uploaded sheet and standard abbreviation reference`);
+  assert.notEqual(entry.symbolType,"legend-specific",`${abbreviation} has a dedicated Tunisian SVG`);
+}
 assert.equal(database.audit().missingSymbolType.length,0,"developer audit finds no missing symbol types");
 assert.equal(database.audit().craftMismatchWarnings.length,0,"developer audit finds no craft mismatches");
+assert.ok(database.entries.every(entry=>Array.isArray(entry.sourceReferences)&&entry.sourceReferences.length>=2),"every entry carries multiple source references");
+assert.ok(database.entries.every(entry=>entry.variationNotes),"every entry documents symbol variation or uncertainty");
 const appSource=await readFile(new URL("../app.js",import.meta.url),"utf8");
-assert.match(appSource,/symbol-card-mark[^\n]+symbolIconSvg\(entry\)/,"symbol cards render reusable inline SVG icons");
+assert.match(appSource,/symbol-card-mark[^\n]+symbolVisualHtml\(entry\)/,"symbol cards prefer uploaded pictures and retain reusable SVG fallbacks");
 assert.match(appSource,/Technique Reference/,"symbol details include user-managed technique references");
 for(const helper of ["loadSymbolOverrides","saveSymbolOverride","resetSymbolOverride","exportSymbolsJson","importSymbolsJson","validateSymbolEntry","openSymbolEditModal"]){
   assert.match(appSource,new RegExp(`function ${helper}\\b`),`${helper} is implemented`);

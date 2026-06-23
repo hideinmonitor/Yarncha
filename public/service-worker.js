@@ -1,4 +1,4 @@
-const CACHE_NAME = "yarncha-shell-v35";
+const CACHE_NAME = "yarncha-shell-v46";
 const APP_SHELL = ["/", "/index.html", "/styles.css?v=35", "/calculator-engine.js?v=35", "/symbol-database.js?v=35", "/app.js?v=35", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", event => {

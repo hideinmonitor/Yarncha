@@ -14,12 +14,24 @@ for(const control of ["settings-language","settings-voice","settings-notificatio
 assert.match(app,/appPreferences:\{notifications:false,voice:true\}/,"preferences have recoverable defaults");
 assert.match(app,/function localCraftGreeting\(\)/,"local-time craft greeting is generated");
 assert.match(html,/id="today-greeting"/,"dashboard exposes a greeting target");
+assert.match(html,/© 2026 Yarncha\. All rights reserved\./,"site footer includes the copyright notice");
 assert.doesNotMatch(css,/\.nav-item\[data-view="settings"\]/,"Settings has no special sidebar styling");
 const cloud=await readFile(new URL("../src/cloud/bootstrap.js",import.meta.url),"utf8");
 assert.match(cloud,/querySelector\("\.settings-page-shell"\)/,"cloud account card uses the unified Settings shell");
 assert.match(cloud,/settings-section-heading/,"cloud account card uses the unified section header");
+assert.match(cloud,/ACCOUNT & SYNC/,"cloud settings has a clear Account & Sync group");
+assert.match(cloud,/cloud-danger-zone/,"cloud deletion lives in a dedicated Danger Zone");
+assert.match(cloud,/settings-danger-title/,"Danger Zone has its own Settings group title");
+assert.match(cloud,/This action cannot be undone\./,"Danger Zone includes irreversible-action warning text");
+assert.match(cloud,/settings-delete-confirm/,"Delete Account requires typed confirmation");
+assert.match(cloud,/value === "DELETE"/,"typing DELETE enables account deletion");
+assert.match(cloud,/email && value\.toLowerCase\(\) === email\.toLowerCase\(\)/,"confirming the account email enables account deletion");
+assert.match(cloud,/settings-cloud-sign-out/,"Cloud Account card exposes sign out");
+assert.doesNotMatch(cloud,/settings-cloud-migrate[\s\S]{0,260}settings-delete-account/,"Delete Account is not grouped with normal cloud sync actions");
+assert.doesNotMatch(cloud,/id="settings-cloud-account"[\s\S]{0,260}settings-delete-account/,"Cloud Account card contains no Delete Account action");
 assert.match(css,/\.settings-page-shell[^}]+grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/s,"desktop Settings uses the shared card grid");
 assert.match(css,/@media \(max-width: 900px\)[\s\S]+\.settings-page-shell[^}]+grid-template-columns:1fr/s,"Settings cards stack responsively");
+assert.match(css,/\.settings-danger-zone[^}]+border-color:color-mix\(in srgb,var\(--danger\)/,"Danger Zone has a visually distinct red border");
 assert.match(css,/\.settings-toggle-row[^}]+min-height:56px/s,"toggles exceed the 44px touch target");
 assert.match(css,/\.view[^}]+env\(safe-area-inset-bottom\)/s,"page shell preserves mobile safe area");
 

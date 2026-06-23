@@ -16,7 +16,8 @@
     "test:symbols": "node tests/symbol-database.test.mjs",
     "test:symbol-audit": "node tests/symbol-database-audit.mjs",
     "test:symbol-editor": "node tests/symbol-editor-contract.test.mjs",
-    "test:settings": "node tests/settings-contract.test.mjs"
+    "test:settings": "node tests/settings-contract.test.mjs",
+    "test:library": "node tests/library-delete-contract.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

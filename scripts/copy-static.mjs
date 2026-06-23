@@ -1,4 +1,4 @@
-import { cp, copyFile, mkdir, stat } from "node:fs/promises";
+import { cp, copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,6 +24,18 @@ await cp(resolve(projectRoot, "public"), resolve(distDir, "public"), { recursive
 
 for (const file of rootAssets) {
   await copyFile(resolve(projectRoot, file), resolve(distDir, file));
+}
+
+const indexFile = resolve(distDir, "index.html");
+const assetVersion = "49";
+const classicScripts = [
+  `<script src="calculator-engine.js?v=${assetVersion}"></script>`,
+  `<script src="symbol-database.js?v=${assetVersion}"></script>`,
+  `<script src="app.js?v=${assetVersion}"></script>`
+].join("\n    ");
+const indexHtml = await readFile(indexFile, "utf8");
+if (!indexHtml.includes(`src="app.js?v=${assetVersion}"`)) {
+  await writeFile(indexFile, indexHtml.replace("\n  </body>", `\n    ${classicScripts}\n  </body>`));
 }
 
 for (const file of ["index.html", ...rootAssets]) {

@@ -45,7 +45,7 @@
     ["Knitting", "Cable", "Tw C", "Twisted Cable", "cross with twist mark"],
     ["Knitting", "Cable", "Travel C", "Traveling Cable", "traveling crossing line"],
     ["Knitting", "Special Stitch", "Nupp", "Nupp", "clustered oval"],
-    ["Knitting", "Special Stitch", "Bobble", "Bobble", "filled or outlined bobble"],
+    ["Knitting", "Special Stitch", "MB", "Bobble", "filled or outlined bobble"],
     ["Knitting", "Special Stitch", "Wrap", "Wrapped Stitch", "loop around stitch"],
     ["Knitting", "Special Stitch", "BR", "Brioche Symbol", "brioche-specific mark"],
     ["Knitting", "Special Stitch", "DK", "Double Knitting Symbol", "two-layer cell mark"],
@@ -79,11 +79,24 @@
     ["Crochet", "Special Stitch", "FPDC", "Front Post Double Crochet", "front-post double crochet"],
     ["Crochet", "Special Stitch", "BPDC", "Back Post Double Crochet", "back-post double crochet"],
 
-    ["Tunisian", "Basic", "TSS", "Tunisian Simple Stitch", "vertical bar"],
-    ["Tunisian", "Basic", "TPS", "Tunisian Purl Stitch", "purl-marked vertical bar"],
-    ["Tunisian", "Basic", "TKS", "Tunisian Knit Stitch", "vertical bar with insertion mark"],
-    ["Tunisian", "Basic", "TRS", "Tunisian Reverse Stitch", "reverse vertical bar"],
-    ["Tunisian", "Basic", "TFS", "Tunisian Full Stitch", "gap insertion mark"],
+    ["Tunisian", "Basic", "TSS", "Tunisian Simple Stitch", "Afghan-chart cell with a vertical bar"],
+    ["Tunisian", "Basic", "TPS", "Tunisian Purl Stitch", "Afghan-chart cell with a horizontal purl bar"],
+    ["Tunisian", "Basic", "TKS", "Tunisian Knit Stitch", "Afghan-chart cell with a teardrop insertion mark"],
+    ["Tunisian", "Basic", "TRS", "Tunisian Reverse Stitch", "Afghan-chart reverse-stitch cell"],
+    ["Tunisian", "Basic", "TFS", "Tunisian Full Stitch", "Afghan-chart gap insertion mark"],
+    ["Tunisian", "Basic", "TDC", "Tunisian Double Crochet", "Afghan-chart tall-stitch cell"],
+    ["Tunisian", "Basic", "TSLST", "Tunisian Slip Stitch", "Afghan-chart elongated slip mark"],
+    ["Tunisian", "Lace", "TYO", "Tunisian Yarn Over", "Afghan-chart yarn-over variation"],
+    ["Tunisian", "Lace", "TYO-FS", "Tunisian Yarn Over into Full-Stitch Space", "Afghan-chart yarn-over and space insertion variation"],
+    ["Tunisian", "Increase", "T INC 1→3", "Tunisian One-to-Three Increase", "one chart cell branching into three loops"],
+    ["Tunisian", "Decrease", "T2TOG", "Tunisian Two Together", "two chart cells joined into one"],
+    ["Tunisian", "Decrease", "T3TOG", "Tunisian Three Together", "three chart cells joined into one"],
+    ["Tunisian", "Decrease", "T4TOG", "Tunisian Four Together", "four chart cells joined into one"],
+    ["Tunisian", "Decrease", "T5TOG", "Tunisian Five Together", "five chart cells joined into one"],
+    ["Tunisian", "Cable", "TC-A", "Tunisian Cross Stitch A", "two-cell Afghan cable cross A"],
+    ["Tunisian", "Cable", "TC-B", "Tunisian Cross Stitch B", "two-cell Afghan cable cross B"],
+    ["Tunisian", "Cable", "TDC-X", "Crossed Tunisian Double Crochet", "crossed tall-stitch cells"],
+    ["Tunisian", "Cable", "T3-LC", "Tunisian Left Three-Stitch Cross", "three-stitch left cross on return-stitch background"],
     ["Tunisian", "Special Stitch", "Honeycomb", "Tunisian Honeycomb", "alternating TSS and TPS cells"],
     ["Tunisian", "Special Stitch", "Smock", "Tunisian Smock Stitch", "joined vertical bars"],
     ["Tunisian", "Special Stitch", "Basketweave", "Tunisian Basketweave", "grouped knit and purl blocks"],
@@ -141,22 +154,48 @@
     "Crochet:TR": { "zh-HK":"長長針", "zh-CN":"长长针", ja:"長々編み" },
     "Crochet:FLO": { "zh-HK":"外半針", "zh-CN":"外半针", ja:"前半目" },
     "Crochet:BLO": { "zh-HK":"內半針", "zh-CN":"内半针", ja:"後半目" },
-    "Tunisian:TSS": { "zh-HK":"阿富汗簡單針", "zh-CN":"阿富汗简单针", ja:"チュニジアンシンプルステッチ" },
+    "Tunisian:TSS": { "zh-HK":"阿富汗簡單針（下針）", "zh-CN":"阿富汗简单针（下针）", ja:"チュニジアンシンプルステッチ" },
     "Tunisian:TPS": { "zh-HK":"阿富汗上針", "zh-CN":"阿富汗上针", ja:"チュニジアンパールステッチ" },
-    "Tunisian:TKS": { "zh-HK":"阿富汗下針", "zh-CN":"阿富汗下针", ja:"チュニジアンニットステッチ" }
+    "Tunisian:TKS": { "zh-HK":"阿富汗下針（平針）", "zh-CN":"阿富汗下针（平针）", ja:"チュニジアンニットステッチ" },
+    "Tunisian:TRS": { "zh-HK":"阿富汗反針", "zh-CN":"阿富汗反针", ja:"チュニジアンリバースステッチ" },
+    "Tunisian:TFS": { "zh-HK":"阿富汗全針（掛針）", "zh-CN":"阿富汗全针（挂针）", ja:"チュニジアンフルステッチ" },
+    "Tunisian:TDC": { "zh-HK":"阿富汗長針", "zh-CN":"阿富汗长针", ja:"チュニジアンダブルクロッシェ" },
+    "Tunisian:TSLST": { "zh-HK":"阿富汗滑針", "zh-CN":"阿富汗滑针", ja:"チュニジアンスリップステッチ" },
+    "Tunisian:TYO": { "zh-HK":"阿富汗掛針／繞線", "zh-CN":"阿富汗挂针／绕线", ja:"チュニジアン掛け目" },
+    "Tunisian:TYO-FS": { "zh-HK":"掛針後於針隙挑針", "zh-CN":"挂针后于针隙挑针", ja:"掛け目とフルステッチ" },
+    "Tunisian:T INC 1→3": { "zh-HK":"一針放三針的加針", "zh-CN":"一针放三针的加针", ja:"1目から3目の増し目" },
+    "Tunisian:T2TOG": { "zh-HK":"二針併一針", "zh-CN":"二针并一针", ja:"2目一度" },
+    "Tunisian:T3TOG": { "zh-HK":"三針併一針", "zh-CN":"三针并一针", ja:"3目一度" },
+    "Tunisian:T4TOG": { "zh-HK":"四針併一針", "zh-CN":"四针并一针", ja:"4目一度" },
+    "Tunisian:T5TOG": { "zh-HK":"五針併一針", "zh-CN":"五针并一针", ja:"5目一度" },
+    "Tunisian:TC-A": { "zh-HK":"交叉針 A", "zh-CN":"交叉针 A", ja:"交差編み A" },
+    "Tunisian:TC-B": { "zh-HK":"交叉針 B", "zh-CN":"交叉针 B", ja:"交差編み B" },
+    "Tunisian:TDC-X": { "zh-HK":"長針交叉", "zh-CN":"长针交叉", ja:"長編み交差" },
+    "Tunisian:T3-LC": { "zh-HK":"退針底的左上三針交叉", "zh-CN":"退针底的左上三针交叉", ja:"戻り目上の左3目交差" }
   };
 
   const chartLegendWarning = "Chart symbols can vary by designer and region. Always check the pattern legend.";
-  const LAST_VERIFIED_DATE = "2026-06-21";
+  const LAST_VERIFIED_DATE = "2026-06-23";
   const SOURCE_URLS = {
     cycCrochet:"https://www.craftyarncouncil.com/standards/crochet-chart-symbols",
     cycKnit:"https://www.craftyarncouncil.com/standards/knit-chart-symbols",
     cycKnitAbbreviations:"https://www.craftyarncouncil.com/knit.html",
     vogueCharts:"https://www.vogueknitting.com/pattern-help/how-to/pattern-reading/reading-charts/",
     interweaveCables:"https://www.interweave.com/article/knitting/understanding-cable-chart-symbols/",
-    tinCanCharts:"https://blog.tincanknits.com/2014/06/06/how-to-read-a-knitting-chart/"
+    interweaveCharts:"https://www.interweave.com/article/knitting/reading-charts/",
+    tinCanCharts:"https://blog.tincanknits.com/2014/06/06/how-to-read-a-knitting-chart/",
+    purlCharts:"https://www.purlsoho.com/create/reading-a-chart/",
+    knitPicksCharts:"https://tutorials.knitpicks.com/wp-content/uploads/2009/12/charttutorial.pdf",
+    cycCrochetAbbreviations:"https://www.craftyarncouncil.com/crochet.html",
+    cgoa:"https://www.crochet.org/",
+    cycCrochetReading:"https://craftyarncouncil.com/standards/how-to-read-crochet-pattern",
+    cycTunisianAbbreviations:"https://www.craftyarncouncil.com/standards/crochet-abbreviations",
+    knitterKnotterTunisian:"https://knitterknotter.com/stitch-guide-and-abbreviations/",
+    tlYarnTunisianBasics:"https://tlycblog.com/3-tunisian-crochet-stitches/",
+    tlYarnTunisianKnit:"https://tlycblog.com/how-to-crochet-the-tunisian-crochet-knit-stitch-video-tutorial/"
   };
   const uploadedReferenceName="User-provided Chinese/Japanese chart reference sheets (IMG_4166–IMG_4176)";
+  const uploadedTunisianReferenceName="User-provided Afghan/Tunisian crochet reference sheets (IMG_4154–IMG_4165)";
   const duplicateAliasesToRemove=new Set([
     "Knitting:YO inc","Knitting:Eyelet","Knitting:Yarn Over (Lace)",
     "Shared:Bobble","Shared:Popcorn","Shared:Puff","Shared:Nupp","Shared:Cluster","Shared:Shell","Shared:V Stitch","Shared:Y Stitch","Shared:Cable Cross","Shared:BR inc","Shared:BR dec"
@@ -180,8 +219,13 @@
     "Crochet:CL":"⋀", "Crochet:Shell":"Ψ", "Crochet:V-st":"V",
     "Crochet:Y-st":"Y", "Crochet:Cross":"⨯", "Crochet:Picot":"△",
     "Crochet:FLO":"⌒", "Crochet:BLO":"⌣", "Crochet:FPDC":"⤴T̸", "Crochet:BPDC":"⤵T̸",
-    "Tunisian:TSS":"│", "Tunisian:TPS":"•│", "Tunisian:TKS":"⌗",
-    "Tunisian:TRS":"⌞", "Tunisian:TFS":"•", "Shared:V Stitch":"V",
+    "Tunisian:TSS":"│", "Tunisian:TPS":"—", "Tunisian:TKS":"◉",
+    "Tunisian:TRS":"∪", "Tunisian:TFS":"○", "Tunisian:TDC":"†",
+    "Tunisian:TSLST":"V", "Tunisian:TYO":"○", "Tunisian:TYO-FS":"◉",
+    "Tunisian:T INC 1→3":"∨3", "Tunisian:T2TOG":"∧2", "Tunisian:T3TOG":"∧3",
+    "Tunisian:T4TOG":"∧4", "Tunisian:T5TOG":"∧5", "Tunisian:TC-A":"╲╱",
+    "Tunisian:TC-B":"╱╲", "Tunisian:TDC-X":"⨯", "Tunisian:T3-LC":"≋╱",
+    "Shared:V Stitch":"V",
     "Shared:Y Stitch":"Y", "Shared:Cable Cross":"⨯"
   };
 
@@ -190,7 +234,7 @@
     "Knitting:YO":"yarn-over", "Knitting:KTBL":"knit-twisted", "Knitting:PTBL":"purl-twisted",
     "Knitting:K2TOG":"decrease-right", "Knitting:P2TOG":"purl-decrease-right",
     "Knitting:SSK":"decrease-left", "Knitting:SSP":"purl-decrease-left", "Knitting:SKP":"decrease-left",
-    "Knitting:CDD":"decrease-centred", "Knitting:KFB":"increase-kfb", "Knitting:PFB":"purl-increase", "Knitting:Bobble":"knit-bobble",
+    "Knitting:CDD":"decrease-centred", "Knitting:KFB":"increase-kfb", "Knitting:PFB":"purl-increase", "Knitting:MB":"knit-bobble",
     "Knitting:M1L":"increase-left", "Knitting:M1R":"increase-right", "Knitting:LI":"increase",
     "Knitting:YO inc":"yarn-over", "Knitting:Eyelet":"yarn-over", "Knitting:DYO":"double-yarn-over",
     "Knitting:C left":"cable-left", "Knitting:C right":"cable-right",
@@ -206,37 +250,53 @@
     "Crochet:HDC2TOG":"half-double-crochet-decrease", "Crochet:DC2TOG":"double-crochet-decrease",
     "Crochet:FLO":"front-loop", "Crochet:BLO":"back-loop", "Crochet:FPDC":"front-post",
     "Crochet:BPDC":"back-post", "Crochet:Cluster inc":"cluster", "Crochet:Cluster dec":"cluster-decrease",
-    "Crochet:PC":"popcorn", "Crochet:Puff":"cyc-hdc-cluster", "Crochet:Bobble":"cyc-hdc-cluster", "Crochet:CL":"cluster",
+    "Crochet:PC":"popcorn", "Crochet:Puff":"puff", "Crochet:Bobble":"bobble", "Crochet:CL":"cluster",
     "Crochet:Shell":"shell", "Crochet:V-st":"v-stitch", "Crochet:Y-st":"y-stitch",
     "Crochet:Cross":"crochet-cross", "Crochet:Picot":"picot",
-    "Tunisian:TSS":"knit", "Tunisian:TPS":"purl-twisted", "Tunisian:TKS":"knit-twisted",
-    "Tunisian:TRS":"slip", "Tunisian:TFS":"crochet-slip", "Shared:Cable Cross":"cable-cross"
+    "Tunisian:TSS":"tunisian-simple", "Tunisian:TPS":"tunisian-purl", "Tunisian:TKS":"tunisian-knit",
+    "Tunisian:TRS":"tunisian-reverse", "Tunisian:TFS":"tunisian-full", "Tunisian:TDC":"tunisian-double",
+    "Tunisian:TSLST":"tunisian-slip", "Tunisian:TYO":"tunisian-yarn-over", "Tunisian:TYO-FS":"tunisian-yarn-over-space",
+    "Tunisian:T INC 1→3":"tunisian-increase-1-3", "Tunisian:T2TOG":"tunisian-decrease-2",
+    "Tunisian:T3TOG":"tunisian-decrease-3", "Tunisian:T4TOG":"tunisian-decrease-4",
+    "Tunisian:T5TOG":"tunisian-decrease-5", "Tunisian:TC-A":"tunisian-cross-a",
+    "Tunisian:TC-B":"tunisian-cross-b", "Tunisian:TDC-X":"tunisian-double-cross",
+    "Tunisian:T3-LC":"tunisian-cable-left-3", "Shared:Cable Cross":"cable-cross"
   };
 
   const cycCrochetSymbols = new Set(["CH","SL ST","SC","HDC","DC","TR","DTR","SC2TOG","DC2TOG","Puff","Bobble","PC","CL","Shell","Picot","FLO","BLO","FPDC","BPDC"]);
-  const cycKnittingSymbols = new Set(["K","P","YO","K2TOG","P2TOG","SSK","SSP","KFB","M1L","M1R","KTBL","PTBL","Bobble"]);
+  const cycKnittingSymbols = new Set(["K","P","YO","K2TOG","P2TOG","SSK","SSP","KFB","M1L","M1R","KTBL","PTBL","MB"]);
   const cycCableSymbols = new Set(["1/1 LC","1/1 RC","2/2 LC","2/2 RC","1/1 LPC","1/1 RPC"]);
 
   const uploadedKnittingSymbols=new Set(["K","P","YO","KTBL","PTBL","M1L","M1R","K2TOG","P2TOG","SSK","SSP","CDD","1/1 LC","1/1 RC","2/2 LC","2/2 RC","3/3 LC","3/3 RC","1/1 LPC","1/1 RPC"]);
   const uploadedCrochetSymbols=new Set(["CH","SL ST","SC","HDC","DC","TR","DTR","SC INC","HDC INC","DC INC","SC2TOG","HDC2TOG","DC2TOG","PC","CL","Shell","Y-st","Picot","FLO","BLO","FPDC","BPDC"]);
+  const uploadedTunisianConfirmedSymbols=new Set(["TSS","TPS","TKS","TDC","TSLST","T INC 1→3","T2TOG","T3TOG","T4TOG","T5TOG","TC-A","TC-B","TDC-X","T3-LC"]);
+  const uploadedTunisianReviewSymbols=new Set(["TRS","TFS","TYO","TYO-FS"]);
 
   function sourceMetadata(craft, abbreviation, category, symbolIcon) {
+    if(craft==="Tunisian"&&uploadedTunisianConfirmedSymbols.has(abbreviation))return{
+      sourceType:"jp-cn-chart",requiresReview:false,confidence:"High",sourceName:uploadedTunisianReferenceName,sourceUrl:"",
+      sourceNote:`Matched to the operation and chart cell shown in the uploaded Afghan/Tunisian sheets; ${["TSS","TPS","TKS","TDC","TSLST"].includes(abbreviation)?"the English abbreviation was cross-checked against the Craft Yarn Council Tunisian abbreviation list.":"the searchable abbreviation is a Yarncha label for this source-specific chart operation."}`
+    };
+    if(craft==="Tunisian"&&uploadedTunisianReviewSymbols.has(abbreviation))return{
+      sourceType:"jp-cn-chart",requiresReview:true,confidence:"Medium",sourceName:uploadedTunisianReferenceName,sourceUrl:"",
+      sourceNote:"The uploaded sheet confirms a related Afghan-chart operation, but the exact mapping to this modern English abbreviation is not universal. Keep it unconfirmed and use the pattern legend."
+    };
+    if(craft==="Crochet"&&uploadedCrochetSymbols.has(abbreviation))return{
+      sourceType:"jp-cn-chart",requiresReview:false,confidence:"High",sourceName:uploadedReferenceName,sourceUrl:"",sourceNote:"Matched to the user-provided Chinese/Japanese-style crochet symbol reference; terminology and construction were cross-checked against CYC where available."
+    };
     if (craft === "Crochet" && cycCrochetSymbols.has(abbreviation)) {
       const familyMark = ["Puff","Bobble"].includes(abbreviation);
       return {
         sourceType:"CYC",
-        requiresReview:false,
-        confidence:"High",
+        requiresReview:familyMark,
+        confidence:familyMark?"Medium":"High",
         sourceName:"Craft Yarn Council Crochet Chart Symbols",
         sourceUrl:SOURCE_URLS.cycCrochet,
         sourceNote:familyMark
-          ? "CYC intentionally publishes one combined 3-hdc cluster/puff/bobble family mark. The shared glyph is correct; the pattern key decides the stitch name and loop count."
+          ? "CYC publishes a combined 3-hdc cluster/puff/bobble family mark rather than a universal stitch-specific glyph. Yarncha keeps the names separate and requires the pattern key."
           : "Based on the Craft Yarn Council crochet chart-symbol standard; always confirm the pattern key."
       };
     }
-    if(craft==="Crochet"&&uploadedCrochetSymbols.has(abbreviation))return{
-      sourceType:"jp-cn-chart",requiresReview:false,confidence:"High",sourceName:uploadedReferenceName,sourceUrl:"",sourceNote:"Matched to the user-provided Chinese/Japanese-style crochet symbol reference; terminology and construction were cross-checked against CYC where available."
-    };
     if(craft==="Knitting"&&uploadedKnittingSymbols.has(abbreviation))return{
       sourceType:"jp-cn-chart",requiresReview:false,confidence:"High",sourceName:uploadedReferenceName,sourceUrl:"",sourceNote:"Matched to the user-provided Chinese/Japanese-style knitting symbol reference; row-side meaning still follows the pattern legend."
     };
@@ -269,7 +329,7 @@
     if (/purl/i.test(fullName)) return "purl";
     if (craft === "Knitting") return category === "Lace" ? "yarn-over" : "knit";
     if (craft === "Crochet") return "crochet-generic";
-    if (craft === "Tunisian") return "knit-twisted";
+    if (craft === "Tunisian") return "legend-specific";
     return "legend-specific";
   }
 
@@ -307,10 +367,63 @@
     "Crochet:BLO":"Work only through the back loop of the indicated stitch.",
     "Crochet:FPDC":"Work a US double crochet around the front of the indicated post (UK front-post treble).",
     "Crochet:BPDC":"Work a US double crochet around the back of the indicated post (UK back-post treble)."
+    ,"Tunisian:TSS":"On the forward pass, insert the hook from right to left under the front vertical bar, yarn over, and draw up a loop. Work the stated return pass separately."
+    ,"Tunisian:TPS":"Bring the yarn to the front, insert under the front vertical bar, then yarn over and draw up a loop while keeping the purl bump at the front."
+    ,"Tunisian:TKS":"Insert the hook from front to back between the front and back vertical bars, yarn over, and draw up a loop for a knit-like face."
+    ,"Tunisian:TRS":"Insert behind the back vertical bar as directed and draw up a loop. Published symbols vary, so confirm the legend before using this entry."
+    ,"Tunisian:TFS":"Insert into the space between vertical bars rather than through a bar, yarn over, and draw up a loop. Confirm edge placement and the chart legend."
+    ,"Tunisian:TDC":"Yarn over, insert as the pattern directs, draw up a loop, then yarn over and draw through two loops; leave the resulting loop on the hook for the forward pass."
+    ,"Tunisian:TSLST":"Insert at the indicated vertical bar or space and pull the working loop through the fabric loop and the loop on the hook."
+    ,"Tunisian:TYO":"Wrap the yarn over the hook to create an extra loop. The uploaded sheets use several related marks, so the chart legend controls placement and return-pass treatment."
+    ,"Tunisian:TYO-FS":"Combine a yarn over with a pickup in the indicated inter-bar space. Treat this as a source-specific variation and check the chart legend."
+    ,"Tunisian:T INC 1→3":"Create three forward-pass loops from one indicated position using the sequence shown by the source chart; verify the following return pass."
+    ,"Tunisian:T2TOG":"Insert through the two indicated vertical bars together and draw up one loop, reducing two chart positions to one worked loop."
+    ,"Tunisian:T3TOG":"Insert through the three indicated vertical bars together and draw up one loop."
+    ,"Tunisian:T4TOG":"Insert through the four indicated vertical bars together and draw up one loop."
+    ,"Tunisian:T5TOG":"Insert through the five indicated vertical bars together and draw up one loop."
+    ,"Tunisian:TC-A":"Cross the two indicated Tunisian stitches in the A orientation shown by the source sheet; exact holding order is legend-specific."
+    ,"Tunisian:TC-B":"Cross the two indicated Tunisian stitches in the B orientation shown by the source sheet; exact holding order is legend-specific."
+    ,"Tunisian:TDC-X":"Work the indicated Tunisian double-crochet elements in crossed order."
+    ,"Tunisian:T3-LC":"Move three loops aside, work the next three, then return and work the held group to form the source sheet's left cross."
   };
 
   function explanationFor(craft, abbreviation, fullName, category){
     return verifiedExplanations[`${craft}:${abbreviation}`] || `${fullName} is a ${craft.toLowerCase()} ${category.toLowerCase()} instruction whose exact operation and chart mark must be confirmed in the pattern legend.`;
+  }
+
+  function sourceReferencesFor(craft, abbreviation, category, source){
+    const references=[{name:source.sourceName,url:source.sourceUrl||"",scope:"Primary entry source"}];
+    if(craft==="Knitting"){
+      references.push({name:"Vogue Knitting — Reading Charts",url:SOURCE_URLS.vogueCharts,scope:"Knit/purl and right-side chart convention"});
+      references.push({name:"Purl Soho — Reading a Chart",url:SOURCE_URLS.purlCharts,scope:"Chart direction, decrease lean, cable width and legend variation"});
+      references.push({name:"Knit Picks — Lace Chart Reading",url:SOURCE_URLS.knitPicksCharts,scope:"Flat/round chart direction and non-universal stitch-symbol warning"});
+      references.push({name:"Interweave Knits — Reading Charts",url:SOURCE_URLS.interweaveCharts,scope:"Chart-reading and legend variation cross-check"});
+      if(category==="Cable")references.push({name:"Interweave — Understanding Cable Chart Symbols",url:SOURCE_URLS.interweaveCables,scope:"Cable direction, span and purl-background notation"});
+      if(category==="Chart Rule")references.push({name:"Tin Can Knits — How to Read a Knitting Chart",url:SOURCE_URLS.tinCanCharts,scope:"Flat and circular chart-reading workflow"});
+    }
+    if(craft==="Crochet"){
+      references.push({name:"Craft Yarn Council — Crochet Chart Symbols",url:SOURCE_URLS.cycCrochet,scope:"Standard crochet symbol family"});
+      references.push({name:"Craft Yarn Council — Crochet Abbreviations",url:SOURCE_URLS.cycCrochetAbbreviations,scope:"US/UK terminology and abbreviations"});
+      references.push({name:"Crochet Guild of America — crochet education resources",url:SOURCE_URLS.cgoa,scope:"Guild-level terminology and teaching cross-check"});
+      references.push({name:"Edie Eckman — The Crochet Answer Book",url:"",scope:"Published crochet terminology and special-stitch cross-check"});
+      if(uploadedCrochetSymbols.has(abbreviation))references.unshift({name:uploadedReferenceName,url:"",scope:"Primary uploaded Chinese/Japanese-style symbol reference"});
+    }
+    if(craft==="Tunisian"){
+      references.push({name:"Craft Yarn Council — Tunisian Abbreviations",url:SOURCE_URLS.cycTunisianAbbreviations,scope:"Standard English abbreviation"});
+      references.push({name:"KnitterKnotter — Tunisian Stitch Guide",url:SOURCE_URLS.knitterKnotterTunisian,scope:"Stitch insertion and abbreviation cross-check"});
+      if(["TSS","TFS","TPS","Honeycomb"].includes(abbreviation))references.push({name:"TL Yarn Crafts — Beginner Tunisian Stitches",url:SOURCE_URLS.tlYarnTunisianBasics,scope:"Stitch construction cross-check"});
+      if(abbreviation==="TKS")references.push({name:"TL Yarn Crafts — Tunisian Knit Stitch",url:SOURCE_URLS.tlYarnTunisianKnit,scope:"Knit-stitch insertion cross-check"});
+    }
+    const seen=new Set();
+    return references.filter(reference=>{const key=`${reference.name}|${reference.url}`;if(seen.has(key))return false;seen.add(key);return true;});
+  }
+
+  function variationNotesFor(craft, abbreviation, category, confidence){
+    if(craft==="Crochet"&&["Puff","Bobble","CL"].includes(abbreviation))return "Cluster, puff and bobble notation varies by loop count and publisher. CYC includes a combined family mark; use the pattern legend for the exact construction.";
+    if(craft==="Knitting"&&category==="Cable")return "Cable symbols are not universal. Line count indicates stitch span in many publications, while fill or added marks may indicate knit, purl or twisted stitches.";
+    if(craft==="Tunisian")return "Tunisian chart notation is publication-specific. The uploaded Afghan-chart cell style is shown where matched; the English abbreviation describes the operation, not a universal glyph.";
+    if(confidence!=="High")return "No sufficiently consistent universal glyph was found across the checked references. Keep this entry tied to the pattern legend.";
+    return "The displayed symbol follows the cited reference family; another designer may use an alternative mark, so the pattern legend remains authoritative.";
   }
 
   const crochetRegionalTerms = {
@@ -328,8 +441,11 @@
     "HDC2TOG": { us:"hdc2tog", uk:"htr2tog", enUS:"Half double crochet two together", enUK:"Half treble two together", zhHK:"中長針二併一", zhCN:"中长针减针", cnAbbreviation:"" },
     "DC2TOG": { us:"dc2tog", uk:"tr2tog", enUS:"Double crochet two together", enUK:"Treble two together", zhHK:"長針二併一", zhCN:"长针减针", cnAbbreviation:"" },
     "PC": { us:"pc", uk:"pc", enUS:"Popcorn", enUK:"Popcorn", zhHK:"爆米花針", zhCN:"爆米花针", cnAbbreviation:"" },
+    "CL": { us:"CL", uk:"CL", enUS:"Cluster", enUK:"Cluster", zhHK:"棗形針／群針", zhCN:"枣形针／组针", cnAbbreviation:"" },
     "Puff": { us:"puff", uk:"puff", enUS:"Puff stitch", enUK:"Puff stitch", zhHK:"泡芙針／玉編", zhCN:"枣形针", cnAbbreviation:"" },
+    "Bobble": { us:"bo", uk:"bo", enUS:"Bobble stitch", enUK:"Bobble stitch", zhHK:"球球針", zhCN:"球球针", cnAbbreviation:"" },
     "Shell": { us:"sh", uk:"sh", enUS:"Shell stitch", enUK:"Shell stitch", zhHK:"貝殼針", zhCN:"贝壳针", cnAbbreviation:"" },
+    "Picot": { us:"picot", uk:"picot", enUS:"Picot", enUK:"Picot", zhHK:"狗牙針", zhCN:"狗牙针", cnAbbreviation:"" },
     "FLO": { us:"FLO", uk:"FLO", enUS:"Front loop only", enUK:"Front loop only", zhHK:"外半針", zhCN:"外半针", cnAbbreviation:"" },
     "BLO": { us:"BLO", uk:"BLO", enUS:"Back loop only", enUK:"Back loop only", zhHK:"內半針", zhCN:"内半针", cnAbbreviation:"" }
     ,"FPDC": { us:"FPdc", uk:"FPtr", enUS:"Front post double crochet", enUK:"Front post treble", zhHK:"內鉤長針", zhCN:"内钩长针", cnAbbreviation:"NF" }
@@ -354,6 +470,7 @@
     const hasKnownIcon = symbolIcon!=="legend-specific";
     const nameTraditionalChinese = terms.zhHK || localized["zh-HK"] || "需核對";
     const confidence=["High","Medium","Low"].includes(source.confidence)?source.confidence:"Low";
+    const sourceReferences=sourceReferencesFor(craft,abbreviation,category,source);
     const needsReview = confidence!=="High" || !hasKnownIcon || source.requiresReview || source.sourceType === "needs-review" || nameTraditionalChinese === "需核對" || (craft === "Crochet" && !regional);
     const abbreviationUS = terms.us || (craft === "Crochet" ? abbreviation.toLowerCase() : abbreviation);
     const abbreviationUK = terms.uk || (craft === "Crochet" ? "" : abbreviation);
@@ -407,12 +524,15 @@
       sourceName:source.sourceName,
       sourceUrl:source.sourceUrl,
       sourceNote:source.sourceNote,
+      sourceReferences,
+      variationNotes:variationNotesFor(craft,abbreviation,category,confidence),
+      matchedUploadedReference:sourceReferences.some(reference=>reference.scope.includes("uploaded")||reference.name===uploadedReferenceName||reference.name===uploadedTunisianReferenceName),
       lastVerifiedDate:LAST_VERIFIED_DATE,
       confidence,
       tags:[craft,category],
       notes:"",
       customSvg:"",
-      verificationStatus:confidence==="High"&&!needsReview ? "Confirmed" : "To Be Confirmed",
+      verificationStatus:confidence==="High"&&!needsReview ? (sourceReferences.some(reference=>reference.name===uploadedReferenceName||reference.name===uploadedTunisianReferenceName) ? "Manually Verified" : "Confirmed") : "To Be Confirmed",
       verifiedDate:confidence==="High"&&!needsReview?LAST_VERIFIED_DATE:"",
       verifiedBy:"",
       verificationNotes:"",
@@ -465,6 +585,9 @@
       sourceName:"Tin Can Knits chart-reading guidance",
       sourceUrl:SOURCE_URLS.tinCanCharts,
       sourceNote:"Educational chart-reading guidance, not a standardized stitch glyph.",
+      sourceReferences:sourceReferencesFor(craft,"","Chart Rule",{sourceName:"Tin Can Knits chart-reading guidance",sourceUrl:SOURCE_URLS.tinCanCharts}),
+      variationNotes:"Chart direction and cell meaning depend on whether the work is flat, circular, right-side, wrong-side, row-based or round-based. Publication instructions override this general rule.",
+      matchedUploadedReference:false,
       lastVerifiedDate:LAST_VERIFIED_DATE,
       confidence:"Medium",
       tags:[craft,"Chart Rule"],
@@ -502,7 +625,7 @@
       if (filters.terminology && filters.terminology !== "All" && !entry.regionTags.includes(filters.terminology)) return false;
       if (filters.verification && filters.verification !== "All" && entry.verificationStatus !== filters.verification) return false;
       if (!needle) return true;
-      const haystack=[entry.visualSymbol, entry.abbreviation, entry.abbreviationUS, entry.abbreviationUK, entry.abbreviationChinese, entry.fullName, entry.nameEnglish, entry.nameTraditionalChinese, entry.nameSimplifiedChinese, entry.category, entry.description, entry.sourceName, entry.confidence, entry.verificationStatus, ...(entry.tags||[]), ...(entry.regionTags||[]), ...entry.aliases, ...entry.recognitionAliases, ...entry.ocrKeywords]
+      const haystack=[entry.visualSymbol, entry.abbreviation, entry.abbreviationUS, entry.abbreviationUK, entry.abbreviationChinese, entry.fullName, entry.nameEnglish, entry.nameTraditionalChinese, entry.nameSimplifiedChinese, entry.category, entry.description, entry.sourceName, entry.confidence, entry.verificationStatus, entry.variationNotes, ...(entry.sourceReferences||[]).flatMap(reference=>[reference.name,reference.scope]), ...(entry.tags||[]), ...(entry.regionTags||[]), ...entry.aliases, ...entry.recognitionAliases, ...entry.ocrKeywords]
         .join(" ").toLowerCase();
       return needle.split(/\s+/).every(token=>haystack.includes(token));
     });
@@ -535,16 +658,17 @@
     }
     const crochetOnly=/^(chain|slip-stitch-crochet|single-crochet|half-double-crochet|double-crochet|treble-crochet|double-treble-crochet|single-crochet-increase|half-double-crochet-increase|double-crochet-increase|single-crochet-decrease|half-double-crochet-decrease|double-crochet-decrease|front-loop|back-loop|front-post|back-post|cluster|cluster-decrease|popcorn|puff|bobble|shell|v-stitch|y-stitch|crochet-cross|picot)$/;
     const knittingOnly=/^(knit|purl|knit-twisted|purl-twisted|increase-kfb|knit-bobble|purl-increase|purl-decrease|decrease-centred|cable-left|cable-right|cable-left-wide|cable-right-wide|cable-left-purl|cable-right-purl|cable-twisted)$/;
+    const tunisianOnly=/^tunisian-/;
     return {
       totalEntries:sourceEntries.length,
       missingSymbolType:sourceEntries.filter(entry=>!entry.symbolType||!entry.visualSymbol).map(entry=>entry.id),
       needsReview:sourceEntries.filter(entry=>entry.needsReview).map(entry=>entry.id),
       duplicateAbbreviations:[...abbreviationGroups.entries()].filter(([,items])=>items.length>1).map(([abbreviation,items])=>({abbreviation,entries:items.map(entry=>({id:entry.id,craft:entry.craft,name:entry.nameEn}))})),
-      duplicateSymbolWarnings:[...symbolGroups.entries()].filter(([key,items])=>items.length>1&&key!=="Crochet:cyc-hdc-cluster").map(([symbolType,items])=>({symbolType,entries:items.map(entry=>({id:entry.id,name:entry.nameEn}))})),
-      intentionalSharedSymbols:[...symbolGroups.entries()].filter(([key,items])=>items.length>1&&key==="Crochet:cyc-hdc-cluster").map(([symbolType,items])=>({symbolType,entries:items.map(entry=>entry.nameEn)})),
-      craftMismatchWarnings:sourceEntries.filter(entry=>(entry.craft==="Knitting"&&crochetOnly.test(entry.symbolType))||(entry.craft==="Crochet"&&knittingOnly.test(entry.symbolType))).map(entry=>({id:entry.id,craft:entry.craft,symbolType:entry.symbolType}))
+      duplicateSymbolWarnings:[...symbolGroups.entries()].filter(([,items])=>items.length>1).map(([symbolType,items])=>({symbolType,entries:items.map(entry=>({id:entry.id,name:entry.nameEn}))})),
+      intentionalSharedSymbols:[],
+      craftMismatchWarnings:sourceEntries.filter(entry=>(entry.craft==="Knitting"&&(crochetOnly.test(entry.symbolType)||tunisianOnly.test(entry.symbolType)))||(entry.craft==="Crochet"&&(knittingOnly.test(entry.symbolType)||tunisianOnly.test(entry.symbolType)))||(entry.craft==="Tunisian"&&(crochetOnly.test(entry.symbolType)||knittingOnly.test(entry.symbolType)))).map(entry=>({id:entry.id,craft:entry.craft,symbolType:entry.symbolType}))
     };
   }
 
-  root.YarnchaSymbolDatabase = Object.freeze({ schemaVersion:5, entries, defaultSymbols:entries, categoryOrder, search, searchEntries, recognitionCandidates, normalizeEntry, audit, chartLegendWarning });
+  root.YarnchaSymbolDatabase = Object.freeze({ schemaVersion:7, entries, defaultSymbols:entries, categoryOrder, search, searchEntries, recognitionCandidates, normalizeEntry, audit, chartLegendWarning });
 })(globalThis);

@@ -1,14 +1,14 @@
-const CACHE_NAME = "yarncha-shell-v44";
+const CACHE_NAME = "yarncha-shell-v46";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=44",
-  "/calculator-engine.js?v=44",
-  "/symbol-database.js?v=44",
-  "/app.js?v=44",
-  "/src/cloud/bootstrap.js?v=44",
-  "/src/document-tools.js?v=44",
-  "/public/manifest.json?v=44",
+  "/styles.css?v=46",
+  "/calculator-engine.js?v=46",
+  "/symbol-database.js?v=46",
+  "/app.js?v=46",
+  "/src/cloud/bootstrap.js?v=46",
+  "/src/document-tools.js?v=46",
+  "/public/manifest.json?v=46",
   "/public/icons/icon-192.png",
   "/public/icons/icon-512.png",
   "/public/icons/maskable-icon-192.png",

@@ -188,14 +188,19 @@ Most features currently live in `app.js`, with styles in `styles.css`.
 - Symbol Database / Flow Mode foundation:
   - seed and schema normalization in `symbol-database.js`
   - Library master/detail UI in `symbolDatabaseHtml()` and `bindSymbolDatabase()`
-  - schema v5 keeps `defaultSymbols` immutable and stores user changes separately in `state.userSymbolsOverride`
+  - schema v6 keeps `defaultSymbols` immutable and stores user changes separately in `state.userSymbolsOverride`
   - the 2026-06-21 source audit is recorded in `SYMBOL_DATABASE_AUDIT.md`; every record has `sourceName`, `sourceUrl`, `lastVerifiedDate`, and `confidence`
   - only High-confidence stitch records show a claimed chart glyph; Medium/Low records use the explicit `legend-specific` state and remain `To Be Confirmed`
+  - the Tunisian/Afghan audit uses the uploaded `IMG_4154–IMG_4165` sheets as the primary chart-glyph reference and CYC only to cross-check standard English abbreviations
+  - confirmed Tunisian entries use dedicated `tunisian-*` SVG tokens; the audit rejects accidental reuse of regular knitting/crochet icon families
   - merged entries are produced by `mergedSymbolEntries()`; do not write changes back into `symbol-database.js` at runtime
   - reusable editing lives in `symbolEditFormHtml()` / `openSymbolEditModal()` with add, duplicate, delete, single reset, full reset, JSON import and JSON export
   - the editor's `Chart symbol / character` field writes both `symbol` and `visualSymbol`; keep it separate from the reusable `symbolType` SVG icon key
   - verification fields are `verificationStatus`, `verifiedDate`, `verifiedBy`, and `verificationNotes`; missing imported statuses must default to `To Be Confirmed`
   - custom icon fragments pass through the SVG element/attribute allowlist in `sanitizeCustomSymbolSvg()` before preview or save
+  - the Symbol Edit form no longer exposes SVG markup or verification-person metadata; legacy custom SVG overrides still render for compatibility
+  - a symbol override may reference one user-uploaded picture through `symbolImageAsset` / `symbolImageName`; the image lives in IndexedDB, appears on cards/details, and falls back to the default SVG when absent
+  - the Symbol Edit form is beginner-facing: do not expose live SVG preview, custom SVG editing, source/audit metadata fields, verified date/by/notes, freeform notes, source type, or confidence editing in the UI. Keep only the verification status dropdown plus local uploaded symbol picture controls.
   - Symbol Database edits are browser-local and are included in Yarncha full backups as well as the dedicated Symbol JSON export
   - favorites persist in `state.symbolFavorites`; project-note saving uses the existing local project save path
   - schema version 3 stores visual chart marks, US/UK crochet terminology, Traditional/Simplified Chinese names, recognition aliases, OCR terms, ambiguity warnings, source audit notes, and an explicit review status
@@ -536,3 +541,29 @@ The Project Toolkit uses a visual category-card workflow, not a long dropdown. T
 Project pages filter tools by project craft type. Knitting projects show knitting + shared tools; crochet projects show crochet + shared tools. Budget-specific calculator work should stay in Buy List / Budget rather than appearing as a project toolkit category.
 
 Calculator results are intentionally user-controlled. Results can be copied, saved to notes, linked to project Tool History, saved as Project Ideas, or added to Buy List when relevant. Do not auto-create projects or purchases from calculator results without a user action.
+
+## Symbol Database Final Audit — 2026-06-23
+
+- `symbol-database.js` was normalized after a final source-backed Symbol Database audit.
+- The default database now has 101 entries: 43 knitting, 32 crochet, and 26 Tunisian crochet.
+- Uploaded reference matches remain primary for the encoded `IMG_4166–IMG_4176` knitting/crochet/cable sheets and `IMG_4154–IMG_4165` Tunisian/Afghan sheets.
+- Verified uploaded-reference entries use `verificationStatus: "Manually Verified"`; unsupported or publisher-variable entries stay `To Be Confirmed`.
+- Current counts: 60 uploaded-reference matches, 47 manually verified entries, 54 `To Be Confirmed` entries, 58 High confidence, 21 Medium confidence, 22 Low confidence, and 41 entries requiring manual review before Flow Mode use.
+- Cross-check references now include CYC chart/abbreviation pages, Vogue Knitting, Interweave, Tin Can Knits, Purl Soho, Knit Picks, Crochet Guild of America resources, Edie Eckman, KnitterKnotter, and TL Yarn Crafts/Toni Lipsey resources.
+- Knitting bobble abbreviation was normalized to `MB`; crochet bobble keeps `bo` as a searchable CYC abbreviation alias. The duplicate-abbreviation audit warning is now zero.
+- Do not invent chart glyphs for unresolved entries. Keep uncertain symbols as `legend-specific`, lower confidence, and document the variation in `variationNotes`.
+- `npm run test:symbols` and `npm run test:symbol-audit` passed after the audit.
+
+## Settings Safety UX Update — 2026-06-23
+
+- Settings now uses clearer groups: Preferences, Projects & Backup, Account & Sync, and Danger Zone.
+- The cloud Account & Sync card must not include destructive actions. It should show email, sync status, sign-in/account access, sign out, and sync preferences only.
+- Delete Account and cloud-data deletion live in a dedicated Danger Zone card with a red border, warning icon, descriptive text, and the exact warning copy `This action cannot be undone.`
+- Account deletion remains disabled until the user types `DELETE` or confirms the signed-in email address.
+- Keep future destructive Settings actions inside Danger Zone rather than mixing them with normal cloud sync controls.
+- `npm run test:settings` covers the Settings grouping and deletion-confirmation contract.
+- The Vite production build intentionally strips Yarncha's three classic root scripts before Vite's HTML transform, then `scripts/copy-static.mjs` injects them back into `dist/index.html` after copying static assets. This keeps the vanilla runtime intact while avoiding misleading non-module script warnings.
+- Classic app assets currently use cache key `v=49`; bump the root `index.html` scripts and `scripts/copy-static.mjs` together whenever browser previews show stale root scripts.
+- `openModal()` must call `ensureModalElements()` before writing modal content. Production module scripts can leave the static modal shell unavailable, so modal actions should self-heal instead of assuming `#modal-backdrop` and `#modal-content` already exist.
+- Library cards should not expose visible destructive Delete actions. Yarn materials, generic Library pages/PDFs, and Project Ideas keep normal card actions only; deletion lives inside each Edit modal's small Danger Zone with the confirmation text `Are you sure you want to delete this item?`. `npm run test:library` covers this contract.
+- The global page footer includes `© 2026 Yarncha. All rights reserved.`
