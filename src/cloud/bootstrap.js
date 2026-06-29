@@ -290,33 +290,34 @@ async function deleteCloudProject(localProjectId) {
 }
 
 async function injectChartReader() {
-  const host = document.querySelector("#project-detail .manual-chart-tools");
-  if (!host || document.getElementById("cloud-chart-reader")) return;
+  const slot = document.getElementById("cloud-chart-reader-slot");
+  const host = slot || document.querySelector("#project-detail .manual-chart-tools");
+  if (!host) return;
   const project = local().getActiveProject();
   if (!project) return;
-  const panel = document.createElement("section");
-  panel.id = "cloud-chart-reader";
-  panel.className = "card cloud-chart-reader";
-  if (!cloud.configured) {
-    panel.innerHTML = `<p class="eyebrow">AI CHART READER · PRIVATE BETA</p><h3>Backend setup required</h3><p>The review-first chart reader is prepared, but this deployment is not connected to Supabase yet. OG Mode remains available offline.</p>`;
+  let panel = document.getElementById("cloud-chart-reader");
+  if (!panel) {
+    panel = document.createElement("section");
+    panel.id = "cloud-chart-reader";
+    panel.className = slot ? "cloud-chart-reader flow-ai-cloud-panel" : "card cloud-chart-reader";
     host.append(panel);
+  }
+  if (!cloud.configured) {
+    panel.innerHTML = `<p class="eyebrow">AI CHART READER</p><h3>Backend setup required</h3><p>The review-first chart reader is prepared, but this deployment is not connected to Supabase yet. OG Mode remains available offline.</p>`;
     return;
   }
   if (!cloud.user) {
-    panel.innerHTML = `<p class="eyebrow">AI CHART READER · PRIVATE BETA</p><h3>Sign in to analyse a chart</h3><p>Your chart must be saved privately before server-side analysis. The reader never treats uncertain symbols as confirmed.</p><button class="secondary-button" id="chart-reader-sign-in">Sign in</button>`;
-    host.append(panel);
+    panel.innerHTML = `<p class="eyebrow">AI CHART READER</p><h3>Sign in to analyse a chart</h3><p>Your chart must be saved privately before server-side analysis. The reader never treats uncertain symbols as confirmed.</p><button class="secondary-button" id="chart-reader-sign-in">Sign in</button>`;
     document.getElementById("chart-reader-sign-in").onclick = openAccountModal;
     return;
   }
   if (!project.cloudId) {
-    panel.innerHTML = `<p class="eyebrow">AI CHART READER · PRIVATE BETA</p><h3>Move this project to cloud first</h3><p>The local chart remains safe. Cloud analysis starts only after you explicitly migrate the project.</p><button class="secondary-button" id="chart-reader-migrate">Move local projects to cloud</button>`;
-    host.append(panel);
+    panel.innerHTML = `<p class="eyebrow">AI CHART READER</p><h3>Move this project to cloud first</h3><p>The local chart remains safe. Cloud analysis starts only after you explicitly migrate the project.</p><button class="secondary-button" id="chart-reader-migrate">Move local projects to cloud</button>`;
     document.getElementById("chart-reader-migrate").onclick = migrateLocalProjects;
     return;
   }
   const uploads = await listChartUploads(project.cloudId).catch(() => []);
-  panel.innerHTML = `<p class="eyebrow">AI CHART READER · PRIVATE BETA</p><h3>AI reads → you review → final pattern</h3><p>Choose an uploaded image. AI suggestions remain editable and every low-confidence cell must be checked manually.</p>${uploads.length ? `<div class="field"><label>Cloud chart</label><select id="cloud-chart-upload-select">${uploads.map(upload => `<option value="${upload.id}">${local().escapeHtml(upload.original_filename)} · ${upload.status}</option>`).join("")}</select></div><div class="button-row"><button class="secondary-button" id="run-cloud-analysis">Analyse selected chart</button><button class="secondary-button" id="load-cloud-cells">Review cells</button></div>` : `<p class="empty-state">Upload a chart while signed in, or migrate existing local chart files.</p>`}<div id="cloud-chart-reader-result" aria-live="polite"></div>`;
-  host.append(panel);
+  panel.innerHTML = `<p class="eyebrow">AI CHART READER</p><h3>Cloud analysis</h3><p>Choose an uploaded image. AI suggestions remain editable and every low-confidence cell must be checked manually.</p>${uploads.length ? `<div class="field"><label>Cloud chart</label><select id="cloud-chart-upload-select">${uploads.map(upload => `<option value="${upload.id}">${local().escapeHtml(upload.original_filename)} · ${upload.status}</option>`).join("")}</select></div><div class="button-row"><button class="secondary-button" id="run-cloud-analysis">Analyse chart</button><button class="secondary-button" id="load-cloud-cells">Review cells</button></div>` : `<p class="empty-state">Upload a chart while signed in, or migrate existing local chart files.</p>`}<div id="cloud-chart-reader-result" aria-live="polite"></div>`;
   document.getElementById("run-cloud-analysis")?.addEventListener("click", runSelectedAnalysis);
   document.getElementById("load-cloud-cells")?.addEventListener("click", loadSelectedCells);
 }

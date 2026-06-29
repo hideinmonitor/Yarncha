@@ -5,22 +5,20 @@ const BACKUP_VERSION = 2;
 const projectTypeOptions = ["Knitting","Crochet","Tunisian Crochet","Weaving","Other"];
 const projectStatusOptions = ["Planning","In progress","Paused","Finished","Frogged"];
 const themePresets=[
-  {id:"creamy-vanilla",name:"Creamy Vanilla",primary:"#D8B899",secondary:"#F4E6D0",background:"#FFF9F0",card:"#FFF3E3",text:"#5A4632",button:"#B68A62",highlight:"#EACB9A"},
-  {id:"matcha-latte",name:"Matcha Latte",primary:"#A8BFA3",secondary:"#E3EAD8",background:"#FAF8EF",card:"#FFFFFF",text:"#4E5A46",button:"#7F9A7A",highlight:"#D8C89A"},
-  {id:"sakura-milk",name:"Sakura Milk",primary:"#E8A6B3",secondary:"#F8DDE4",background:"#FFF7F9",card:"#FFFFFF",text:"#5B4148",button:"#C97B8C",highlight:"#F3C1C9"},
-  {id:"cocoa-beige",name:"Cocoa Beige",primary:"#A9826D",secondary:"#E8D8C8",background:"#F7F0E8",card:"#FFFDF9",text:"#4C3A32",button:"#8B6655",highlight:"#D1A883"},
-  {id:"soft-lavender",name:"Soft Lavender",primary:"#B9A7D8",secondary:"#EDE6F7",background:"#FBF9FF",card:"#FFFFFF",text:"#4A3F5E",button:"#8F7BBE",highlight:"#D8C8F0"},
-  {id:"peach-apricot",name:"Peach Apricot",primary:"#F0B28A",secondary:"#FFE0C7",background:"#FFF8F2",card:"#FFFFFF",text:"#5C4436",button:"#D9875A",highlight:"#F6C59B"},
-  {id:"ocean-mist",name:"Ocean Mist",primary:"#9BBCC2",secondary:"#DDEEEF",background:"#F5FBFB",card:"#FFFFFF",text:"#354D52",button:"#6F9FA8",highlight:"#B7D8D9"},
-  {id:"vintage-paper",name:"Original Yarncha",primary:"#B7785F",secondary:"#E7E9DC",background:"#F6F0E6",card:"#FFFAF3",text:"#463D35",button:"#5F6958",highlight:"#C4A269"}
+  {id:"creamy-vanilla",name:"Creamy Vanilla",primary:"#D8B899",secondary:"#F4E6D0",background:"#FFF9F0",card:"#FFF3E3",text:"#5A4632",button:"#B68A62",highlight:"#EACB9A",dark:{background:"#15120F",card:"#211C17",text:"#FAF3EA",button:"#E7B97F",secondary:"#352A20",highlight:"#FFD08F"}},
+  {id:"matcha-latte",name:"Matcha Latte",primary:"#A8BFA3",secondary:"#E3EAD8",background:"#FAF8EF",card:"#FFFFFF",text:"#4E5A46",button:"#7F9A7A",highlight:"#D8C89A",dark:{background:"#111611",card:"#1D251C",text:"#F3F8EF",button:"#A9D49E",secondary:"#283424",highlight:"#D8E9A7"}},
+  {id:"sakura-milk",name:"Sakura Milk",primary:"#E8A6B3",secondary:"#F8DDE4",background:"#FFF7F9",card:"#FFFFFF",text:"#5B4148",button:"#C97B8C",highlight:"#F3C1C9",dark:{background:"#181113",card:"#261A1F",text:"#FFF1F5",button:"#F0A5B6",secondary:"#3A242C",highlight:"#FFC4D0"}},
+  {id:"cocoa-beige",name:"Cocoa Beige",primary:"#A9826D",secondary:"#E8D8C8",background:"#F7F0E8",card:"#FFFDF9",text:"#4C3A32",button:"#8B6655",highlight:"#D1A883",dark:{background:"#15110F",card:"#241C18",text:"#F8EEE6",button:"#D6A17F",secondary:"#382920",highlight:"#E7B98B"}},
+  {id:"soft-lavender",name:"Soft Lavender",primary:"#B9A7D8",secondary:"#EDE6F7",background:"#FBF9FF",card:"#FFFFFF",text:"#4A3F5E",button:"#8F7BBE",highlight:"#D8C8F0",dark:{background:"#13111A",card:"#211D2D",text:"#F6F1FF",button:"#BFA7F2",secondary:"#302842",highlight:"#D8C8FF"}},
+  {id:"peach-apricot",name:"Peach Apricot",primary:"#F0B28A",secondary:"#FFE0C7",background:"#FFF8F2",card:"#FFFFFF",text:"#5C4436",button:"#D9875A",highlight:"#F6C59B",dark:{background:"#17110E",card:"#271B15",text:"#FFF1E8",button:"#F0A26C",secondary:"#3B261A",highlight:"#FFC08B"}},
+  {id:"ocean-mist",name:"Ocean Mist",primary:"#9BBCC2",secondary:"#DDEEEF",background:"#F5FBFB",card:"#FFFFFF",text:"#354D52",button:"#6F9FA8",highlight:"#B7D8D9",dark:{background:"#0F1517",card:"#192529",text:"#EEF9FA",button:"#83D2D7",secondary:"#21363A",highlight:"#AFE6E6"}},
+  {id:"vintage-paper",name:"Vintage Paper",primary:"#B7785F",secondary:"#E7E9DC",background:"#F6F0E6",card:"#FFFAF3",text:"#463D35",button:"#5F6958",highlight:"#C4A269",dark:{background:"#151310",card:"#211F19",text:"#F6EFE2",button:"#C8AA70",secondary:"#302D23",highlight:"#E2C47E"}}
 ];
 const designStyles=[
   {id:"original-classic",name:"Original Classic",desc:"Balanced Yarncha look with soft cards and familiar controls."},
-  {id:"japanese-zakka",name:"Japanese Zakka",desc:"Warm paper texture, gentle shadows and handmade notebook details."},
   {id:"korean-soft",name:"Korean Soft",desc:"Rounded airy cards, soft spacing and gentle interface edges."},
   {id:"minimal-clean",name:"Minimal Clean",desc:"Crisp spacing, simple cards and almost no decoration."},
-  {id:"artsy-journal",name:"Artsy Journal",desc:"Scrapbook-like texture, expressive cards and a creative desk feeling."},
-  {id:"dreamy-pastel",name:"Dreamy Pastel",desc:"Soft glow, floating cards and a delicate pastel mood."}
+  {id:"artsy-journal",name:"Artsy Journal",desc:"Scrapbook-like texture, expressive cards and a creative desk feeling."}
 ];
 const ideaCraftOptions=["Knitting","Crochet","Tunisian Crochet","Mixed / Other"];
 const ideaKindOptions=["Blanket","Sweater","Hat / beanie","Scarf","Socks pair","Amigurumi","Shawl","Gloves pair","Cardigan","Bag","Homeware","Custom idea"];
@@ -84,7 +82,7 @@ let currentProjectTool = "swatch";
 let currentToolCategory = "All";
 let currentToolSearch = "";
 let currentGlobalRenderingTool = "grid";
-let activeAnnotationTool = "marker";
+let activeAnnotationTool = "touch";
 let drawingStroke = null;
 let drawingFrame = null;
 let maskDrag = null;
@@ -485,7 +483,8 @@ function renderProjectDetail() {
     </div>`;
   bindProjectDetail();
   hydrateProjectCovers();
-  if(p.attachments.length)setTimeout(()=>showProjectAsset(p.attachments[0].id),0);
+  const chartAssetId=p.activeChartAssetId&&p.attachments.some(a=>a.id===p.activeChartAssetId)?p.activeChartAssetId:p.attachments[0]?.id;
+  if(chartAssetId)setTimeout(()=>showProjectAsset(chartAssetId),0);
   queueMicrotask(applyLanguage);
   window.dispatchEvent(new CustomEvent("yarncha:project-rendered", { detail:{ projectId:p.id, tab } }));
 }
@@ -513,15 +512,16 @@ function projectTrackHtml(p){
 function projectChartHtml(p){
   const chartMode=p.chartMode||"og";
   const hasChart=!!(p.chart||p.attachments?.length);
+  const activeAssetId=p.activeChartAssetId&&p.attachments?.some(a=>a.id===p.activeChartAssetId)?p.activeChartAssetId:p.attachments?.[0]?.id;
   return `<div class="chart-mode ${p.readingMode?"reading-mode":""}">
-    <div class="chart-mode-toolbar card">
-      <div class="reading-title-wrap">${p.readingMode?`<span class="reading-cover-thumb">${visual(p,true)}</span>`:""}<div><p class="eyebrow">CHART WORKSPACE</p><h2>${chartMode==="flow"?"Flow Mode (Beta)":"Manual chart reading"}</h2><p>${chartMode==="flow"?"AI-assisted chart reading with upload, symbol recognition, row tracking, highlight masks, read aloud, and review before anything is accepted.":"Follow your chart without AI guessing. Zoom, pan, highlight the row, and annotate as you go."}</p></div></div>
+    <div class="chart-mode-toolbar chart-action-bar card">
+      <div class="reading-title-wrap">${p.readingMode?`<span class="reading-cover-thumb">${visual(p,true)}</span>`:""}<div><p class="eyebrow">PROJECT CHART</p><h2>Chart Reading</h2><p>${chartMode==="flow"?"AI reads, you review, and Yarncha tracks your row.":"Zoom, pan, highlight the row, and annotate as you go."}</p></div></div>
       <div class="chart-mode-actions"><button class="secondary-button" id="replace-chart">Upload chart</button><button class="primary-button" id="toggle-reading">${p.readingMode?"Exit Reading":"Reading Mode"}</button></div>
       <input type="file" id="chart-upload" accept=".pdf,image/*" multiple hidden>
     </div>
     <div class="chart-mode-switch card" role="radiogroup" aria-label="Chart mode">
       <button class="${chartMode==="og"?"active":""}" data-chart-mode="og" aria-checked="${chartMode==="og"}">OG Mode</button>
-      <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}">Flow Mode (Beta)</button>
+      <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}">Flow Mode</button>
       <span>${chartMode==="flow"?"Project-only AI reader workflow. You review and correct every suggested row and symbol.":"Recommended for accurate row-by-row tracking."}</span>
     </div>
     <div class="reading-counter card">
@@ -533,7 +533,7 @@ function projectChartHtml(p){
       <button class="mini-button voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","button-icon")}</button>
     </div>
     <div class="annotation-toolbar card ${hasChart?"":"is-disabled"}" role="toolbar" aria-label="Annotation tools" aria-disabled="${!hasChart}">
-      ${["pen","highlighter","eraser","rowMask","text","arrow","marker"].map(tool=>`<button class="${activeAnnotationTool===tool?"active":""}" data-annotation-tool="${tool}" ${hasChart?"":"disabled"}>${toolIcon(tool)}<span>${toolLabel(tool)}</span></button>`).join("")}
+      ${["touch","pen","highlighter","eraser","rowMask","text","arrow","marker"].map(tool=>`<button class="${activeAnnotationTool===tool?"active":""}" data-annotation-tool="${tool}" ${hasChart?"":"disabled"}>${toolIcon(tool)}<span>${toolLabel(tool)}</span></button>`).join("")}
       <label class="annotation-control">Color <input id="annotation-color" type="color" value="${escapeHtml(p.annotationColor||"#d96572")}" ${hasChart?"":"disabled"}></label>
       <label class="annotation-control">Size <select id="annotation-width" ${hasChart?"":"disabled"}>${[2,4,6,10,14,20].map(w=>`<option value="${w}" ${Number(p.annotationWidth)===w?"selected":""}>${w}</option>`).join("")}</select></label>
       <label class="annotation-control mask-only">Opacity <input id="row-mask-opacity" type="range" min=".2" max=".95" step=".05" value="${p.rowMask?.opacity??.72}" ${hasChart?"":"disabled"}></label>
@@ -546,7 +546,7 @@ function projectChartHtml(p){
     </div>
     <div class="chart-reader card">
       <div class="chart-stage og-chart-stage" id="chart-stage">${chartViewerHtml(p)}</div>
-      <div class="attachment-strip">${p.attachments.map(a=>`<button class="mini-button" data-project-asset="${a.id}">${escapeHtml(a.name)}</button>`).join("")}</div>
+      <div class="attachment-strip">${p.attachments.map(a=>`<div class="chart-file-pill ${activeAssetId===a.id?"active":""}"><button class="mini-button chart-file-open" data-project-asset="${a.id}">${escapeHtml(a.name||"Chart file")}</button><button class="mini-button danger-button chart-file-remove" data-delete-chart-asset="${a.id}" aria-label="Remove ${escapeHtml(a.name||"chart file")}">Remove</button></div>`).join("")}</div>
     </div>
     <div class="manual-chart-tools">
       <div class="sync-panel card"><strong>Chart sync</strong><span>${p.chartRows ? `Highlighting row ${p.row} of ${p.chartRows}` : "Enter planned row count to place the row highlight."}</span></div>
@@ -591,12 +591,12 @@ function annotationSvg(a,selected=false){
   }
   return `<circle class="annotation-object" data-ann-id="${a.id}" cx="${a.x||0}" cy="${a.y||0}" r="${Math.max(8,Number(a.width)||12)}" fill="${escapeHtml(a.color||"#d96572")}" opacity=".9"></circle>`;
 }
-function toolIcon(tool){return uiIcon(({pen:"pen",highlighter:"highlighter",text:"text",arrow:"arrow",marker:"marker",eraser:"eraser",rowMask:"mask"})[tool]||"calculator","annotation-button-icon");}
-function toolLabel(tool){return ({rowMask:"Row Mask",highlighter:"Highlighter"}[tool]||tool);}
+function toolIcon(tool){return uiIcon(({touch:"voice",pen:"pen",highlighter:"highlighter",text:"text",arrow:"arrow",marker:"marker",eraser:"eraser",rowMask:"mask"})[tool]||"calculator","annotation-button-icon");}
+function toolLabel(tool){return ({touch:"Touch",rowMask:"Row Mask",highlighter:"Highlighter"}[tool]||tool);}
 
 function friendlyChartBetaHtml(p){
   const hasChart=p.chart||p.attachments.length,hasLegend=!!p.chartAnalysis?.legend,hasRows=!!(p.chartAnalysis?.rows||[]).length;
-  return `<div class="chart-analysis ai-beta-safe card"><p class="eyebrow">PROJECT FLOW MODE</p><h3>AI-assisted chart reader</h3><p>Flow Mode lives inside this project chart. Upload a chart, let Yarncha prepare suggested chart reading, symbol recognition, row tracking, highlight masks and read-aloud prompts, then review or correct every result before using it.</p><div class="beta-checks"><span>${hasChart?"✓":"○"} Chart uploaded</span><span>${hasLegend?"✓":"○"} Symbol legend reviewed</span><span>${hasRows?"✓":"⚠"} Row tracking ${hasRows?"reviewed":"needs review"}</span><span>○ Highlight mask ready</span><span>○ Read aloud available</span><span>○ User correction required</span></div><strong>Review-first workflow:</strong><p>AI reads → symbols are recognized → rows are tracked → you review → you correct → only checked guidance is used.</p><button class="mini-button" id="edit-chart-legend">Review symbols</button><button class="mini-button" id="add-analysis-row">Review row</button></div>`;
+  return `<div class="chart-analysis ai-beta-safe card" id="flow-ai-reader"><p class="eyebrow">PROJECT CHART</p><h3>Flow Mode / AI Chart Reader</h3><p>AI reads → you review → Yarncha tracks your row.</p><p class="muted-copy">Upload a chart, review symbol recognition, keep row tracking checked, use the highlight mask, and read aloud only after you approve uncertain results.</p><div class="beta-checks"><span>${hasChart?"✓":"○"} Chart uploaded</span><span>${hasLegend?"✓":"○"} Symbol recognition reviewed</span><span>${hasRows?"✓":"⚠"} Row tracking ${hasRows?"reviewed":"needs review"}</span><span>○ Highlight mask ready</span><span>○ Read aloud available</span><span>○ User correction required</span></div><div class="analysis-actions"><button class="mini-button" id="run-cloud-analysis-local">Analyse chart</button><button class="mini-button" id="review-chart-cells-local">Review cells</button><button class="mini-button" id="add-analysis-row">Add manual row</button><button class="mini-button" id="edit-chart-legend">Review legend</button></div><div id="cloud-chart-reader-slot" class="flow-ai-cloud-slot"></div></div>`;
 }
 
 function projectProjectHtml(p){
@@ -627,6 +627,21 @@ function projectAssistantTabHtml(p){
   return `<div class="assistant-tab-grid">${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Automatic Flow Mode remains paused. The optional signed-in cloud chart reader produces an editable draft; Manual OG Chart Mode remains the reliable daily workflow.</p><p>The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.</p></div></div>`;
 }
 function themeLabel(t){return themePresets.find(theme=>theme.id===normalizeThemeName(t))?.name||t;}
+function themeComparePreviewHtml(theme){
+  const d=theme.dark;
+  return `<article class="theme-compare-card" aria-label="${escapeHtml(theme.name)} light and dark preview">
+    <div class="theme-compare-pane light" style="--pane-bg:${theme.background};--pane-card:${theme.card};--pane-text:${theme.text};--pane-muted:${theme.button};--pane-button:${theme.button};--pane-button-text:#fff;--pane-secondary:${theme.secondary};--pane-highlight:${theme.highlight};">
+      <div class="theme-compare-top"><span>Light</span><i></i></div>
+      <div class="theme-compare-surface"><b></b><b></b><b></b></div>
+      <div class="theme-compare-content"><strong>${escapeHtml(theme.name)}</strong><p>Row 42 · soft card</p><em>Active tab</em></div>
+    </div>
+    <div class="theme-compare-pane dark" style="--pane-bg:${d.background};--pane-card:${d.card};--pane-text:${d.text};--pane-muted:${d.highlight};--pane-button:${d.button};--pane-button-text:#11130f;--pane-secondary:${d.secondary};--pane-highlight:${d.highlight};">
+      <div class="theme-compare-top"><span>Dark</span><i></i></div>
+      <div class="theme-compare-surface"><b></b><b></b><b></b></div>
+      <div class="theme-compare-content"><strong>${escapeHtml(theme.name)}</strong><p>Row 42 · readable card</p><em>Active tab</em></div>
+    </div>
+  </article>`;
+}
 function styleLabel(s){return designStyles.find(style=>style.id===normalizeDesignStyle(s))?.name||s;}
 
 function rowHighlightTop(p) { return `${p.chartRows ? Math.min(92, Math.max(0, (p.row / p.chartRows) * 92)) : 0}%`; }
@@ -646,7 +661,7 @@ function chartAnalysisHtml(p){
 }
 function chartRowHtml(r){return `<div class="chart-row ${r.status==="uncertain"?"uncertain":""}"><div><strong>Row ${r.number}</strong><span>${escapeHtml(r.side||"Side uncertain")} · ${Number(r.stitchCount)||"?"} stitches</span></div><p>${escapeHtml(r.sequence||"uncertain")}</p><small>${escapeHtml(r.shaping||"No increase/decrease detected")}</small><div class="row-actions"><button class="mini-button" data-edit-analysis-row="${r.id}">Edit</button><button class="mini-button danger-button" data-delete-analysis-row="${r.id}">Delete</button></div></div>`;}
 function subCounterHtml(s) {
-  return `<div class="sub-counter repeat-counter-card"><div class="sub-counter-main"><strong>${escapeHtml(s.name)}</strong><div class="link-toggle">${s.linked ? `Linked every ${s.every} rows` : "Independent"}</div></div>
+  return `<div class="sub-counter repeat-counter-card"><div class="sub-counter-main"><strong>${escapeHtml(s.name)}</strong><div class="link-toggle">${s.linked!==false ? "Linked to main row counter" : "Manual counter"}</div></div>
   <div class="sub-counter-controls"><button data-sub="${s.id}" data-delta="-1" aria-label="Decrease ${escapeHtml(s.name)}">−</button><strong>${s.count}</strong><button data-sub="${s.id}" data-delta="1" aria-label="Increase ${escapeHtml(s.name)}">+</button></div>
   <div class="repeat-counter-actions"><button class="secondary-button" data-edit-sub="${s.id}">Edit Counter</button><button class="mini-button" data-counter-more="${s.id}">More</button></div></div>`;
 }
@@ -796,7 +811,10 @@ function bindProjectDetail() {
   document.querySelectorAll("[data-project-tab]").forEach(b => b.onclick = () => { p.activeTab=b.dataset.projectTab; p.readingMode=false; saveProjectTouch(p); renderProjectDetail(); });
   document.querySelectorAll("[data-counter]").forEach(b => b.onclick = () => changeMainCounter(Number(b.dataset.counter)));
   document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => {
-    const s = p.subCounters.find(x => x.id === b.dataset.sub); s.count = Math.max(0, s.count + Number(b.dataset.delta)); saveState(); renderProjectDetail();
+    const s = p.subCounters.find(x => x.id === b.dataset.sub),floor=Math.max(0,Number(s?.start)||0);
+    if(!s)return;
+    s.count = Math.max(floor, (Number(s.count)||0) + Number(b.dataset.delta));
+    saveProjectTouch(p); renderProjectDetail();
   });
   document.querySelectorAll("[data-edit-sub]").forEach(b => b.onclick = () => openSubCounterModal(b.dataset.editSub));
   document.querySelectorAll("[data-counter-more]").forEach(b => b.onclick = () => openSubCounterActionsModal(b.dataset.counterMore));
@@ -817,13 +835,15 @@ function bindProjectDetail() {
   document.getElementById("flow-toggle")?.addEventListener("click",()=>{p.flowMode=!p.flowMode;saveProjectTouch(p);renderProjectDetail();});
   document.getElementById("edit-chart-legend")?.addEventListener("click",openChartLegendModal);
   document.getElementById("add-analysis-row")?.addEventListener("click",()=>openChartRowModal());
+  document.getElementById("run-cloud-analysis-local")?.addEventListener("click",()=>{const button=document.getElementById("run-cloud-analysis");if(button)button.click();else toast("Chart saved locally. Sign in and upload to cloud for AI analysis, or use Review cells and Add manual row.");});
+  document.getElementById("review-chart-cells-local")?.addEventListener("click",()=>{const button=document.getElementById("load-cloud-cells");if(button)button.click();else openChartLegendModal();});
   document.getElementById("generate-final-pattern")?.addEventListener("click",generateFinalPattern);
   document.querySelectorAll("[data-edit-analysis-row]").forEach(b=>b.onclick=()=>openChartRowModal(b.dataset.editAnalysisRow));
   document.querySelectorAll("[data-delete-analysis-row]").forEach(b=>b.onclick=()=>{p.chartAnalysis.rows=p.chartAnalysis.rows.filter(r=>r.id!==b.dataset.deleteAnalysisRow);saveState();renderProjectDetail();});
   document.getElementById("chart-rows")?.addEventListener("change", e => { p.chartRows = Math.max(1, +e.target.value || 0) || null; p.totalRows=p.chartRows||p.totalRows; saveProjectTouch(p); renderProjectDetail(); });
   document.getElementById("manual-row-save")?.addEventListener("click",()=>setManualRowFromInput());
   document.getElementById("manual-row-input")?.addEventListener("change",()=>setManualRowFromInput());
-  document.getElementById("reset-main")?.addEventListener("click", () => { p.row=0; p.subCounters.forEach(s=>s.count=0); saveProjectTouch(p); renderProjectDetail(); toast("Counters reset"); });
+  document.getElementById("reset-main")?.addEventListener("click", () => { setMainRow(0,{render:false}); p.subCounters.forEach(s=>{s.count=Math.max(0,Number(s.start)||0);}); saveProjectTouch(p); renderProjectDetail(); toast("Counters reset"); });
   document.getElementById("edit-project-rows")?.addEventListener("click", () => openRowPlanModal());
   document.getElementById("ask-assistant")?.addEventListener("click", askProjectAssistant);
   document.getElementById("open-chatgpt")?.addEventListener("click", openInChatGPT);
@@ -867,6 +887,7 @@ function bindProjectDetail() {
   const upload = document.getElementById("chart-upload"); if (upload) upload.onchange = e => handleChartFiles(e.target.files);
   const uploadInline = document.getElementById("chart-upload-inline"); if(uploadInline)uploadInline.onchange=e=>handleChartFiles(e.target.files);
   document.querySelectorAll("[data-project-asset]").forEach(b=>b.onclick=()=>showProjectAsset(b.dataset.projectAsset));
+  document.querySelectorAll("[data-delete-chart-asset]").forEach(b=>b.onclick=()=>removeProjectChartAsset(b.dataset.deleteChartAsset));
   document.querySelectorAll("[data-annotation-tool]").forEach(b=>b.onclick=()=>{activeAnnotationTool=b.dataset.annotationTool;renderProjectDetail();});
   document.getElementById("annotation-color")?.addEventListener("input",e=>{p.annotationColor=e.target.value;saveProjectTouch(p);});
   document.getElementById("annotation-width")?.addEventListener("change",e=>{p.annotationWidth=Number(e.target.value)||4;saveProjectTouch(p);});
@@ -889,12 +910,26 @@ function bindProjectDetail() {
   ["project-yarn","project-needles","project-gauge","project-sizing"].forEach(id=>document.getElementById(id)?.addEventListener("input",e=>{const key={ "project-yarn":"yarn","project-needles":"needles","project-gauge":"gauge","project-sizing":"sizingNotes"}[id];p[key]=e.target.value;saveProjectTouch(p);}));
 }
 function saveProjectTouch(p){p.updatedAt=new Date().toISOString();saveState();}
-function setManualRowFromInput(){const p=getProject(),input=document.getElementById("manual-row-input");if(!input)return;const next=Math.max(0,Math.round(+input.value||0));p.row=p.totalRows?Math.min(p.totalRows,next):next;saveProjectTouch(p);renderProjectDetail();}
+function setManualRowFromInput(){const p=getProject(),input=document.getElementById("manual-row-input");if(!input)return;const next=Math.max(0,Math.round(+input.value||0));setMainRow(next);}
 function changeMainCounter(delta) {
-  const p = getProject(); const oldRow = p.row; p.row = Math.max(0, p.row + delta);
-  if (p.totalRows) p.row = Math.min(p.totalRows, p.row);
-  if (delta > 0) p.subCounters.filter(s => s.linked && s.every > 0 && p.row % s.every === 0 && p.row !== oldRow).forEach(s => s.count++);
-  saveProjectTouch(p); renderProjectDetail();
+  const p=getProject();
+  setMainRow((Number(p.row)||0)+Number(delta||0));
+}
+function setMainRow(nextRow,{render=true}={}){
+  const p=getProject(),oldRow=Number(p.row)||0;
+  let next=Math.max(0,Math.round(Number(nextRow)||0));
+  if(p.totalRows)next=Math.min(p.totalRows,next);
+  const delta=next-oldRow;
+  p.row=next;
+  if(delta){
+    (p.subCounters||[]).filter(s=>s.linked!==false).forEach(s=>{
+      const floor=Math.max(0,Number(s.start)||0);
+      s.count=Math.max(floor,(Number(s.count)||0)+delta);
+      if(delta>0)s.lastForwardMainRow=next;
+    });
+  }
+  saveProjectTouch(p);
+  if(render)renderProjectDetail();
 }
 function cloneAnnotations(list){return JSON.parse(JSON.stringify(list||[]));}
 function pushAnnotationHistory(p){p.annotationHistory=[...(p.annotationHistory||[]),cloneAnnotations(p.annotations)].slice(-40);p.annotationRedo=[];}
@@ -925,6 +960,11 @@ function beginAnnotation(event){
   const p=getProject(),pt=pointFromEvent(event);
   if(!pt)return;
   if(!(p.chart||p.attachments?.length))return;
+  if(activeAnnotationTool==="touch"){
+    event.preventDefault();
+    handleTouchRead(pt);
+    return;
+  }
   const annId=event.target?.dataset?.annId;
   const arrowHandle=event.target?.dataset?.arrowHandle;
   if(annId){
@@ -1093,6 +1133,34 @@ function distanceToSegment(pt,a,b){
   const dx=b.x-a.x,dy=b.y-a.y,len=dx*dx+dy*dy||1;
   const t=Math.max(0,Math.min(1,((pt.x-a.x)*dx+(pt.y-a.y)*dy)/len));
   return Math.hypot(pt.x-(a.x+t*dx),pt.y-(a.y+t*dy));
+}
+function rowFromTouchPoint(p,pt){
+  const rows=Number(p.chartRows||p.chartAnalysis?.detectedRows||p.totalRows)||0;
+  if(!rows)return Math.max(1,Number(p.row)||1);
+  return Math.max(1,Math.min(rows,Math.ceil((pt.y/1000)*rows)));
+}
+function handleTouchRead(pt){
+  const p=getProject(),rowNumber=rowFromTouchPoint(p,pt),rows=p.chartAnalysis?.rows||[],row=rows.find(r=>Number(r.number)===rowNumber);
+  const columnCount=Number(p.chartAnalysis?.columns)||0;
+  const column=columnCount?Math.max(1,Math.min(columnCount,Math.ceil((pt.x/1000)*columnCount))):null;
+  const status=row?.status==="checked"?"Checked":"Needs review";
+  const spoken=row?`Row ${rowNumber}${column?`, column ${column}`:""}. ${row.sequence||"Needs review"}. ${status}.`:`Row ${rowNumber}${column?`, column ${column}`:""}. Needs review.`;
+  speak(spoken);
+  openTouchReadModal(rowNumber,column,row);
+}
+function openTouchReadModal(rowNumber,column,row=null){
+  openModal(`<p class="eyebrow">TOUCH TO READ</p><h2>${row?.status==="checked"?"Checked row":"Needs review"}</h2><p class="muted-copy">Touched ${column?`row ${rowNumber}, column ${column}`:`row ${rowNumber}`}. Correct the row or symbol, then save it for future reads.</p><div class="form-grid"><div class="field"><label>Row</label><input id="touch-row-number" type="number" min="1" value="${rowNumber}"></div><div class="field"><label>Column / symbol</label><input id="touch-column" value="${column||""}" placeholder="Optional"></div><div class="field full"><label>What should Yarncha read?</label><textarea id="touch-sequence" rows="4" placeholder="e.g. k2, yo, ssk, repeat">${escapeHtml(row?.sequence||"")}</textarea></div><div class="field"><label>Verification</label><select id="touch-status"><option value="uncertain" ${row?.status!=="checked"?"selected":""}>Needs review</option><option value="checked" ${row?.status==="checked"?"selected":""}>Checked by me</option></select></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-touch-read">Save correction</button></div>`);
+  document.getElementById("save-touch-read").onclick=()=>{
+    const p=getProject(),a=p.chartAnalysis||(p.chartAnalysis={rows:[],legend:"",detectedRows:null,summary:"Manual touch review started."});
+    a.rows ||= [];
+    const number=Math.max(1,+document.getElementById("touch-row-number").value||rowNumber),sequence=document.getElementById("touch-sequence").value.trim()||"uncertain",status=document.getElementById("touch-status").value;
+    const existing=a.rows.find(r=>Number(r.number)===number);
+    const values={number,sequence,status,side:existing?.side||row?.side||"Side uncertain",stitchCount:existing?.stitchCount||null,shaping:existing?.shaping||"No increase/decrease confirmed"};
+    if(existing)Object.assign(existing,values);else a.rows.push({id:`analysis-row-${Date.now()}`,...values});
+    a.rows.sort((x,y)=>x.number-y.number);
+    if(!p.chartRows&&a.detectedRows)p.chartRows=a.detectedRows;
+    saveProjectTouch(p);closeModal();renderProjectDetail();toast("Touch reading saved.");
+  };
 }
 function undoAnnotation(){const p=getProject(),history=p.annotationHistory||[];if(!history.length)return toast("Nothing to undo.");p.annotationRedo=[...(p.annotationRedo||[]),cloneAnnotations(p.annotations)].slice(-40);p.annotations=history.pop();p.annotationHistory=history;p.selectedAnnotationId=null;paintAnnotations(p);saveStateSoon(120);}
 function redoAnnotation(){const p=getProject(),redo=p.annotationRedo||[];if(!redo.length)return toast("Nothing to redo.");p.annotationHistory=[...(p.annotationHistory||[]),cloneAnnotations(p.annotations)].slice(-40);p.annotations=redo.pop();p.annotationRedo=redo;p.selectedAnnotationId=null;paintAnnotations(p);saveStateSoon(120);}
@@ -1468,6 +1536,7 @@ async function handleChartFiles(fileList){
   const allText=[];
   for(const file of files){
     const id=`asset${Date.now()}${Math.random().toString(16).slice(2)}`;await putAsset(id,file);p.attachments.push({id,name:file.name,type:file.type,size:file.size});
+    p.activeChartAssetId=id;
     window.YarnchaCloud?.queueChartUpload?.(p.id,id,file);
     if(!p.chart){p.chart={name:file.name,type:file.type,data:null,assetId:id};}
     let text="";if(file.type==="application/pdf")text=await extractPdfText(file);
@@ -1477,7 +1546,7 @@ async function handleChartFiles(fileList){
   p.chartAnalysis=analysePatternText(allText.join("\n"));
   if(!p.chartRows&&p.chartAnalysis.detectedRows)p.chartRows=p.chartAnalysis.detectedRows;
   p.readerStatus=allText.length ? `Chart saved. Text reference found; please review rows manually.` : `Chart saved. Manual Reading Mode is recommended.`;
-  p.activeTab="chart";saveProjectTouch(p);renderProjectDetail();showProjectAsset(p.attachments.at(-1).id);toast("Chart saved for Reading Mode");
+  p.activeTab="chart";saveProjectTouch(p);renderProjectDetail();showProjectAsset(p.activeChartAssetId||p.attachments.at(-1).id);toast("Chart saved for Reading Mode");
 }
 function analysePatternText(text){
   const clean=text.replace(/\s+/g," ").trim(),rowMatches=[...clean.matchAll(/(?:row|round|rnd|第)\s*([0-9]{1,4})(?:\s*(?:行|段|圈|段目))?/gi)].map(m=>+m[1]).filter(n=>n>0&&n<2000);
@@ -1516,8 +1585,22 @@ async function showProjectAsset(id){
   const file=await getAsset(id);if(!file)return toast("This file is no longer available.");
   const p=getProject(),url=URL.createObjectURL(file),stage=document.getElementById("chart-stage"),highlight=p.chartMode==="flow"&&p.flowMode!==false?`<div class="row-highlight" style="top:${rowHighlightTop(p)}"></div>`:"";
   if(!stage)return;
+  if(p.activeChartAssetId!==id){p.activeChartAssetId=id;saveProjectTouch(p);}
   stage.innerHTML=`<div class="chart-canvas" style="transform:scale(${p.chartZoom||1});transform-origin:top left;">${file.type==="application/pdf"?`<iframe src="${url}#toolbar=0"></iframe>`:`<img src="${url}" alt="Pattern attachment">`}${highlight}${annotationsHtml(p)}</div>`;
   bindAnnotationStage();
+}
+async function removeProjectChartAsset(id){
+  const p=getProject(),asset=(p.attachments||[]).find(a=>a.id===id);
+  if(!asset)return toast("Chart file was already removed.");
+  if(!confirm(`Remove "${asset.name||"this chart file"}" from this project? This cannot be undone.`))return;
+  p.attachments=(p.attachments||[]).filter(a=>a.id!==id);
+  if(p.chart?.assetId===id)p.chart=p.attachments[0]?{name:p.attachments[0].name,type:p.attachments[0].type,data:null,assetId:p.attachments[0].id}:null;
+  if(p.activeChartAssetId===id)p.activeChartAssetId=p.attachments[0]?.id||null;
+  await deleteAsset(id);
+  saveProjectTouch(p);
+  renderProjectDetail();
+  if(p.activeChartAssetId)setTimeout(()=>showProjectAsset(p.activeChartAssetId),0);
+  toast("Chart file removed.");
 }
 async function extractPdfText(file){
   try{
@@ -2124,6 +2207,7 @@ function renderSettings(){
     ["Local preview availability may depend on the development environment.","A deployed website will be more stable than a temporary local preview server."]
   ];
   const activeTheme=normalizeThemeName(state.theme?.name),activeStyle=normalizeDesignStyle(state.theme?.style);
+  const activeThemePreset=themePresets.find(t=>t.id===activeTheme)||themePresets[0];
   const preferences=state.appPreferences||starterData.appPreferences;
   host.innerHTML=`<div class="page-title"><p class="eyebrow">YOUR YARNCHA</p><h1>Settings</h1><p>Personalise your workspace and keep your projects safely within reach.</p></div>
     <div class="settings-page-shell">
@@ -2131,10 +2215,12 @@ function renderSettings(){
       <section class="card mobile-card settings-panel settings-panel-wide appearance-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("appearance","ui-icon")}</span><div><p class="eyebrow">APPEARANCE</p><h2>Make Yarncha feel like yours</h2><p>Choose a colour mood, design style, display mode, and language.</p></div></div>
         <div class="appearance-heading"><h3>Colour theme</h3><button class="mini-button" id="reset-appearance">Reset default</button></div>
         <div class="appearance-grid theme-preview-grid">${themePresets.map(t=>`<button class="theme-preview-card ${activeTheme===t.id?"active":""}" data-theme-name="${t.id}" style="--preview-primary:${t.primary};--preview-secondary:${t.secondary};--preview-bg:${t.background};--preview-card:${t.card};--preview-text:${t.text};--preview-button:${t.button};--preview-highlight:${t.highlight};"><span class="theme-preview-surface"><i></i><b></b></span><strong>${escapeHtml(t.name)}</strong><small>${escapeHtml(t.background)} · ${escapeHtml(t.button)}</small><span class="swatch-row"><em></em><em></em><em></em><em></em></span></button>`).join("")}</div>
-        <div class="appearance-heading"><h3>Design style</h3><span class="muted-copy">Style affects spacing, card shape, shadows, texture and overall feel.</span></div>
-        <div class="appearance-grid style-preview-grid">${designStyles.map(s=>`<button class="style-preview-card ${activeStyle===s.id?"active":""}" data-style-name="${s.id}"><span class="style-sample ${s.id}"><i></i><i></i><i></i></span><strong>${escapeHtml(s.name)}</strong><small>${escapeHtml(s.desc)}</small></button>`).join("")}</div>
+        <div class="appearance-heading"><h3>Light / Dark preview</h3><span class="muted-copy">Preview the selected theme before applying a mode.</span></div>
+        ${themeComparePreviewHtml(activeThemePreset)}
         <div class="appearance-heading"><h3>Mode</h3><span class="muted-copy">System follows your device setting.</span></div>
         <div class="theme-grid mode-grid">${["light","dark","system"].map(m=>`<button class="theme-choice ${state.theme.mode===m?"active":""}" data-theme-mode="${m}">${m}</button>`).join("")}</div>
+        <div class="appearance-heading"><h3>Design style</h3><span class="muted-copy">Style affects spacing, card shape, shadows, texture and overall feel.</span></div>
+        <div class="appearance-grid style-preview-grid">${designStyles.map(s=>`<button class="style-preview-card ${activeStyle===s.id?"active":""}" data-style-name="${s.id}"><span class="style-sample ${s.id}"><i></i><i></i><i></i></span><strong>${escapeHtml(s.name)}</strong><small>${escapeHtml(s.desc)}</small></button>`).join("")}</div>
         <div class="settings-divider"></div><div class="settings-form-row"><div><strong>Language</strong><p>Choose the language used across Yarncha.</p></div><select id="settings-language" aria-label="App language"><option value="en" ${state.language==="en"?"selected":""}>English</option><option value="zh-HK" ${state.language==="zh-HK"?"selected":""}>繁體中文（香港）</option></select></div>
       </section>
       <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("preferences","ui-icon")}</span><div><p class="eyebrow">APP PREFERENCES</p><h2>Making preferences</h2><p>Set the defaults Yarncha uses while you work.</p></div></div><div class="settings-form-row settings-form-row-stack"><div><strong>Preferred units</strong><p>Calculators use this system by default.</p></div><div class="theme-grid mode-grid"><button class="theme-choice ${state.unitSystem!=="imperial"?"active":""}" data-unit-system="metric">UK / Metric<br><small>cm · mm · metres · grams</small></button><button class="theme-choice ${state.unitSystem==="imperial"?"active":""}" data-unit-system="imperial">US / Imperial<br><small>inches · yards · ounces</small></button></div></div><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Voice controls</strong><small>Allow hands-free row and note commands.</small></span><input type="checkbox" id="settings-voice" ${preferences.voice!==false?"checked":""}><i aria-hidden="true"></i></label><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Notification prompts</strong><small>Remember whether Yarncha may offer browser reminders later.</small></span><input type="checkbox" id="settings-notifications" ${preferences.notifications?"checked":""}><i aria-hidden="true"></i></label></section>
@@ -2564,13 +2650,15 @@ function openSubCounterModal(editId=null) {
   const existing=editId?getProject().subCounters.find(s=>s.id===editId):null;
   openModal(`<p class="eyebrow">TRACK A REPEAT</p><h2>${existing?"Edit":"Add"} sub-counter</h2><div class="form-grid">
     <div class="field full"><label>Name</label><input id="sub-name" value="${escapeHtml(existing?.name||"")}" placeholder="e.g. Cable repeat"></div>
-    <div class="field"><label>Link to main counter?</label><select id="sub-linked"><option value="yes" ${existing?.linked!==false?"selected":""}>Yes</option><option value="no" ${existing?.linked===false?"selected":""}>No</option></select></div>
-    <div class="field"><label>Advance every X rows</label><input id="sub-every" type="number" value="${existing?.every||2}"></div></div>
+    <div class="field"><label>Sync with main row counter</label><select id="sub-linked"><option value="yes" ${existing?.linked!==false?"selected":""}>On</option><option value="no" ${existing?.linked===false?"selected":""}>Off</option></select></div>
+    <div class="field"><label>Start value</label><input id="sub-start" type="number" min="0" value="${Math.max(0,Number(existing?.start)||0)}"></div>
+    <div class="field full"><label>Reminder interval</label><input id="sub-every" type="number" min="1" value="${existing?.every||1}"><small>Linked counters move by the same row delta. This interval is kept for reminders and notes.</small></div></div>
     <div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="create-sub">${existing?"Save changes":"Add counter"}</button></div>`);
   document.getElementById("create-sub").onclick = () => {
     const name = document.getElementById("sub-name").value.trim(); if (!name) return toast("Name your sub-counter.");
-    const values={name,linked:document.getElementById("sub-linked").value==="yes",every:Math.max(1,+document.getElementById("sub-every").value||1)};
-    if(existing)Object.assign(existing,values);else getProject().subCounters.push({id:`s${Date.now()}`,count:0,...values});
+    const start=Math.max(0,+document.getElementById("sub-start").value||0);
+    const values={name,linked:document.getElementById("sub-linked").value==="yes",every:Math.max(1,+document.getElementById("sub-every").value||1),start};
+    if(existing){Object.assign(existing,values);existing.count=Math.max(start,Number(existing.count)||0);}else getProject().subCounters.push({id:`s${Date.now()}`,count:start,...values});
     saveState(); closeModal(); renderProjectDetail();
   };
 }
@@ -2661,7 +2749,8 @@ function openEditProjectModal(){
     if(!validProjectUrl(patternUrl)){editProjectError("edit-project-pattern-url","Enter a complete http:// or https:// URL.");invalid=true;}
     if(invalid)return form.querySelector('[aria-invalid="true"]')?.focus();
     const oldCover=p.coverAsset;
-    Object.assign(p,{name,type:editProjectField("edit-project-type").value,status:editProjectField("edit-project-status").value,startDate,finishDate,row:currentRow,totalRows,yarn:editProjectField("edit-project-yarn").value.trim(),needles:editProjectField("edit-project-tools").value.trim(),gauge:editProjectField("edit-project-gauge").value.trim(),size:editProjectField("edit-project-size").value.trim(),sizingNotes:editProjectField("edit-project-size").value.trim(),patternUrl,notes:editProjectField("edit-project-notes").value});
+    Object.assign(p,{name,type:editProjectField("edit-project-type").value,status:editProjectField("edit-project-status").value,startDate,finishDate,totalRows,yarn:editProjectField("edit-project-yarn").value.trim(),needles:editProjectField("edit-project-tools").value.trim(),gauge:editProjectField("edit-project-gauge").value.trim(),size:editProjectField("edit-project-size").value.trim(),sizingNotes:editProjectField("edit-project-size").value.trim(),patternUrl,notes:editProjectField("edit-project-notes").value});
+    setMainRow(currentRow,{render:false});
     const markerCount=Math.max(0,Number(editProjectField("edit-project-markers").value)||0);
     p.markers=p.markers.slice(0,markerCount);while(p.markers.length<markerCount)p.markers.push({id:`marker${Date.now()}-${p.markers.length}`,row:p.row,color:"#577fa8",label:`Marker ${p.markers.length+1}`});
     if(cover){const id=`cover${Date.now()}`;await putAsset(id,cover);p.coverAsset=id;window.YarnchaCloud?.queueCoverUpload?.(p.id,id,cover);if(oldCover&&oldCover!==id)await deleteAsset(oldCover);}
@@ -2670,7 +2759,7 @@ function openEditProjectModal(){
     dirty=false;saveProjectTouch(p);document.getElementById("breadcrumb").textContent=p.name;closeModal(true);renderToday();renderProjects();renderProjectDetail();toast("✓ Project updated");
   };
 }
-function openEditRowModal(){const p=getProject();openModal(`<p class="eyebrow">ROW COUNTER</p><h2>Set exact row</h2><div class="field"><label>Current row</label><input id="exact-row" type="number" min="0" value="${p.row}"></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-exact-row">Set row</button></div>`);document.getElementById("save-exact-row").onclick=()=>{p.row=Math.max(0,+document.getElementById("exact-row").value||0);if(p.totalRows)p.row=Math.min(p.totalRows,p.row);saveState();closeModal();renderProjectDetail();};}
+function openEditRowModal(){const p=getProject();openModal(`<p class="eyebrow">ROW COUNTER</p><h2>Set exact row</h2><div class="field"><label>Current row</label><input id="exact-row" type="number" min="0" value="${p.row}"></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-exact-row">Set row</button></div>`);document.getElementById("save-exact-row").onclick=()=>{setMainRow(Math.max(0,+document.getElementById("exact-row").value||0),{render:false});closeModal();renderProjectDetail();};}
 function openMarkerModal(markerId=null){const p=getProject(),marker=p.markers.find(m=>m.id===markerId);openModal(`<p class="eyebrow">STITCH MARKER</p><h2>${marker?"Edit":"Add"} marker</h2><div class="form-grid"><div class="field"><label>Row</label><input id="marker-row" type="number" min="0" value="${marker?.row??p.row}"></div><div class="field"><label>HEX color</label><input id="marker-color" type="color" value="${validHex(marker?.color)?marker.color:"#577fa8"}"></div><div class="field full"><label>Label</label><input id="marker-label" value="${escapeHtml(marker?.label||"")}" placeholder="e.g. sleeve join"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-marker">Save marker</button></div>`);document.getElementById("save-marker").onclick=()=>{const values={row:Math.max(0,+document.getElementById("marker-row").value||0),color:document.getElementById("marker-color").value,label:document.getElementById("marker-label").value.trim()||document.getElementById("marker-color").value};if(marker)Object.assign(marker,values);else p.markers.push({id:`marker${Date.now()}`,...values});saveState();closeModal();renderProjectDetail();};}
 function openBuyItemModal(itemId=null){const p=getProject(),item=p.buyList.find(i=>i.id===itemId);openModal(`<p class="eyebrow">PROJECT BUY LIST</p><h2>${item?"Edit":"Add"} supply</h2><div class="form-grid"><div class="field full"><label>Item</label><input id="buy-name" value="${escapeHtml(item?.name||"")}" placeholder="e.g. Sage DK yarn"></div><div class="field"><label>Category</label><select id="buy-category">${["Yarn","Tools","DIY kit","Other"].map(c=>`<option ${c===item?.category?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Quantity</label><input id="buy-quantity" type="number" min="1" value="${item?.quantity||1}"></div><div class="field"><label>Price each</label><input id="buy-price" type="number" min="0" step=".01" value="${item?.price||0}"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-buy-item">Save</button></div>`);document.getElementById("save-buy-item").onclick=()=>{const name=document.getElementById("buy-name").value.trim();if(!name)return toast("Name this supply.");const values={name,category:document.getElementById("buy-category").value,quantity:Math.max(1,+document.getElementById("buy-quantity").value||1),price:Math.max(0,+document.getElementById("buy-price").value||0)};if(item)Object.assign(item,values);else p.buyList.push({id:`buy${Date.now()}`,...values});saveState();closeModal();renderProjectDetail();};}
 function sendBuyItemToCart(itemId){const p=getProject(),item=p.buyList.find(i=>i.id===itemId);if(!item)return;const existing=state.cart.find(i=>i.projectId===p.id&&i.name.toLowerCase()===item.name.toLowerCase());if(existing)existing.quantity+=item.quantity;else state.cart.push({id:`cart${Date.now()}`,...item,projectId:p.id,reason:`Required for ${p.name}`});saveState();toast("Added to Yarn Stash shopping list");}
