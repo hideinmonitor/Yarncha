@@ -5,14 +5,14 @@ const BACKUP_VERSION = 2;
 const projectTypeOptions = ["Knitting","Crochet","Tunisian Crochet","Weaving","Other"];
 const projectStatusOptions = ["Planning","In progress","Paused","Finished","Frogged"];
 const themePresets=[
-  {id:"creamy-vanilla",name:"Creamy Vanilla",primary:"#D8B899",secondary:"#F4E6D0",background:"#FFF9F0",card:"#FFF3E3",text:"#5A4632",button:"#B68A62",highlight:"#EACB9A",dark:{background:"#15120F",card:"#211C17",text:"#FAF3EA",button:"#E7B97F",secondary:"#352A20",highlight:"#FFD08F"}},
-  {id:"matcha-latte",name:"Matcha Latte",primary:"#A8BFA3",secondary:"#E3EAD8",background:"#FAF8EF",card:"#FFFFFF",text:"#4E5A46",button:"#7F9A7A",highlight:"#D8C89A",dark:{background:"#111611",card:"#1D251C",text:"#F3F8EF",button:"#A9D49E",secondary:"#283424",highlight:"#D8E9A7"}},
-  {id:"sakura-milk",name:"Sakura Milk",primary:"#E8A6B3",secondary:"#F8DDE4",background:"#FFF7F9",card:"#FFFFFF",text:"#5B4148",button:"#C97B8C",highlight:"#F3C1C9",dark:{background:"#181113",card:"#261A1F",text:"#FFF1F5",button:"#F0A5B6",secondary:"#3A242C",highlight:"#FFC4D0"}},
-  {id:"cocoa-beige",name:"Cocoa Beige",primary:"#A9826D",secondary:"#E8D8C8",background:"#F7F0E8",card:"#FFFDF9",text:"#4C3A32",button:"#8B6655",highlight:"#D1A883",dark:{background:"#15110F",card:"#241C18",text:"#F8EEE6",button:"#D6A17F",secondary:"#382920",highlight:"#E7B98B"}},
-  {id:"soft-lavender",name:"Soft Lavender",primary:"#B9A7D8",secondary:"#EDE6F7",background:"#FBF9FF",card:"#FFFFFF",text:"#4A3F5E",button:"#8F7BBE",highlight:"#D8C8F0",dark:{background:"#13111A",card:"#211D2D",text:"#F6F1FF",button:"#BFA7F2",secondary:"#302842",highlight:"#D8C8FF"}},
-  {id:"peach-apricot",name:"Peach Apricot",primary:"#F0B28A",secondary:"#FFE0C7",background:"#FFF8F2",card:"#FFFFFF",text:"#5C4436",button:"#D9875A",highlight:"#F6C59B",dark:{background:"#17110E",card:"#271B15",text:"#FFF1E8",button:"#F0A26C",secondary:"#3B261A",highlight:"#FFC08B"}},
-  {id:"ocean-mist",name:"Ocean Mist",primary:"#9BBCC2",secondary:"#DDEEEF",background:"#F5FBFB",card:"#FFFFFF",text:"#354D52",button:"#6F9FA8",highlight:"#B7D8D9",dark:{background:"#0F1517",card:"#192529",text:"#EEF9FA",button:"#83D2D7",secondary:"#21363A",highlight:"#AFE6E6"}},
-  {id:"vintage-paper",name:"Vintage Paper",primary:"#B7785F",secondary:"#E7E9DC",background:"#F6F0E6",card:"#FFFAF3",text:"#463D35",button:"#5F6958",highlight:"#C4A269",dark:{background:"#151310",card:"#211F19",text:"#F6EFE2",button:"#C8AA70",secondary:"#302D23",highlight:"#E2C47E"}}
+  {id:"vintage-paper",name:"Original Yarncha",description:"The default calm paper theme for a warm handmade workspace.",recommended:true,canDelete:false,primary:"#6A5840",secondary:"#E5DDC7",accent:"#8B7346",background:"#F3EBDD",surface:"#FFF9ED",card:"#EFE1C8",border:"#CBB894",text:"#332B22",textSecondary:"#665A4C",button:"#6A5840",buttonText:"#FFFDF8",secondaryButton:"#E7D9BF",success:"#4F7846",warning:"#9C6215",danger:"#B2473E",highlight:"#D2A84E",link:"#6B5434",colors:{background:"#F3EBDD",surface:"#FFF9ED",surfaceSecondary:"#EFE1C8",primary:"#6A5840",primaryHover:"#574833",secondary:"#E5DDC7",accent:"#8B7346",border:"#CBB894",divider:"#E3D8C6",text:"#332B22",textSecondary:"#665A4C",success:"#4F7846",warning:"#9C6215",error:"#B2473E",chartCurrentRow:"#D2A84E",chartCompleted:"#E5DDC7",annotationPen:"#6A5840",annotationHighlight:"rgba(210,168,78,0.28)",voiceListening:"#8B7346",shadow:"rgba(51,43,34,0.08)"},dark:{background:"#15120E",surface:"#292218",card:"#342B1F",text:"#F7EFE1",textSecondary:"#D8C8AE",button:"#D0A95E",buttonText:"#11130F",secondary:"#3E3525",accent:"#B9C184",border:"#5B4C35",success:"#A4D08F",warning:"#E8B256",danger:"#FF8E84",highlight:"#E8C878",link:"#E8C878"}},
+  {id:"flower-blossom",name:"Flower Blossom",description:"Soft spring flowers with warm peach accents.",primary:"#958F42",secondary:"#EEBB9A",accent:"#FB9547",background:"#EBE6D9",surface:"#FFF9F2",card:"#F7EFE4",border:"#D8CDBE",text:"#3D372C",textSecondary:"#726A5E",button:"#958F42",buttonText:"#2A241C",secondaryButton:"#F7EFE4",success:"#8CA04D",warning:"#FB9547",danger:"#C96E72",highlight:"#DD8687",link:"#6F692D",colors:{background:"#EBE6D9",surface:"#FFF9F2",surfaceSecondary:"#F7EFE4",primary:"#958F42",primaryHover:"#7F7937",secondary:"#EEBB9A",accent:"#FB9547",border:"#D8CDBE",divider:"#E9E0D4",text:"#3D372C",textSecondary:"#726A5E",success:"#8CA04D",warning:"#FB9547",error:"#C96E72",chartCurrentRow:"#DD8687",chartCompleted:"#EEC8A8",annotationPen:"#958F42",annotationHighlight:"rgba(251,149,71,0.28)",voiceListening:"#FB9547",shadow:"rgba(61,55,44,0.08)"},dark:{background:"#17150F",surface:"#2B261D",card:"#352D22",text:"#F8F1E7",textSecondary:"#D8CCBD",button:"#D7D06C",buttonText:"#18150E",secondary:"#483628",accent:"#FFB172",border:"#5E4F3C",success:"#B8CD74",warning:"#FFB172",danger:"#FF9699",highlight:"#F2A4A5",link:"#FFD8A8"}},
+  {id:"sky-blessing",name:"Sky Blessing",description:"Clear sky, soft mint, and golden sunshine for a fresh calm workspace.",tags:["fresh","green","yellow","soft","airy"],primary:"#404930",secondary:"#BDD3D0",accent:"#BD962F",background:"#F7FAF7",surface:"#FFFFFF",card:"#F1F5F1",border:"#D8DED6",text:"#2F3528",textSecondary:"#66705F",button:"#404930",buttonText:"#FFFFFF",secondaryButton:"#F1F5F1",success:"#5E7046",warning:"#BD962F",danger:"#B94A48",highlight:"#BDD3D0",link:"#404930",colors:{background:"#F7FAF7",surface:"#FFFFFF",surfaceSecondary:"#F1F5F1",primary:"#404930",primaryHover:"#313927",secondary:"#BDD3D0",accent:"#BD962F",accentSoft:"#EFD36D",border:"#D8DED6",divider:"#E8EDE6",text:"#2F3528",textSecondary:"#66705F",success:"#5E7046",warning:"#BD962F",error:"#B94A48",chartCurrentRow:"#BDD3D0",chartCompleted:"#EFD36D",annotationPen:"#404930",annotationHighlight:"rgba(239, 211, 109, 0.35)",voiceListening:"#BD962F",shadow:"rgba(47, 53, 40, 0.08)"},dark:{background:"#101510",surface:"#202A22",card:"#2A352C",text:"#F4FAF4",textSecondary:"#CAD8C8",button:"#BFD8C9",buttonText:"#11130F",secondary:"#31423E",accent:"#E4C15E",border:"#4A5D4D",success:"#9FBD81",warning:"#E4C15E",danger:"#FF8E8C",highlight:"#CFE6E1",link:"#EFD36D"}},
+  {id:"matcha-grove",name:"Matcha Grove",description:"Quiet green shade with ink-like contrast.",primary:"#121810",secondary:"#3B5131",accent:"#768572",background:"#F3F2EF",surface:"#FFFFFF",card:"#ECEBE7",border:"#CFCFC8",text:"#1E241C",textSecondary:"#596255",button:"#121810",buttonText:"#FFFDF8",secondaryButton:"#ECEBE7",success:"#4E6943",warning:"#A08F54",danger:"#9A6767",highlight:"#768572",link:"#30482A",colors:{background:"#F3F2EF",surface:"#FFFFFF",surfaceSecondary:"#ECEBE7",primary:"#121810",primaryHover:"#0C100B",secondary:"#3B5131",accent:"#768572",border:"#CFCFC8",divider:"#E3E3DD",text:"#1E241C",textSecondary:"#596255",success:"#4E6943",warning:"#A08F54",error:"#9A6767",chartCurrentRow:"#768572",chartCompleted:"#BCBFB1",annotationPen:"#3B5131",annotationHighlight:"rgba(118,133,114,0.25)",voiceListening:"#3B5131",shadow:"rgba(18,24,16,0.08)"},dark:{background:"#0E120D",surface:"#1C2518",card:"#263020",text:"#F4F6EF",textSecondary:"#CBD4C4",button:"#B4C0A8",buttonText:"#11130F",secondary:"#304427",accent:"#94A58E",border:"#465740",success:"#8FB37E",warning:"#CDBA77",danger:"#D58D8D",highlight:"#94A58E",link:"#C8D7BC"}},
+  {id:"ocean-mist",name:"Ocean Mist",description:"Misty shoreline neutrals with quiet sea-glass greens.",primary:"#5B5C5E",secondary:"#697D7B",accent:"#8C9F96",background:"#F3F5F4",surface:"#FFFFFF",card:"#ECEFED",border:"#D7D8D4",text:"#353739",textSecondary:"#656B69",button:"#5B5C5E",buttonText:"#FFFDF8",secondaryButton:"#ECEFED",success:"#6C8A82",warning:"#B79A73",danger:"#A56E6A",highlight:"#8C9F96",link:"#4F6563",colors:{background:"#F3F5F4",surface:"#FFFFFF",surfaceSecondary:"#ECEFED",primary:"#5B5C5E",primaryHover:"#4A4B4D",secondary:"#697D7B",accent:"#8C9F96",border:"#D7D8D4",divider:"#E8EAE8",text:"#353739",textSecondary:"#656B69",success:"#6C8A82",warning:"#B79A73",error:"#A56E6A",chartCurrentRow:"#8C9F96",chartCompleted:"#BFB09B",annotationPen:"#697D7B",annotationHighlight:"rgba(140,159,150,0.28)",voiceListening:"#697D7B",shadow:"rgba(53,55,57,0.08)"},dark:{background:"#101414",surface:"#222A29",card:"#2C3533",text:"#F1F5F4",textSecondary:"#CCD5D2",button:"#B7C7C1",buttonText:"#11130F",secondary:"#374B49",accent:"#9FB6AD",border:"#4E5E5A",success:"#9ABCB2",warning:"#D9BF93",danger:"#DA9692",highlight:"#9FB6AD",link:"#CBE6DE"}},
+  {id:"mediterranean-dream",name:"Mediterranean Dream",description:"Elegant seaside ceramics with soft stone and blush.",primary:"#A0AFB6",secondary:"#B3B69E",accent:"#E6CDC6",background:"#FAF8F6",surface:"#FFFFFF",card:"#F3F0ED",border:"#DDD8D2",text:"#4A4C50",textSecondary:"#6B6C70",button:"#A0AFB6",buttonText:"#2A241C",secondaryButton:"#F3F0ED",success:"#8F9E89",warning:"#D7B394",danger:"#C58F92",highlight:"#E6CDC6",link:"#58727D",colors:{background:"#FAF8F6",surface:"#FFFFFF",surfaceSecondary:"#F3F0ED",primary:"#A0AFB6",primaryHover:"#8898A0",secondary:"#B3B69E",accent:"#E6CDC6",border:"#DDD8D2",divider:"#ECE7E2",text:"#4A4C50",textSecondary:"#6B6C70",success:"#8F9E89",warning:"#D7B394",error:"#C58F92",chartCurrentRow:"#E6CDC6",chartCompleted:"#B3B69E",annotationPen:"#A0AFB6",annotationHighlight:"rgba(230,205,198,0.28)",voiceListening:"#A0AFB6",shadow:"rgba(74,76,80,0.08)"},dark:{background:"#111416",surface:"#22282B",card:"#2E3436",text:"#F3F4F4",textSecondary:"#D2D5D7",button:"#B9CAD2",buttonText:"#11130F",secondary:"#42483C",accent:"#E8C9C2",border:"#596267",success:"#B8D0AF",warning:"#E3C09E",danger:"#E4A0A4",highlight:"#E8C9C2",link:"#C8E3EE"}},
+  {id:"sakura-milk",name:"Sakura Milk",description:"Milky pinks and vanilla warmth for a gentle workspace.",primary:"#DCA094",secondary:"#C8A59E",accent:"#E1C5C4",background:"#FFF9F6",surface:"#FFFFFF",card:"#F8F2EE",border:"#E5D8D3",text:"#5A4845",textSecondary:"#786460",button:"#DCA094",buttonText:"#2A241C",secondaryButton:"#F8F2EE",success:"#B9B27A",warning:"#DCA094",danger:"#C97F8C",highlight:"#E1C5C4",link:"#9B5F57",colors:{background:"#FFF9F6",surface:"#FFFFFF",surfaceSecondary:"#F8F2EE",primary:"#DCA094",primaryHover:"#C8897B",secondary:"#C8A59E",accent:"#E1C5C4",border:"#E5D8D3",divider:"#F0E8E5",text:"#5A4845",textSecondary:"#786460",success:"#B9B27A",warning:"#DCA094",error:"#C97F8C",chartCurrentRow:"#E1C5C4",chartCompleted:"#E6D9BA",annotationPen:"#DCA094",annotationHighlight:"rgba(225,197,196,0.30)",voiceListening:"#DCA094",shadow:"rgba(90,72,69,0.08)"},dark:{background:"#181211",surface:"#2B211F",card:"#372A27",text:"#FFF2EE",textSecondary:"#E5CBC4",button:"#F0B7AD",buttonText:"#11130F",secondary:"#493832",accent:"#EBC9C8",border:"#654E48",success:"#D1C989",warning:"#F0B7AD",danger:"#EF98A5",highlight:"#EBC9C8",link:"#FFD5CE"}},
+  {id:"lavender-twilight",name:"Lavender Twilight",description:"Dusky lavender with quiet blush and evening ink.",primary:"#4D516D",secondary:"#A8868C",accent:"#B5A4B4",background:"#FAF8FA",surface:"#FFFFFF",card:"#F4F1F4",border:"#DED9DD",text:"#3A3D4F",textSecondary:"#6F6A72",button:"#4D516D",buttonText:"#FFFDF8",secondaryButton:"#F4F1F4",success:"#8D8AA4",warning:"#C5A38E",danger:"#B06E83",highlight:"#B5A4B4",link:"#4D516D",colors:{background:"#FAF8FA",surface:"#FFFFFF",surfaceSecondary:"#F4F1F4",primary:"#4D516D",primaryHover:"#3F435B",secondary:"#A8868C",accent:"#B5A4B4",border:"#DED9DD",divider:"#ECE8EC",text:"#3A3D4F",textSecondary:"#6F6A72",success:"#8D8AA4",warning:"#C5A38E",error:"#B06E83",chartCurrentRow:"#B5A4B4",chartCompleted:"#DDDAD5",annotationPen:"#4D516D",annotationHighlight:"rgba(181,164,180,0.28)",voiceListening:"#4D516D",shadow:"rgba(58,61,79,0.08)"},dark:{background:"#11121A",surface:"#222433",card:"#2D3042",text:"#F3F1FA",textSecondary:"#D2CEDD",button:"#AEB6E3",buttonText:"#11130F",secondary:"#4A363E",accent:"#CFBBD0",border:"#55586F",success:"#B8B5D4",warning:"#DDBCA5",danger:"#D890A4",highlight:"#CFBBD0",link:"#CCD3FF"}}
 ];
 const designStyles=[
   {id:"original-classic",name:"Original Classic",desc:"Balanced Yarncha look with soft cards and familiar controls."},
@@ -45,6 +45,7 @@ const starterData = {
     { id: "ideas", name: "My project ideas", icon: "✦", description: "Inspiration, sketches and future makes.", items: [] },
     { id: "materials", name: "Yarn materials", icon: "◌", description: "Natural and synthetic fibres, texture, season and care reference.", items: [] },
     { id: "symbols", name: "Symbol Database", icon: "", description: "Searchable knitting, crochet and Tunisian symbols, abbreviations, special stitches and chart-reading rules.", items: [] },
+    { id: "symbol-learning", name: "Symbol Learning Library", icon: "◈", description: "Local Flow Mode corrections Yarncha remembers on this device.", items: [] },
     { id: "tool-manual", name: "Tool Manual", icon: "◧", description: "Plain-language guide to every Toolkit calculator.", items: [] },
     { id: "theory", name: "Theory & Foundation", icon: "◎", description: "Structured knitting, crochet and Tunisian crochet learning notes.", items: [] }
   ],
@@ -58,7 +59,7 @@ const starterData = {
   language:"en",
   unitSystem:"metric",
   appPreferences:{notifications:false,voice:true},
-  theme:{name:"creamy-vanilla",style:"original-classic",mode:"system"},
+  theme:{name:"vintage-paper",style:"original-classic",mode:"system"},
   onboardingComplete:false,
   onboardingStep:0,
   aiAccessConfirmed:false,
@@ -68,7 +69,8 @@ const starterData = {
   projectIdeas:[],
   symbolFavorites:[],
   userTechniqueReferences:{},
-  userSymbolsOverride:{}
+  userSymbolsOverride:{},
+  symbolLearningLibrary:[]
 };
 
 let state = loadState();
@@ -106,7 +108,7 @@ async function dataUrlToBlob(dataUrl){
   return response.blob();
 }
 function normalizeThemeName(name){
-  return { "soft-yarn":"creamy-vanilla", sakura:"sakura-milk", forest:"matcha-latte" }[name] || (themePresets.some(t=>t.id===name)?name:"creamy-vanilla");
+  return { "soft-yarn":"vintage-paper", "creamy-vanilla":"vintage-paper", "cocoa-beige":"vintage-paper", sakura:"sakura-milk", forest:"matcha-grove", "matcha-latte":"matcha-grove", "peach-apricot":"sky-blessing", "soft-lavender":"lavender-twilight" }[name] || (themePresets.some(t=>t.id===name)?name:"vintage-paper");
 }
 function normalizeDesignStyle(style){
   return designStyles.some(s=>s.id===style)?style:"original-classic";
@@ -136,13 +138,82 @@ function normalizeProjectIdea(idea={}){
   };
 }
 
+function normalizeLearningRecord(raw={}){
+  const date=raw.dateAdded||raw.createdAt||new Date().toISOString();
+  const confidence=Number(raw.confidence);
+  return {
+    id:raw.id||`learned-symbol-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    schemaVersion:1,
+    localOnly:raw.localOnly!==false,
+    syncStatus:raw.syncStatus||"local-only",
+    uploadedChartRef:raw.uploadedChartRef||raw.chartImageRef||null,
+    uploadedChartName:raw.uploadedChartName||raw.chartName||"",
+    detectedSymbolImageAsset:raw.detectedSymbolImageAsset||raw.symbolImageAsset||"",
+    detectedSymbolImageName:raw.detectedSymbolImageName||raw.symbolImageName||"",
+    detectedSymbolFingerprint:raw.detectedSymbolFingerprint||raw.fingerprint||"",
+    originalAiGuess:String(raw.originalAiGuess||raw.originalGuess||"").trim(),
+    correctedSymbolName:String(raw.correctedSymbolName||raw.userCorrectedSymbolName||raw.name||"Needs review").trim(),
+    abbreviation:String(raw.abbreviation||"").trim(),
+    craftType:raw.craftType||raw.craft||"Shared",
+    notes:String(raw.notes||"").trim(),
+    confidence:Math.max(0,Math.min(100,Number.isFinite(confidence)?confidence:70)),
+    dateAdded:date,
+    updatedAt:raw.updatedAt||date,
+    source:raw.source||"user-correction"
+  };
+}
+function learningRecords(){return (state.symbolLearningLibrary||[]).map(normalizeLearningRecord);}
+function learningTokens(value){return String(value||"").toLowerCase().match(/[\p{L}\p{N}]+/gu)||[];}
+function learnedSymbolSuggestion(input={}){
+  const craft=String(input.craftType||input.craft||"").toLowerCase();
+  const guess=String(input.originalAiGuess||input.originalGuess||input.symbol||input.sequence||"").toLowerCase();
+  const abbr=String(input.abbreviation||"").toLowerCase();
+  const tokens=new Set([...learningTokens(guess),...learningTokens(abbr)]);
+  const scored=learningRecords().map(record=>{
+    let score=0;
+    if(craft&&record.craftType.toLowerCase()===craft)score+=24;
+    if(abbr&&record.abbreviation.toLowerCase()===abbr)score+=42;
+    if(guess&&(record.originalAiGuess.toLowerCase()===guess||record.correctedSymbolName.toLowerCase()===guess))score+=36;
+    const recordTokens=new Set([...learningTokens(record.originalAiGuess),...learningTokens(record.correctedSymbolName),...learningTokens(record.abbreviation),...learningTokens(record.notes)]);
+    for(const token of tokens)if(recordTokens.has(token))score+=8;
+    return {...record,matchConfidence:Math.min(99,Math.round(score+(record.confidence||0)*.35))};
+  }).filter(record=>record.matchConfidence>=45).sort((a,b)=>b.matchConfidence-a.matchConfidence);
+  return scored[0]||null;
+}
+function learningSuggestionHtml(input={}){
+  const suggestion=learnedSymbolSuggestion(input);
+  if(!suggestion)return `<div class="learning-suggestion empty"><strong>No local learned match yet.</strong><p>Yarncha will remember corrections you save on this device.</p></div>`;
+  return `<div class="learning-suggestion"><p class="eyebrow">LOCAL LEARNING SUGGESTION</p><strong>${escapeHtml(suggestion.correctedSymbolName)}${suggestion.abbreviation?` · ${escapeHtml(suggestion.abbreviation)}`:""}</strong><p>Confidence ${suggestion.matchConfidence}%. Yarncha remembers your corrections on this device.</p><small>From ${escapeHtml(suggestion.uploadedChartName||"a previous chart")} · ${new Date(suggestion.dateAdded).toLocaleDateString()}</small></div>`;
+}
+function saveLearningRecord(raw){
+  const record=normalizeLearningRecord(raw),records=learningRecords();
+  const existingIndex=records.findIndex(item=>item.id===record.id);
+  if(existingIndex>=0)records[existingIndex]={...records[existingIndex],...record,updatedAt:new Date().toISOString()};
+  else records.unshift(record);
+  state.symbolLearningLibrary=records.slice(0,500);
+  saveState();
+  return record;
+}
+async function deleteLearningRecord(id){
+  const record=learningRecords().find(item=>item.id===id);
+  if(!record)return;
+  if(record.detectedSymbolImageAsset)await deleteAsset(record.detectedSymbolImageAsset);
+  state.symbolLearningLibrary=learningRecords().filter(item=>item.id!==id);
+  saveState();
+}
+function currentChartLearningRef(){
+  const p=getProject();
+  const active=(p.activeChartAssetId&&p.attachments?.find(a=>a.id===p.activeChartAssetId)) || p.attachments?.[0] || null;
+  return {uploadedChartRef:active?.id||p.chart?.assetId||"",uploadedChartName:active?.name||p.chart?.name||p.name};
+}
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     const merged = { ...starterData, ...saved };
     merged.librarySections = saved.librarySections || structuredClone(starterData.librarySections);
     if(!merged.librarySections.some(s=>s.id==="materials"))merged.librarySections.push(structuredClone(starterData.librarySections.find(s=>s.id==="materials")));
-    for(const id of ["symbols","tool-manual","theory"]){
+    for(const id of ["symbols","symbol-learning","tool-manual","theory"]){
       if(!merged.librarySections.some(s=>s.id===id))merged.librarySections.push(structuredClone(starterData.librarySections.find(s=>s.id===id)));
     }
     const tutorialSection=merged.librarySections.find(s=>s.id==="tutorials");
@@ -173,6 +244,7 @@ function loadState() {
     merged.symbolFavorites = saved.symbolFavorites || [];
     merged.userTechniqueReferences = saved.userTechniqueReferences || {};
     merged.userSymbolsOverride = saved.userSymbolsOverride || {};
+    merged.symbolLearningLibrary = (saved.symbolLearningLibrary || []).map(normalizeLearningRecord);
     merged.projectIdeas = (saved.projectIdeas || []).map(normalizeProjectIdea);
     merged.ideaFilters = saved.ideaFilters || {search:"",craft:"All",kind:"All",showArchived:false};
     merged.projects = (saved.projects || starterData.projects).map(p => ({
@@ -275,6 +347,7 @@ const uiIconPaths={
   garment:'<path d="m8 5 4-2 4 2 4 4-3 2v9H7v-9L4 9Z"></path>',
   circle:'<circle cx="12" cy="12" r="8"></circle><path d="M12 4v16M4 12h16"></path>',
   render:'<rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M4 10h16M10 4v16"></path>',
+  sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"></path>',
   exchange:'<path d="M5 8h13M15 5l3 3-3 3M19 16H6M9 13l-3 3 3 3"></path>'
   ,appearance:'<circle cx="12" cy="12" r="8"></circle><path d="M12 4a8 8 0 0 0 0 16c2 0 2.5-2.2 1-3.4-1.2-1-.5-2.6 1-2.6h2.5A3.5 3.5 0 0 0 20 10.5"></path><circle cx="9" cy="8" r=".7"></circle><circle cx="6.8" cy="11.5" r=".7"></circle>',
   preferences:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle>',
@@ -596,7 +669,8 @@ function toolLabel(tool){return ({touch:"Touch",rowMask:"Row Mask",highlighter:"
 
 function friendlyChartBetaHtml(p){
   const hasChart=p.chart||p.attachments.length,hasLegend=!!p.chartAnalysis?.legend,hasRows=!!(p.chartAnalysis?.rows||[]).length;
-  return `<div class="chart-analysis ai-beta-safe card" id="flow-ai-reader"><p class="eyebrow">PROJECT CHART</p><h3>Flow Mode / AI Chart Reader</h3><p>AI reads → you review → Yarncha tracks your row.</p><p class="muted-copy">Upload a chart, review symbol recognition, keep row tracking checked, use the highlight mask, and read aloud only after you approve uncertain results.</p><div class="beta-checks"><span>${hasChart?"✓":"○"} Chart uploaded</span><span>${hasLegend?"✓":"○"} Symbol recognition reviewed</span><span>${hasRows?"✓":"⚠"} Row tracking ${hasRows?"reviewed":"needs review"}</span><span>○ Highlight mask ready</span><span>○ Read aloud available</span><span>○ User correction required</span></div><div class="analysis-actions"><button class="mini-button" id="run-cloud-analysis-local">Analyse chart</button><button class="mini-button" id="review-chart-cells-local">Review cells</button><button class="mini-button" id="add-analysis-row">Add manual row</button><button class="mini-button" id="edit-chart-legend">Review legend</button></div><div id="cloud-chart-reader-slot" class="flow-ai-cloud-slot"></div></div>`;
+  const learnedCount=learningRecords().length;
+  return `<div class="chart-analysis ai-beta-safe card" id="flow-ai-reader"><p class="eyebrow">PROJECT CHART</p><h3>Flow Mode / AI Chart Reader</h3><p>AI reads → you review → Yarncha tracks your row.</p><p class="muted-copy">Upload a chart, review symbol recognition, keep row tracking checked, use the highlight mask, and read aloud only after you approve uncertain results.</p><div class="learning-suggestion"><strong>Local learning first</strong><p>Before suggesting a detected symbol, Yarncha checks ${learnedCount} learned correction${learnedCount===1?"":"s"} saved on this device and shows a confidence level.</p></div><div class="beta-checks"><span>${hasChart?"✓":"○"} Chart uploaded</span><span>${hasLegend?"✓":"○"} Symbol recognition reviewed</span><span>${hasRows?"✓":"⚠"} Row tracking ${hasRows?"reviewed":"needs review"}</span><span>${learnedCount?"✓":"○"} Local learning checked</span><span>○ Highlight mask ready</span><span>○ Read aloud available</span><span>○ User correction required</span></div><div class="analysis-actions"><button class="mini-button" id="run-cloud-analysis-local">Analyse chart</button><button class="mini-button" id="review-chart-cells-local">Review cells</button><button class="mini-button" id="add-analysis-row">Add manual row</button><button class="mini-button" id="edit-chart-legend">Review legend</button></div><div id="cloud-chart-reader-slot" class="flow-ai-cloud-slot"></div></div>`;
 }
 
 function projectProjectHtml(p){
@@ -630,16 +704,22 @@ function themeLabel(t){return themePresets.find(theme=>theme.id===normalizeTheme
 function themeComparePreviewHtml(theme){
   const d=theme.dark;
   return `<article class="theme-compare-card" aria-label="${escapeHtml(theme.name)} light and dark preview">
-    <div class="theme-compare-pane light" style="--pane-bg:${theme.background};--pane-card:${theme.card};--pane-text:${theme.text};--pane-muted:${theme.button};--pane-button:${theme.button};--pane-button-text:#fff;--pane-secondary:${theme.secondary};--pane-highlight:${theme.highlight};">
-      <div class="theme-compare-top"><span>Light</span><i></i></div>
-      <div class="theme-compare-surface"><b></b><b></b><b></b></div>
-      <div class="theme-compare-content"><strong>${escapeHtml(theme.name)}</strong><p>Row 42 · soft card</p><em>Active tab</em></div>
+    <div class="theme-compare-pane light" style="--pane-bg:${theme.background};--pane-card:${theme.card};--pane-text:${theme.text};--pane-muted:${theme.button};--pane-button:${theme.button};--pane-button-text:${theme.buttonText||"#fff"};--pane-secondary:${theme.secondary};--pane-highlight:${theme.highlight};">
+      <div class="theme-compare-surface"><b></b><b></b><b></b><b></b><b></b></div>
     </div>
-    <div class="theme-compare-pane dark" style="--pane-bg:${d.background};--pane-card:${d.card};--pane-text:${d.text};--pane-muted:${d.highlight};--pane-button:${d.button};--pane-button-text:#11130f;--pane-secondary:${d.secondary};--pane-highlight:${d.highlight};">
-      <div class="theme-compare-top"><span>Dark</span><i></i></div>
-      <div class="theme-compare-surface"><b></b><b></b><b></b></div>
-      <div class="theme-compare-content"><strong>${escapeHtml(theme.name)}</strong><p>Row 42 · readable card</p><em>Active tab</em></div>
+    <div class="theme-compare-pane dark" style="--pane-bg:${d.background};--pane-card:${d.card};--pane-text:${d.text};--pane-muted:${d.highlight};--pane-button:${d.button};--pane-button-text:${d.buttonText||"#11130f"};--pane-secondary:${d.secondary};--pane-highlight:${d.highlight};">
+      <div class="theme-compare-surface"><b></b><b></b><b></b><b></b><b></b></div>
     </div>
+  </article>`;
+}
+function themeGalleryCardHtml(t,activeTheme,index=0){
+  const swatches=[t.colors.primary,t.colors.secondary,t.colors.accent,t.colors.chartCurrentRow,t.colors.background];
+  const active=activeTheme===t.id;
+  return `<article class="theme-preview-card ${active?"active":""}" data-theme-card="${t.id}" role="button" tabindex="0" aria-pressed="${active}" aria-label="Choose ${escapeHtml(t.name)} theme" style="--preview-primary:${t.primary};--preview-secondary:${t.secondary};--preview-accent:${t.accent};--preview-bg:${t.background};--preview-card:${t.card};--preview-surface:${t.surface};--preview-text:${t.text};--preview-button:${t.button};--preview-button-text:${t.buttonText};--preview-highlight:${t.highlight};">
+    <div class="theme-card-meta"><span class="theme-number">Theme ${String(index+1).padStart(2,"0")}</span>${active?`<span class="theme-active-badge" aria-label="Current Theme">✓ Active</span>`:""}</div>
+    <div class="theme-preview-surface" aria-hidden="true"><i></i><b></b><em></em><span></span><strong></strong></div>
+    <div class="theme-card-copy"><h4>${escapeHtml(t.name)}${t.recommended?` <small>Default</small>`:""}</h4><p>${escapeHtml(t.description)}</p></div>
+    <div class="swatch-row" aria-hidden="true">${swatches.map(color=>`<em style="background:${color}"></em>`).join("")}</div>
   </article>`;
 }
 function styleLabel(s){return designStyles.find(style=>style.id===normalizeDesignStyle(s))?.name||s;}
@@ -1149,7 +1229,8 @@ function handleTouchRead(pt){
   openTouchReadModal(rowNumber,column,row);
 }
 function openTouchReadModal(rowNumber,column,row=null){
-  openModal(`<p class="eyebrow">TOUCH TO READ</p><h2>${row?.status==="checked"?"Checked row":"Needs review"}</h2><p class="muted-copy">Touched ${column?`row ${rowNumber}, column ${column}`:`row ${rowNumber}`}. Correct the row or symbol, then save it for future reads.</p><div class="form-grid"><div class="field"><label>Row</label><input id="touch-row-number" type="number" min="1" value="${rowNumber}"></div><div class="field"><label>Column / symbol</label><input id="touch-column" value="${column||""}" placeholder="Optional"></div><div class="field full"><label>What should Yarncha read?</label><textarea id="touch-sequence" rows="4" placeholder="e.g. k2, yo, ssk, repeat">${escapeHtml(row?.sequence||"")}</textarea></div><div class="field"><label>Verification</label><select id="touch-status"><option value="uncertain" ${row?.status!=="checked"?"selected":""}>Needs review</option><option value="checked" ${row?.status==="checked"?"selected":""}>Checked by me</option></select></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-touch-read">Save correction</button></div>`);
+  const p=getProject(),guess=row?.sequence||"",suggestion=learnedSymbolSuggestion({craftType:p.type,originalAiGuess:guess,sequence:guess});
+  openModal(`<p class="eyebrow">TOUCH TO READ</p><h2>${row?.status==="checked"?"Checked row":"Needs review"}</h2><p class="muted-copy">Touched ${column?`row ${rowNumber}, column ${column}`:`row ${rowNumber}`}. Correct the row or symbol, then save it for future reads.</p>${learningSuggestionHtml({craftType:p.type,originalAiGuess:guess,sequence:guess})}<div class="form-grid"><div class="field"><label>Row</label><input id="touch-row-number" type="number" min="1" value="${rowNumber}"></div><div class="field"><label>Column / symbol</label><input id="touch-column" value="${column||""}" placeholder="Optional"></div><div class="field"><label>Original AI guess</label><input id="touch-original-guess" value="${escapeHtml(guess)}" placeholder="Needs review"></div><div class="field"><label>Abbreviation</label><input id="touch-abbreviation" value="${escapeHtml(suggestion?.abbreviation||"")}" placeholder="e.g. YO, SC, k2tog"></div><div class="field full"><label>What should Yarncha read?</label><textarea id="touch-sequence" rows="4" placeholder="e.g. k2, yo, ssk, repeat">${escapeHtml(suggestion?.correctedSymbolName||row?.sequence||"")}</textarea></div><div class="field"><label>Verification</label><select id="touch-status"><option value="uncertain" ${row?.status!=="checked"?"selected":""}>Needs review</option><option value="checked" ${row?.status==="checked"?"selected":""}>Checked by me</option></select></div><div class="field"><label>Learning confidence</label><input id="touch-learning-confidence" type="number" min="0" max="100" value="${suggestion?.matchConfidence||70}"></div><div class="field full"><label>Learning notes</label><input id="touch-learning-notes" value="${escapeHtml(suggestion?.notes||"")}" placeholder="What made this symbol clear?"></div></div><label class="check-row"><input id="save-touch-learning" type="checkbox" checked><span>Save this correction to my symbol learning library?</span></label><div class="privacy-note">Local learning only: Yarncha remembers your corrections on this device. This does not retrain the AI model.</div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-touch-read">Save correction</button></div>`);
   document.getElementById("save-touch-read").onclick=()=>{
     const p=getProject(),a=p.chartAnalysis||(p.chartAnalysis={rows:[],legend:"",detectedRows:null,summary:"Manual touch review started."});
     a.rows ||= [];
@@ -1159,6 +1240,9 @@ function openTouchReadModal(rowNumber,column,row=null){
     if(existing)Object.assign(existing,values);else a.rows.push({id:`analysis-row-${Date.now()}`,...values});
     a.rows.sort((x,y)=>x.number-y.number);
     if(!p.chartRows&&a.detectedRows)p.chartRows=a.detectedRows;
+    if(document.getElementById("save-touch-learning").checked){
+      saveLearningRecord({...currentChartLearningRef(),originalAiGuess:document.getElementById("touch-original-guess").value.trim()||"Needs review",correctedSymbolName:sequence,abbreviation:document.getElementById("touch-abbreviation").value.trim(),craftType:p.type,notes:document.getElementById("touch-learning-notes").value.trim(),confidence:+document.getElementById("touch-learning-confidence").value||70,source:"touch-to-read"});
+    }
     saveProjectTouch(p);closeModal();renderProjectDetail();toast("Touch reading saved.");
   };
 }
@@ -1562,11 +1646,19 @@ const chartSymbolReference={
   knitting:["— knit stitch (上針 in the supplied Chinese reference)","| purl stitch (下針)","○ yarn over (鏤空針)","twisted stitch / knit through back loop","right- and left-leaning 2-stitch decreases","centred double decrease","right- and left-leaning increases","cable crossings over 2–5 stitches","bobble and multi-row bobble symbols"],
   crochet:["oval = chain (CH)","filled dot = slip stitch (SL)","+ or × = single crochet (X / sc)","T = half double crochet","crossed T = double crochet","multi-bar T = taller crochet stitches","V-family = increases in one stitch","A-family = decreases worked together","FLO / BLO = front or back loop only","post-stitch symbols","shell, popcorn, cluster and crossed-stitch symbols"]
 };
+function learnedLegendCorrections(text,craftType){
+  return String(text||"").split(/\n|;/).map(line=>line.trim()).filter(Boolean).map(line=>{
+    const match=line.match(/^(.{1,24}?)(?:=| means | is |：|:)\s*(.{2,120})$/i);
+    if(!match)return null;
+    const originalAiGuess=match[1].trim(),corrected=match[2].trim(),abbr=(corrected.match(/\(([A-Z][A-Z0-9 /\-]{0,12})\)/)||corrected.match(/\b([A-Z][A-Z0-9 /\-]{0,12})\b/))?.[1]||"";
+    return {...currentChartLearningRef(),originalAiGuess,correctedSymbolName:corrected,abbreviation:abbr,craftType,notes:`Saved from chart legend line: ${line}`,confidence:82,source:"chart-legend"};
+  }).filter(Boolean);
+}
 function openChartLegendModal(){
   const p=getProject(),a=p.chartAnalysis||(p.chartAnalysis={rows:[],legend:"",detectedRows:null,summary:"Manual review started."});
   a.rows ||= [];
-  openModal(`<p class="eyebrow">USER-CHECKED LEGEND</p><h2>Review chart grid and symbols</h2><div class="form-grid"><div class="field"><label>Detected rows</label><input id="legend-rows" type="number" min="1" value="${a.detectedRows||""}"></div><div class="field"><label>Detected columns</label><input id="legend-columns" type="number" min="1" value="${a.columns||""}"></div><div class="field full"><label>Grid notes</label><input id="grid-status" value="${escapeHtml(a.gridStatus||"")}"></div><div class="field full"><label>Legend transcription and corrections</label><textarea id="chart-legend-text" rows="7" placeholder="Example: — = knit, | = purl, ○ = yarn over">${escapeHtml(a.legend||"")}</textarea></div></div><div class="symbol-reference"><h3>Reference vocabulary from your supplied sheets</h3><div><strong>Knitting</strong><p>${chartSymbolReference.knitting.join(" · ")}</p></div><div><strong>Crochet</strong><p>${chartSymbolReference.crochet.join(" · ")}</p></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-chart-legend">Save checked legend</button></div>`);
-  document.getElementById("save-chart-legend").onclick=()=>{a.detectedRows=Math.max(1,+document.getElementById("legend-rows").value||0)||null;a.columns=Math.max(1,+document.getElementById("legend-columns").value||0)||null;a.gridStatus=document.getElementById("grid-status").value.trim();a.legend=document.getElementById("chart-legend-text").value.trim();if(a.detectedRows)p.chartRows=a.detectedRows;saveState();closeModal();renderProjectDetail();};
+  openModal(`<p class="eyebrow">USER-CHECKED LEGEND</p><h2>Review chart grid and symbols</h2><div class="form-grid"><div class="field"><label>Detected rows</label><input id="legend-rows" type="number" min="1" value="${a.detectedRows||""}"></div><div class="field"><label>Detected columns</label><input id="legend-columns" type="number" min="1" value="${a.columns||""}"></div><div class="field full"><label>Grid notes</label><input id="grid-status" value="${escapeHtml(a.gridStatus||"")}"></div><div class="field full"><label>Legend transcription and corrections</label><textarea id="chart-legend-text" rows="7" placeholder="Example: — = knit, | = purl, ○ = yarn over">${escapeHtml(a.legend||"")}</textarea></div></div><label class="check-row"><input id="save-legend-learning" type="checkbox" checked><span>Save these corrections to my symbol learning library?</span></label><div class="privacy-note">Local learning only: Yarncha remembers your corrections on this device. This does not retrain the AI model.</div><div class="symbol-reference"><h3>Reference vocabulary from your supplied sheets</h3><div><strong>Knitting</strong><p>${chartSymbolReference.knitting.join(" · ")}</p></div><div><strong>Crochet</strong><p>${chartSymbolReference.crochet.join(" · ")}</p></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-chart-legend">Save checked legend</button></div>`);
+  document.getElementById("save-chart-legend").onclick=()=>{a.detectedRows=Math.max(1,+document.getElementById("legend-rows").value||0)||null;a.columns=Math.max(1,+document.getElementById("legend-columns").value||0)||null;a.gridStatus=document.getElementById("grid-status").value.trim();a.legend=document.getElementById("chart-legend-text").value.trim();if(document.getElementById("save-legend-learning").checked)learnedLegendCorrections(a.legend,p.type).forEach(saveLearningRecord);if(a.detectedRows)p.chartRows=a.detectedRows;saveState();closeModal();renderProjectDetail();};
 }
 function openChartRowModal(rowId=null){
   const p=getProject(),a=p.chartAnalysis||(p.chartAnalysis={rows:[],legend:"",detectedRows:null,summary:"Manual review started."});
@@ -1783,12 +1875,13 @@ async function hydrateIdeaImages(){
 function librarySectionCount(section){
   if(section.id==="materials")return state.yarnMaterials.length;
   if(section.id==="symbols")return window.YarnchaSymbolDatabase?mergedSymbolEntries().length:0;
+  if(section.id==="symbol-learning")return learningRecords().length;
   if(section.id==="tool-manual")return toolkitToolDefs.length;
   if(section.id==="theory")return Object.values(theoryTopics).reduce((sum,items)=>sum+items.length,0);
   if(section.id==="ideas")return (state.projectIdeas||[]).length;
   return (section.items||[]).length;
 }
-function librarySectionIcon(sectionId){return uiIcon(({"personal-references":"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
+function librarySectionIcon(sectionId){return uiIcon(({"personal-references":"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","symbol-learning":"sparkle","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
 function symbolRegionBadges(entry){return (entry.regionTags||[]).map(tag=>`<span class="symbol-region-badge">${escapeHtml(tag)}</span>`).join("");}
 const symbolSvgPaths={
   knit:'<path d="M32 10v44"></path>',
@@ -2017,7 +2110,7 @@ function openSymbolEditModal(entry=null){
   pictureInput.onchange=()=>{const file=pictureInput.files?.[0];if(!file)return;if(!file.type.startsWith("image/"))return toast("Choose an image file.");stagedPicture=file;removePicture=false;const url=URL.createObjectURL(file);pictureEditor.innerHTML=`<div class="symbol-edit-picture"><img class="symbol-uploaded-picture" src="${url}" alt="Selected symbol picture"></div><div><strong>New symbol picture selected</strong><p>${escapeHtml(file.name)}</p></div>`;choosePicture.textContent="Replace symbol picture";if(removeButton)removeButton.hidden=false;};
   removeButton?.addEventListener("click",()=>{stagedPicture=null;removePicture=true;pictureInput.value="";pictureEditor.innerHTML=`<div class="symbol-edit-picture">${symbolIconSvg(base)}</div><div><strong>Uploaded picture will be removed</strong><p>The default Yarncha symbol will be used after saving.</p></div>`;choosePicture.textContent="Upload symbol picture";removeButton.hidden=true;});
   document.getElementById("cancel-symbol-edit").onclick=()=>closeModal();
-  document.getElementById("symbol-edit-form").onsubmit=async event=>{event.preventDefault();const candidate=symbolEntryFromEditForm(base),result=validateSymbolEntry(candidate),errorHost=document.getElementById("symbol-edit-errors");if(!result.valid){errorHost.hidden=false;errorHost.innerHTML=`<strong>Please fix:</strong><ul>${result.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join("")}</ul>`;return;}const previousAsset=base.symbolImageAsset||"";if(stagedPicture){const assetId=`symbol-picture-${candidate.id}-${Date.now()}`;await putAsset(assetId,stagedPicture);result.entry.symbolImageAsset=assetId;result.entry.symbolImageName=stagedPicture.name;}else if(removePicture){result.entry.symbolImageAsset="";result.entry.symbolImageName="";}const saved=saveSymbolOverride(result.entry);if(previousAsset&&previousAsset!==saved.symbolImageAsset)await deleteAsset(previousAsset);currentSymbolId=saved.id;closeModal(true);renderLibrary();toast("Symbol saved");};
+  document.getElementById("symbol-edit-form").onsubmit=async event=>{event.preventDefault();const candidate=symbolEntryFromEditForm(base),result=validateSymbolEntry(candidate),errorHost=document.getElementById("symbol-edit-errors");if(!result.valid){errorHost.hidden=false;errorHost.innerHTML=`<strong>Please fix:</strong><ul>${result.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join("")}</ul>`;return;}const previousAsset=base.symbolImageAsset||"";if(stagedPicture){const assetId=`symbol-picture-${candidate.id}-${Date.now()}`;await putAsset(assetId,stagedPicture);result.entry.symbolImageAsset=assetId;result.entry.symbolImageName=stagedPicture.name;}else if(removePicture){result.entry.symbolImageAsset="";result.entry.symbolImageName="";}const saved=saveSymbolOverride(result.entry);if(confirm("Save this correction to my symbol learning library?"))saveLearningRecord({uploadedChartRef:"symbol-database",uploadedChartName:"Symbol Database",detectedSymbolImageAsset:saved.symbolImageAsset||"",detectedSymbolImageName:saved.symbolImageName||"",originalAiGuess:base.nameEn||base.abbreviation||base.symbol||"Manual symbol entry",correctedSymbolName:saved.nameEn,abbreviation:saved.abbreviation,craftType:saved.craft,notes:saved.explanation||saved.notes||"",confidence:saved.verificationStatus==="To Be Confirmed"?60:90,source:"symbol-database-edit"});if(previousAsset&&previousAsset!==saved.symbolImageAsset)await deleteAsset(previousAsset);currentSymbolId=saved.id;closeModal(true);renderLibrary();toast("Symbol saved");};
   document.getElementById("reset-symbol-default")?.addEventListener("click",async()=>{if(!confirm(`Reset “${base.nameEn}” to the Yarncha default?`))return;if(base.symbolImageAsset)await deleteAsset(base.symbolImageAsset);resetSymbolOverride(base.id);closeModal(true);currentSymbolId=base.id;renderLibrary();toast("Symbol reset to default");});
   document.getElementById("duplicate-symbol")?.addEventListener("click",()=>duplicateSymbolEntry(base));
   document.getElementById("delete-symbol")?.addEventListener("click",()=>deleteSymbolEntry(base));
@@ -2066,6 +2159,73 @@ function symbolDatabaseHtml(){
     ${entries.length?sections.map(section=>{const items=entries.filter(entry=>entry.section===section);return items.length?`<section class="symbol-section"><div class="section-heading"><div><p class="eyebrow">SYMBOL DATABASE</p><h2>${escapeHtml(section)}</h2></div><span>${items.length} entries</span></div><div class="symbol-grid">${items.map(entry=>`<article class="symbol-card card"><button class="symbol-card-open" data-symbol-id="${entry.id}" aria-label="Open ${escapeHtml(entry.nameEn)} details"><span class="symbol-card-mark">${symbolVisualHtml(entry)}</span><span class="symbol-card-copy"><strong>${escapeHtml(entry.nameEn)}</strong><small>${escapeHtml(entry.nameZh)}</small><span class="symbol-card-abbreviation">${entry.craft==="Crochet"?`US ${escapeHtml(entry.abbreviationUS||"—")} · UK ${escapeHtml(entry.abbreviationUK||"—")}`:escapeHtml(entry.abbreviation||entry.category)}</span>${symbolVerificationBadge(entry)}<span class="symbol-region-badges">${symbolRegionBadges(entry)}</span><em>${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}${entry.needsReview?" · Needs review":""}</em></span></button><button class="symbol-card-edit" data-edit-symbol="${entry.id}" aria-label="Edit ${escapeHtml(entry.nameEn)}" title="Edit symbol">${uiIcon("edit","ui-icon")}</button>${(state.symbolFavorites||[]).includes(entry.id)?`<span class="symbol-favorite" aria-label="Favorite">Saved</span>`:""}</article>`).join("")}</div></section>`:"";}).join(""):`<div class="empty-state"><h3>No symbols match these filters</h3><p>Try a different craft, category, terminology or search term.</p></div>`}
   </section>`;
 }
+function symbolLearningLibraryHtml(){
+  const records=learningRecords();
+  return `<section class="symbol-learning-shell">
+    <div class="symbol-database-intro card"><p class="eyebrow">FLOW MODE MEMORY</p><h2>Symbol Learning Library</h2><p>Yarncha remembers your corrections on this device and checks them before suggesting a Flow Mode symbol. This is local learning, not model training.</p></div>
+    <div class="symbol-admin-toolbar card" aria-label="Symbol Learning Library controls"><div><strong>${records.length} learned symbol${records.length===1?"":"s"}</strong><p>Future-ready records include chart references, symbol crop asset IDs, corrections, confidence, and local-only sync status.</p></div><div class="button-row"><button class="secondary-button" id="add-learning-symbol">Add learned symbol</button><button class="secondary-button" id="export-learning-symbols">Export learning data</button><button class="secondary-button" id="import-learning-symbols">Import learning data</button><button class="secondary-button danger-button" id="reset-learning-symbols">Reset learning data</button><input id="learning-import-file" type="file" accept="application/json,.json" hidden></div></div>
+    ${records.length?`<div class="symbol-learning-grid">${records.map(record=>`<article class="symbol-learning-card card"><div class="symbol-learning-mark">${record.detectedSymbolImageAsset?`<img data-learning-image="${record.detectedSymbolImageAsset}" alt="${escapeHtml(record.correctedSymbolName)} symbol crop">`:symbolIconSvg({symbolType:"legend-specific"},"symbol-svg-icon")}</div><div><p class="eyebrow">${escapeHtml(record.craftType)} · confidence ${record.confidence}%</p><h3>${escapeHtml(record.correctedSymbolName)}</h3><p>${record.abbreviation?`Abbreviation: ${escapeHtml(record.abbreviation)} · `:""}Original guess: ${escapeHtml(record.originalAiGuess||"Needs review")}</p><small>${escapeHtml(record.uploadedChartName||"No chart reference")} · ${new Date(record.dateAdded).toLocaleDateString()} · ${escapeHtml(record.syncStatus)}</small><p class="muted-copy">${escapeHtml(record.notes||"No notes yet.")}</p></div><div class="row-actions"><button class="mini-button" data-edit-learning="${record.id}">Edit</button><button class="mini-button danger-button" data-delete-learning="${record.id}">Delete</button></div></article>`).join("")}</div>`:`<div class="empty-state"><h3>No learned symbols yet</h3><p>When you correct Flow Mode, Touch to Read, chart legends, or symbol entries, Yarncha can remember the correction here.</p></div>`}
+  </section>`;
+}
+async function hydrateLearningImages(){
+  for(const img of document.querySelectorAll("[data-learning-image]")){
+    const file=await getAsset(img.dataset.learningImage);
+    if(file)img.src=URL.createObjectURL(file);
+  }
+}
+function bindSymbolLearningLibrary(){
+  document.getElementById("add-learning-symbol")?.addEventListener("click",()=>openLearningRecordModal());
+  document.getElementById("export-learning-symbols")?.addEventListener("click",exportLearningJson);
+  const importInput=document.getElementById("learning-import-file");
+  document.getElementById("import-learning-symbols")?.addEventListener("click",()=>importInput?.click());
+  importInput?.addEventListener("change",event=>importLearningJson(event.target.files?.[0]));
+  document.getElementById("reset-learning-symbols")?.addEventListener("click",resetLearningLibrary);
+  document.querySelectorAll("[data-edit-learning]").forEach(button=>button.onclick=()=>openLearningRecordModal(button.dataset.editLearning));
+  document.querySelectorAll("[data-delete-learning]").forEach(button=>button.onclick=async()=>{const record=learningRecords().find(item=>item.id===button.dataset.deleteLearning);if(!record||!confirm(`Delete learned symbol “${record.correctedSymbolName}”?`))return;await deleteLearningRecord(record.id);renderLibrary();toast("Learned symbol deleted");});
+  hydrateLearningImages();
+}
+function learningRecordFormHtml(record){
+  return `<form id="learning-record-form"><p class="eyebrow">LOCAL LEARNING</p><h2>${record.id?"Edit":"Add"} learned symbol</h2><p class="muted-copy">Yarncha remembers your corrections on this device. This does not retrain the AI model.</p><div class="form-grid"><div class="field"><label>Original AI guess</label><input id="learning-original" value="${escapeHtml(record.originalAiGuess||"")}" placeholder="What Flow Mode guessed"></div><div class="field"><label>Corrected symbol name</label><input id="learning-corrected" value="${escapeHtml(record.correctedSymbolName||"")}" required></div><div class="field"><label>Abbreviation</label><input id="learning-abbreviation" value="${escapeHtml(record.abbreviation||"")}"></div><div class="field"><label>Craft type</label><select id="learning-craft">${["Knitting","Crochet","Tunisian Crochet","Weaving","Shared","Other"].map(value=>`<option ${record.craftType===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Confidence</label><input id="learning-confidence" type="number" min="0" max="100" value="${record.confidence||70}"></div><div class="field"><label>Chart reference</label><input id="learning-chart-name" value="${escapeHtml(record.uploadedChartName||"")}" placeholder="Pattern or chart name"></div><div class="field full"><label>Notes</label><textarea id="learning-notes" rows="4">${escapeHtml(record.notes||"")}</textarea></div><div class="field full"><label>Detected symbol image / crop</label><div class="button-row"><button class="secondary-button" type="button" id="choose-learning-image">${record.detectedSymbolImageAsset?"Replace image":"Upload image"}</button><button class="secondary-button danger-button" type="button" id="remove-learning-image" ${record.detectedSymbolImageAsset?"":"hidden"}>Remove image</button></div><input id="learning-image-file" type="file" accept="image/*" hidden><small>Optional. The image stays in this browser and can later sync as a file asset.</small></div></div><div class="modal-actions"><button class="secondary-button" type="button" onclick="closeModal()">Cancel</button><button class="primary-button" type="submit">Save learned symbol</button></div></form>`;
+}
+function openLearningRecordModal(recordId=null){
+  const base=recordId?learningRecords().find(item=>item.id===recordId):normalizeLearningRecord({id:"",correctedSymbolName:"",craftType:getProject()?.type||"Knitting",confidence:70,...currentChartLearningRef()});
+  if(!base)return toast("Learned symbol not found.");
+  openModal(learningRecordFormHtml(base),{label:"Learned symbol"});
+  let stagedImage=null,removeImage=false;
+  const imageInput=document.getElementById("learning-image-file"),choose=document.getElementById("choose-learning-image"),remove=document.getElementById("remove-learning-image");
+  choose.onclick=()=>imageInput.click();
+  imageInput.onchange=()=>{const file=imageInput.files?.[0];if(!file)return;if(!file.type.startsWith("image/"))return toast("Choose an image file.");stagedImage=file;removeImage=false;choose.textContent="Replace image";remove.hidden=false;};
+  remove?.addEventListener("click",()=>{stagedImage=null;removeImage=true;imageInput.value="";choose.textContent="Upload image";remove.hidden=true;});
+  document.getElementById("learning-record-form").onsubmit=async event=>{
+    event.preventDefault();
+    let detectedSymbolImageAsset=base.detectedSymbolImageAsset||"",detectedSymbolImageName=base.detectedSymbolImageName||"";
+    if(stagedImage){const assetId=`learned-symbol-${Date.now()}-${Math.random().toString(16).slice(2)}`;await putAsset(assetId,stagedImage);if(base.detectedSymbolImageAsset&&base.detectedSymbolImageAsset!==assetId)await deleteAsset(base.detectedSymbolImageAsset);detectedSymbolImageAsset=assetId;detectedSymbolImageName=stagedImage.name;}
+    else if(removeImage){if(base.detectedSymbolImageAsset)await deleteAsset(base.detectedSymbolImageAsset);detectedSymbolImageAsset="";detectedSymbolImageName="";}
+    saveLearningRecord({...base,id:base.id||undefined,uploadedChartName:document.getElementById("learning-chart-name").value.trim(),originalAiGuess:document.getElementById("learning-original").value.trim(),correctedSymbolName:document.getElementById("learning-corrected").value.trim(),abbreviation:document.getElementById("learning-abbreviation").value.trim(),craftType:document.getElementById("learning-craft").value,confidence:+document.getElementById("learning-confidence").value||70,notes:document.getElementById("learning-notes").value.trim(),detectedSymbolImageAsset,detectedSymbolImageName,source:base.source||"manual-review"});
+    closeModal(true);renderLibrary();toast("Learned symbol saved");
+  };
+}
+function exportLearningJson(){
+  const payload={app:"Yarncha",kind:"symbol-learning-library",schemaVersion:1,exportedAt:new Date().toISOString(),localOnly:true,learningRecords:learningRecords()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download=`yarncha-symbol-learning-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(url);toast("Symbol learning data exported");
+}
+async function importLearningJson(file){
+  try{
+    if(!file)return;
+    const parsed=JSON.parse(await file.text()),incoming=Array.isArray(parsed.learningRecords)?parsed.learningRecords:Array.isArray(parsed)?parsed:[];
+    if(!incoming.length)throw new Error("No learning records found");
+    const existing=new Map(learningRecords().map(record=>[record.id,record]));
+    incoming.map(normalizeLearningRecord).forEach(record=>existing.set(record.id,record));
+    state.symbolLearningLibrary=[...existing.values()].sort((a,b)=>new Date(b.updatedAt||b.dateAdded)-new Date(a.updatedAt||a.dateAdded));
+    saveState();renderLibrary();toast(`${incoming.length} learned symbol records imported`);
+  }catch(error){toast(`Learning import failed: ${error.message}`);}
+}
+async function resetLearningLibrary(){
+  if(!confirm("Reset all local symbol learning data on this device?"))return;
+  await Promise.allSettled(learningRecords().map(record=>record.detectedSymbolImageAsset?deleteAsset(record.detectedSymbolImageAsset):null));
+  state.symbolLearningLibrary=[];saveState();renderLibrary();toast("Symbol learning data reset");
+}
 function symbolMeaningText(entry){return `${entry.nameEnglish}${entry.abbreviation?` (${entry.abbreviation})`:""}\nTraditional Chinese: ${entry.nameTraditionalChinese}\nChart symbol: ${entry.visualSymbol}\n${entry.craft==="Crochet"?`US: ${entry.abbreviationUS||"—"} · UK: ${entry.abbreviationUK||"—"} · CN: ${entry.abbreviationChinese||"—"}\n`:""}Meaning: ${entry.explanation}\nHow to: ${entry.howTo}\n${entry.chartLegendWarning}\nFlow Mode note: ${entry.confidenceHint}`;}
 function openSymbolProjectModal(entry){
   if(!state.projects.length)return toast("Create a project before saving notes.");
@@ -2108,9 +2268,10 @@ function renderLibrary() {
   } else {
     const section=state.librarySections.find(s=>s.id===currentLibrarySection);
     if(!section){currentLibrarySection=null;return renderLibrary();}
-    host.innerHTML=`<button class="text-button library-back" id="library-back">← All library spaces</button><div class="page-title split-title"><div><p class="eyebrow">PERSONAL LIBRARY</p><h1>${escapeHtml(section.name)}</h1><p>${escapeHtml(section.description)}</p></div>${section.id==="symbols"?"":`<div><button class="secondary-button" id="rename-library">Rename</button> <button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button></div>`}</div>
-      ${section.id==="materials"?yarnMaterialReferenceHtml():section.id==="symbols"?symbolDatabaseHtml():section.id==="tool-manual"?toolManualHtml():section.id==="theory"?theoryFoundationHtml():section.id==="ideas"?projectIdeasHtml():""}
-      <div class="notion-list">${["symbols","ideas"].includes(section.id)?"":section.items.length?section.items.map(item=>`<div class="notion-row"><div>${item.fileData||item.assets?.length?"▧":"□"}</div><div><h3>${escapeHtml(item.name)}</h3><p>${item.craft?`${escapeHtml(item.craft)} · `:""}${escapeHtml(item.notes||"No notes")}${item.assets?.length?` · ${item.assets.length} files`:item.fileName?` · ${escapeHtml(item.fileName)}`:""}</p></div><div class="row-actions"><button class="mini-button" data-edit-item="${item.id}">Edit</button>${item.fileData||item.assets?.length?`<button class="mini-button" data-open-item="${item.id}">View files</button>`:""}</div></div>`).join(""):["materials","tool-manual","theory","ideas"].includes(section.id)?"":`<div class="empty-state"><h3>This space is ready for your own pages</h3><p>Add a named section, note or PDF tutorial.</p></div>`}</div>`;
+    const noGenericActions=["symbols","symbol-learning"],managedLibrarySections=["symbols","symbol-learning","ideas"];
+    host.innerHTML=`<button class="text-button library-back" id="library-back">← All library spaces</button><div class="page-title split-title"><div><p class="eyebrow">PERSONAL LIBRARY</p><h1>${escapeHtml(section.name)}</h1><p>${escapeHtml(section.description)}</p></div>${noGenericActions.includes(section.id)?"":`<div><button class="secondary-button" id="rename-library">Rename</button> <button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button></div>`}</div>
+      ${section.id==="materials"?yarnMaterialReferenceHtml():section.id==="symbols"?symbolDatabaseHtml():section.id==="symbol-learning"?symbolLearningLibraryHtml():section.id==="tool-manual"?toolManualHtml():section.id==="theory"?theoryFoundationHtml():section.id==="ideas"?projectIdeasHtml():""}
+      <div class="notion-list">${managedLibrarySections.includes(section.id)?"":section.items.length?section.items.map(item=>`<div class="notion-row"><div>${item.fileData||item.assets?.length?"▧":"□"}</div><div><h3>${escapeHtml(item.name)}</h3><p>${item.craft?`${escapeHtml(item.craft)} · `:""}${escapeHtml(item.notes||"No notes")}${item.assets?.length?` · ${item.assets.length} files`:item.fileName?` · ${escapeHtml(item.fileName)}`:""}</p></div><div class="row-actions"><button class="mini-button" data-edit-item="${item.id}">Edit</button>${item.fileData||item.assets?.length?`<button class="mini-button" data-open-item="${item.id}">View files</button>`:""}</div></div>`).join(""):["materials","tool-manual","theory","ideas"].includes(section.id)?"":`<div class="empty-state"><h3>This space is ready for your own pages</h3><p>Add a named section, note or PDF tutorial.</p></div>`}</div>`;
     document.getElementById("library-back").onclick=()=>{currentLibrarySection=null;renderLibrary();};
     document.getElementById("add-library-item")?.addEventListener("click",()=>section.id==="materials"?openYarnMaterialModal():section.id==="ideas"?openProjectIdeaModal():openLibraryItemModal(section.id));
     document.getElementById("rename-library")?.addEventListener("click",()=>openLibrarySpaceModal(section.id));
@@ -2119,6 +2280,7 @@ function renderLibrary() {
     document.querySelectorAll("[data-edit-material]").forEach(b=>b.onclick=()=>openYarnMaterialModal(b.dataset.editMaterial));
     bindProjectIdeas();
     bindSymbolDatabase();
+    bindSymbolLearningLibrary();
     hydrateMaterialImages();
   }
   queueMicrotask(applyLanguage);
@@ -2214,7 +2376,8 @@ function renderSettings(){
       <div class="settings-group-title"><p class="eyebrow">PREFERENCES</p><h2>Preferences</h2></div>
       <section class="card mobile-card settings-panel settings-panel-wide appearance-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("appearance","ui-icon")}</span><div><p class="eyebrow">APPEARANCE</p><h2>Make Yarncha feel like yours</h2><p>Choose a colour mood, design style, display mode, and language.</p></div></div>
         <div class="appearance-heading"><h3>Colour theme</h3><button class="mini-button" id="reset-appearance">Reset default</button></div>
-        <div class="appearance-grid theme-preview-grid">${themePresets.map(t=>`<button class="theme-preview-card ${activeTheme===t.id?"active":""}" data-theme-name="${t.id}" style="--preview-primary:${t.primary};--preview-secondary:${t.secondary};--preview-bg:${t.background};--preview-card:${t.card};--preview-text:${t.text};--preview-button:${t.button};--preview-highlight:${t.highlight};"><span class="theme-preview-surface"><i></i><b></b></span><strong>${escapeHtml(t.name)}</strong><small>${escapeHtml(t.background)} · ${escapeHtml(t.button)}</small><span class="swatch-row"><em></em><em></em><em></em><em></em></span></button>`).join("")}</div>
+        <div class="appearance-grid theme-preview-grid">${themePresets.map((t,index)=>themeGalleryCardHtml(t,activeTheme,index)).join("")}</div>
+        <p class="theme-gallery-note">Palette inspiration: @Lux Design Studio from Pinterest.</p>
         <div class="appearance-heading"><h3>Light / Dark preview</h3><span class="muted-copy">Preview the selected theme before applying a mode.</span></div>
         ${themeComparePreviewHtml(activeThemePreset)}
         <div class="appearance-heading"><h3>Mode</h3><span class="muted-copy">System follows your device setting.</span></div>
@@ -2229,7 +2392,11 @@ function renderSettings(){
       <div id="cloud-settings-anchor" class="settings-cloud-anchor"></div>
       <section class="card mobile-card settings-panel settings-panel-wide settings-notes-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("info","ui-icon")}</span><div><p class="eyebrow">UPDATES & LIMITATIONS</p><h2>What to know</h2><p>Honest notes about the current Yarncha build.</p></div></div><div class="limitations-list">${limitations.map(([limit,fix])=>`<article><strong>${escapeHtml(limit)}</strong><p>${escapeHtml(fix)}</p></article>`).join("")}</div></section>
     </div>`;
-  document.querySelectorAll("[data-theme-name]").forEach(b=>b.onclick=()=>{state.theme.name=b.dataset.themeName;saveState();renderSettings();});
+  function chooseThemeCard(card){state.theme.name=card.dataset.themeCard;saveState();renderSettings();}
+  document.querySelectorAll("[data-theme-card]").forEach(card=>{
+    card.onclick=()=>chooseThemeCard(card);
+    card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();chooseThemeCard(card);}};
+  });
   document.querySelectorAll("[data-style-name]").forEach(b=>b.onclick=()=>{state.theme.style=b.dataset.styleName;saveState();renderSettings();});
   document.querySelectorAll("[data-theme-mode]").forEach(b=>b.onclick=()=>{state.theme.mode=b.dataset.themeMode;saveState();renderSettings();});
   document.getElementById("reset-appearance").onclick=()=>{state.theme=structuredClone(starterData.theme);saveState();renderSettings();};
@@ -2551,6 +2718,7 @@ function allAssetIdsForState(snapshot){
     ...(snapshot.projectIdeas||[]).map(i=>i.referenceImageAsset),
     ...Object.values(snapshot.userTechniqueReferences||{}).map(reference=>reference.assetId),
     ...Object.values(snapshot.userSymbolsOverride||{}).map(entry=>entry.symbolImageAsset),
+    ...(snapshot.symbolLearningLibrary||[]).map(record=>record.detectedSymbolImageAsset),
     ...(snapshot.librarySections||[]).flatMap(s=>(s.items||[]).flatMap(i=>(i.assets||[]).map(a=>a.id)))
   ].filter(Boolean);
 }
@@ -2595,6 +2763,8 @@ async function importBackup(event,mode="merge"){
       state.techniqueKnowledge=[...(state.techniqueKnowledge||[]),...(imported.techniqueKnowledge||[])];
       state.userTechniqueReferences={...(state.userTechniqueReferences||{}),...(imported.userTechniqueReferences||{})};
       state.userSymbolsOverride={...(state.userSymbolsOverride||{}),...(imported.userSymbolsOverride||{})};
+      const learningMap=new Map([...(state.symbolLearningLibrary||[]),...(imported.symbolLearningLibrary||[])].map(record=>{const normalized=normalizeLearningRecord(record);return[normalized.id,normalized];}));
+      state.symbolLearningLibrary=[...learningMap.values()];
       state.activeProjectId=projects[0]?.id||state.activeProjectId;
     }
     localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
