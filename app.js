@@ -75,6 +75,8 @@ const starterData = {
 
 let state = loadState();
 let currentProjectId = state.activeProjectId;
+let activePage = "today";
+let renderedComponent = "TodayPage";
 let currentLibrarySection = null;
 let currentSymbolId = null;
 let symbolFilters = { search:"", craft:"All", category:"All", difficulty:"All", terminology:"All", verification:"All", sort:"Default" };
@@ -323,20 +325,50 @@ function applyLanguage(){
   let node;while(node=walker.nextNode()){const raw=originalText.get(node)||node.nodeValue;const trimmed=raw.trim();if(!trimmed)continue;if(!originalText.has(node))originalText.set(node,raw);const translated=state.language==="zh-HK"?(hkTranslations[trimmed]??trimmed):trimmed,target=translated!==trimmed?raw.replace(trimmed,translated):raw;if(node.nodeValue!==target)node.nodeValue=target;}
 }
 
+function setActiveView(viewId){
+  document.querySelectorAll(".view").forEach(view => {
+    const isActive = view.id === `${viewId}-view`;
+    view.classList.toggle("active", isActive);
+    view.toggleAttribute("hidden", !isActive);
+    view.setAttribute("aria-hidden", isActive ? "false" : "true");
+  });
+}
+
+function navigationDebugLog(clickedPageId,before,after,component){
+  const isLocal=["localhost","127.0.0.1",""].includes(location.hostname);
+  if(isLocal)console.debug("[Yarncha navigation]",{clickedPageId,activePageBefore:before,activePageAfter:after,renderedComponent:component});
+}
+
+function routeForPage(pageId){
+  const routes={
+    today:{viewId:"today",component:"TodayPage",label:"Today",render:renderToday},
+    projects:{viewId:"projects",component:"ProjectsPage",label:"Projects",render:renderProjects},
+    market:{viewId:"market",component:"YarnStashPage",label:"Yarn Stash",render:renderMarket},
+    library:{viewId:"library",component:"LibraryPage",label:"Library",render:renderLibrary},
+    tools:{viewId:"tools",component:"ToolsPage",label:"Tools",render:()=>renderTool("swatch")},
+    settings:{viewId:"settings",component:"SettingsPage",label:"Settings",render:renderSettings},
+    "project-detail":{viewId:"project-detail",component:"ProjectDetailPage",label:getProject()?.name||"Project",render:renderProjectDetail}
+  };
+  if(pageId==="yarnStash")return routes.market;
+  return routes[pageId]||routes.today;
+}
+
 function showView(name) {
-  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-  document.querySelectorAll(".nav-item").forEach(v => v.classList.toggle("active", v.dataset.view === name));
-  const view = document.getElementById(`${name}-view`);
-  if (view) view.classList.add("active");
-  document.getElementById("breadcrumb").textContent = name === "project-detail" ? getProject()?.name : name[0].toUpperCase() + name.slice(1);
-  document.getElementById("header-context").textContent = name === "project-detail" ? "Projects" : "Workspace";
+  const requested = name === "yarnStash" ? "market" : String(name || "today");
+  const before = activePage;
+  const route = routeForPage(requested);
+  route.render();
+  activePage = requested;
+  renderedComponent = route.component;
+  setActiveView(route.viewId);
+  document.querySelectorAll(".nav-item").forEach(item => {
+    const navId = item.dataset.view === "yarnStash" ? "market" : item.dataset.view;
+    item.classList.toggle("active", navId === requested);
+  });
+  document.getElementById("breadcrumb").textContent = route.label;
+  document.getElementById("header-context").textContent = route.viewId === "project-detail" ? "Projects" : "Workspace";
   document.querySelector(".sidebar").classList.remove("open");
-  if (name === "today") renderToday();
-  if (name === "projects") renderProjects();
-  if (name === "market") renderMarket();
-  if (name === "library") renderLibrary();
-  if (name === "tools") renderTool("swatch");
-  if (name === "settings") renderSettings();
+  navigationDebugLog(requested,before,activePage,renderedComponent);
   queueMicrotask(applyLanguage);
 }
 
@@ -483,14 +515,14 @@ function projectChartHtml(p){
   const hasChart=!!(p.chart||p.attachments?.length);
   return `<div class="chart-mode ${p.readingMode?"reading-mode":""}">
     <div class="chart-mode-toolbar card">
-      <div class="reading-title-wrap">${p.readingMode?`<span class="reading-cover-thumb">${visual(p,true)}</span>`:""}<div><p class="eyebrow">CHART WORKSPACE</p><h2>${chartMode==="flow"?"Flow Mode (Beta)":"Manual chart reading"}</h2><p>${chartMode==="flow"?"Flow Mode is paused. It will return later as a reviewed AI-assisted workflow.":"Follow your chart without AI guessing. Zoom, pan, highlight the row, and annotate as you go."}</p></div></div>
+      <div class="reading-title-wrap">${p.readingMode?`<span class="reading-cover-thumb">${visual(p,true)}</span>`:""}<div><p class="eyebrow">CHART WORKSPACE</p><h2>${chartMode==="flow"?"Flow Mode (Beta)":"Manual chart reading"}</h2><p>${chartMode==="flow"?"AI-assisted chart reading with upload, symbol recognition, row tracking, highlight masks, read aloud, and review before anything is accepted.":"Follow your chart without AI guessing. Zoom, pan, highlight the row, and annotate as you go."}</p></div></div>
       <div class="chart-mode-actions"><button class="secondary-button" id="replace-chart">Upload chart</button><button class="primary-button" id="toggle-reading">${p.readingMode?"Exit Reading":"Reading Mode"}</button></div>
       <input type="file" id="chart-upload" accept=".pdf,image/*" multiple hidden>
     </div>
     <div class="chart-mode-switch card" role="radiogroup" aria-label="Chart mode">
       <button class="${chartMode==="og"?"active":""}" data-chart-mode="og" aria-checked="${chartMode==="og"}">OG Mode</button>
       <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}">Flow Mode (Beta)</button>
-      <span>${chartMode==="flow"?"Experimental / disabled guidance only. No visual symbol recognition is running.":"Recommended for accurate row-by-row tracking."}</span>
+      <span>${chartMode==="flow"?"Project-only AI reader workflow. You review and correct every suggested row and symbol.":"Recommended for accurate row-by-row tracking."}</span>
     </div>
     <div class="reading-counter card">
       <button data-counter="-1" aria-label="Previous row">−</button>
@@ -564,7 +596,7 @@ function toolLabel(tool){return ({rowMask:"Row Mask",highlighter:"Highlighter"}[
 
 function friendlyChartBetaHtml(p){
   const hasChart=p.chart||p.attachments.length,hasLegend=!!p.chartAnalysis?.legend,hasRows=!!(p.chartAnalysis?.rows||[]).length;
-  return `<div class="chart-analysis ai-beta-safe card"><p class="eyebrow">FLOW MODE · DISABLED</p><h3>Manual tracking remains recommended</h3><p>Automatic Flow Mode does not move or interpret rows. Signed-in private-beta users may use the separate cloud chart reader below, where every AI suggestion remains editable and unclear symbols stay uncertain.</p><div class="beta-checks"><span>${hasChart?"✓":"○"} Chart uploaded</span><span>${hasLegend?"✓":"○"} User legend saved</span><span>${hasRows?"✓":"⚠"} Row numbering ${hasRows?"manually reviewed":"needs review"}</span></div><strong>Safe workflow:</strong><p>AI reads → you review → you edit → final checked pattern. OG Mode remains the reliable daily tracker.</p><button class="mini-button" id="edit-chart-legend">Review legend</button><button class="mini-button" id="add-analysis-row">Add manual row</button></div>`;
+  return `<div class="chart-analysis ai-beta-safe card"><p class="eyebrow">PROJECT FLOW MODE</p><h3>AI-assisted chart reader</h3><p>Flow Mode lives inside this project chart. Upload a chart, let Yarncha prepare suggested chart reading, symbol recognition, row tracking, highlight masks and read-aloud prompts, then review or correct every result before using it.</p><div class="beta-checks"><span>${hasChart?"✓":"○"} Chart uploaded</span><span>${hasLegend?"✓":"○"} Symbol legend reviewed</span><span>${hasRows?"✓":"⚠"} Row tracking ${hasRows?"reviewed":"needs review"}</span><span>○ Highlight mask ready</span><span>○ Read aloud available</span><span>○ User correction required</span></div><strong>Review-first workflow:</strong><p>AI reads → symbols are recognized → rows are tracked → you review → you correct → only checked guidance is used.</p><button class="mini-button" id="edit-chart-legend">Review symbols</button><button class="mini-button" id="add-analysis-row">Review row</button></div>`;
 }
 
 function projectProjectHtml(p){
@@ -781,7 +813,7 @@ function bindProjectDetail() {
   document.getElementById("speak-row")?.addEventListener("click", () => speak(buildRowGuidance(p)));
   document.querySelectorAll("#voice-project").forEach(b=>b.onclick = startVoice);
   document.getElementById("toggle-reading")?.addEventListener("click",()=>{p.readingMode=!p.readingMode;p.activeTab="chart";saveProjectTouch(p);renderProjectDetail();});
-  document.querySelectorAll("[data-chart-mode]").forEach(b=>b.onclick=()=>{p.chartMode=b.dataset.chartMode;if(p.chartMode==="flow")toast("Flow Mode beta is disabled guidance only. Use OG Mode for tracking.");saveProjectTouch(p);renderProjectDetail();});
+  document.querySelectorAll("[data-chart-mode]").forEach(b=>b.onclick=()=>{p.chartMode=b.dataset.chartMode;if(p.chartMode==="flow")toast("Flow Mode stays inside this project chart. Review every AI suggestion before using it.");saveProjectTouch(p);renderProjectDetail();});
   document.getElementById("flow-toggle")?.addEventListener("click",()=>{p.flowMode=!p.flowMode;saveProjectTouch(p);renderProjectDetail();});
   document.getElementById("edit-chart-legend")?.addEventListener("click",openChartLegendModal);
   document.getElementById("add-analysis-row")?.addEventListener("click",()=>openChartRowModal());
@@ -2757,21 +2789,9 @@ function renderOnboarding(){
 }
 function completeOnboarding(){state.onboardingComplete=true;saveState();document.getElementById("onboarding-overlay")?.remove();}
 
-document.addEventListener("click", e => {
-  const nav = e.target.closest("[data-view]"); if (nav) showView(nav.dataset.view);
-  const go = e.target.closest("[data-go]"); if (go) showView(go.dataset.go);
-  const project = e.target.closest("[data-project]"); if (project) openProject(project.dataset.project);
-  const add = e.target.closest("[data-add-project]"); if (add) openProjectModal();
-  const tool = e.target.closest("[data-tool]"); if (tool) { showView("tools"); renderTool(tool.dataset.tool); }
-  const tab = e.target.closest("[data-tool-tab]"); if (tab) renderTool(tab.dataset.toolTab);
-  const space=e.target.closest("[data-library-space]"); if(space){currentLibrarySection=space.dataset.librarySpace;renderLibrary();}
-});
 document.getElementById("new-project").onclick = openProjectModal;
 document.getElementById("quick-add-project").onclick = openProjectModal;
 document.getElementById("app-language").onchange=e=>{state.language=e.target.value;saveState();applyLanguage();renderTimeGreeting();};
-document.querySelectorAll(".nav-item").forEach(button => {
-  button.onclick = () => showView(button.dataset.view);
-});
 ensureModalElements();
 document.getElementById("modal-close").onclick = () => closeModal();
 document.getElementById("modal-backdrop").onclick = e => { if (e.target.id === "modal-backdrop") closeModal(); };
@@ -2822,6 +2842,7 @@ window.YarnchaLocal={
 
 renderSidebar();
 renderToday();
+setActiveView("today");
 renderLibrary();
 applyTheme();
 applyLanguage();
