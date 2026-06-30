@@ -1,0 +1,34 @@
+{
+  "name": "yarncha",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20.19" },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 4183",
+    "build": "vite build && node ./scripts/copy-static.mjs",
+    "preview": "vite preview --host 0.0.0.0 --port 4183",
+    "start": "vite --host 0.0.0.0 --port 4183",
+    "start:4184": "python3 -m http.server 4184 --bind 0.0.0.0",
+    "start:5173": "python3 -m http.server 5173 --bind 0.0.0.0",
+    "test:calculators": "node tests/run-calculator-tests.cjs",
+    "test:project-editor": "node tests/project-editor-contract.test.cjs",
+    "test:symbols": "node tests/symbol-database.test.mjs",
+    "test:symbol-audit": "node tests/symbol-database-audit.mjs",
+    "test:symbol-editor": "node tests/symbol-editor-contract.test.mjs",
+    "test:symbol-learning": "node tests/symbol-learning-contract.test.mjs",
+    "test:flow-mode": "node tests/flow-mode-reader-contract.test.mjs",
+    "test:voice": "node tests/voice-command-contract.test.mjs",
+    "test:navigation": "node tests/navigation-contract.test.mjs",
+    "test:settings": "node tests/settings-contract.test.mjs",
+    "test:library": "node tests/library-delete-contract.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "pdfjs-dist": "^5.4.149",
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "vite": "^7.1.7"
+  }
+}
