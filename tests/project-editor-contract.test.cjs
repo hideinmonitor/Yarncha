@@ -19,12 +19,17 @@ const checks = [
   ["protects unsaved changes", /beforeClose:\(\)=>!dirty\|\|confirm\("Discard changes\?"\)/],
   ["requires exact DELETE confirmation", /event\.target\.value!=="DELETE"/],
   ["deletes project assets and stored project", /assetIdsForProject\(p\)\.map\(deleteAsset\)[\s\S]*state\.projects=state\.projects\.filter/],
-  ["navigates safely after deletion", /closeModal\(true\);showView\("projects"\);toast\("Project deleted"\)/]
+  ["navigates safely after deletion", /closeModal\(true\);showView\("projects"\);toast\("Project deleted"\)/],
+  ["shows project Fit Check card", /FIT CHECK[\s\S]*Check the fit before you continue/],
+  ["saves Fit Check measurements", /function saveProjectFitCheck\(\)[\s\S]*bodyChest:value\("fit-body-chest"\)[\s\S]*finishedChest:value\("fit-finished-chest"\)/],
+  ["opens sizing tools from Fit Check", /function openProjectFitTools\(\)[\s\S]*p\.projectTools\.category="fit"/]
 ];
 
 for (const [name, pattern] of checks) assert.match(app, pattern, name);
 assert.match(html, /class="header-left"/);
 assert.match(html, /class="header-actions"/);
 assert.match(css, /\.project-actions \{ width:100%; display:grid;/);
+assert.match(css, /\.fit-check-grid \{ display:grid; grid-template-columns:minmax\(0,1\.25fr\) minmax\(220px,\.75fr\);/, "desktop Fit Check uses a two-column section");
+assert.match(css, /@media \(max-width:760px\)[\s\S]*\.fit-check-grid,[\s\S]*\.result-summary-grid \{ grid-template-columns:1fr; \}/, "mobile Fit Check collapses to one column");
 
 console.log(`Project editor contract: ${checks.length} workflow checks passed.`);

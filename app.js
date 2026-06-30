@@ -85,11 +85,14 @@ let currentToolCategory = "All";
 let currentToolSearch = "";
 let currentGlobalRenderingTool = "grid";
 let activeAnnotationTool = "touch";
+const annotationTools=["touch","pen","highlighter","eraser","row-mask","text","arrow","marker"];
+let annotationSettings={color:"#d96572",size:4,opacity:.72};
 let drawingStroke = null;
 let drawingFrame = null;
 let maskDrag = null;
 let arrowDrag = null;
 let recognition = null;
+let pendingVoiceIntent = null;
 let fxRates={EUR:1,AUD:1.6442,USD:1.1567,CNY:7.8220,JPY:185.30,HKD:9.025};
 let fxDate="12 June 2026";
 function openAssetDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open("threadline-files",2);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains("files"))db.createObjectStore("files");if(!db.objectStoreNames.contains("state"))db.createObjectStore("state");};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
@@ -136,6 +139,266 @@ function normalizeProjectIdea(idea={}){
     createdAt:date,
     updatedAt:idea.updatedAt || date
   };
+}
+function normalizeChartReaderConfig(config={},project={}){
+  const crop=config.crop||{};
+  const grid=config.grid||{};
+  const direction=config.rowDirection||config.readingDirection;
+  return {
+    chartType:["Knitting","Crochet","Tunisian Crochet","Unknown"].includes(config.chartType)?config.chartType:(project.type&&["Knitting","Crochet","Tunisian Crochet"].includes(project.type)?project.type:"Unknown"),
+    readingDirection:["right-to-left","left-to-right","alternating-rs-ws","round","auto"].includes(config.readingDirection)?config.readingDirection:"auto",
+    rowDirection:["right-to-left","left-to-right","alternating-rs-ws","round"].includes(direction)?direction:"alternating-rs-ws",
+    activeAssetId:config.activeAssetId||project.activeChartAssetId||project.chart?.assetId||"",
+    chartReadingMode:config.chartReadingMode!==false,
+    coverCompletedRows:!!config.coverCompletedRows,
+    readAloud:{
+      voiceSpeed:Math.max(.6,Math.min(1.5,Number(config.readAloud?.voiceSpeed)||1)),
+      language:["en","zh-Hant","yue"].includes(config.readAloud?.language)?config.readAloud.language:"en",
+      mode:["short","teaching","beginner"].includes(config.readAloud?.mode)?config.readAloud.mode:"teaching"
+    },
+    crop:{x:Number(crop.x)||0,y:Number(crop.y)||0,width:Number(crop.width)||100,height:Number(crop.height)||100},
+    grid:{
+      x:Number(grid.x)||0,
+      y:Number(grid.y)||0,
+      width:Number(grid.width)||100,
+      height:Number(grid.height)||100,
+      rows:Number(grid.rows)||Number(project.chartRows)||Number(project.totalRows)||0,
+      columns:Number(grid.columns)||Number(project.chartAnalysis?.columns)||0,
+      rowNumbers:Array.isArray(grid.rowNumbers)?grid.rowNumbers:[],
+      columnNumbers:Array.isArray(grid.columnNumbers)?grid.columnNumbers:[],
+      manualAdjusted:!!grid.manualAdjusted,
+      status:grid.status||"Grid not detected yet."
+    },
+    recognitionResults:Array.isArray(config.recognitionResults)?config.recognitionResults:[],
+    lastExplanation:config.lastExplanation||"",
+    updatedAt:config.updatedAt||""
+  };
+}
+function normalizePatternSource(source={},project={}){
+  const typeOptions=["visual-chart","written-pattern","mixed","none"];
+  const fileTypeOptions=["image","pdf","docx","text","paste","none"];
+  const statusOptions=["not-started","scanning","success","low-confidence","failed"];
+  const workspaceOptions=["og-visual","flow-visual","reading-text","mixed"];
+  const scan=source.scanSettings||{};
+  const crop=scan.crop||{};
+  return {
+    type:typeOptions.includes(source.type)?source.type:"none",
+    fileType:fileTypeOptions.includes(source.fileType)?source.fileType:"none",
+    originalFileBlobId:source.originalFileBlobId||project.activeChartAssetId||project.chart?.assetId||"",
+    extractedText:source.extractedText||"",
+    ocrConfidence:Math.max(0,Math.min(100,Number(source.ocrConfidence)||0)),
+    ocrStatus:statusOptions.includes(source.ocrStatus)?source.ocrStatus:"not-started",
+    selectedPages:Array.isArray(source.selectedPages)?source.selectedPages.map(n=>Math.max(1,Number(n)||1)).filter(Boolean):[],
+    userCorrectedText:source.userCorrectedText||"",
+    workspaceMode:workspaceOptions.includes(source.workspaceMode)?source.workspaceMode:"og-visual",
+    currentLine:Math.max(1,Number(source.currentLine)||1),
+    chartCollapsed:!!source.chartCollapsed,
+    textCollapsed:!!source.textCollapsed,
+    pageModes:source.pageModes&&typeof source.pageModes==="object"?source.pageModes:{},
+    scanSettings:{
+      rotation:[0,90,180,270].includes(Number(scan.rotation))?Number(scan.rotation):0,
+      improve:!!scan.improve,
+      zoom:Math.max(.5,Math.min(3,Number(scan.zoom)||1)),
+      crop:{
+        x:Math.max(0,Math.min(100,Number(crop.x)||0)),
+        y:Math.max(0,Math.min(100,Number(crop.y)||0)),
+        width:Math.max(1,Math.min(100,Number(crop.width)||100)),
+        height:Math.max(1,Math.min(100,Number(crop.height)||100))
+      }
+    },
+    reviewedAt:source.reviewedAt||""
+  };
+}
+function normalizeProjectSetup(setup={},project={}){
+  const sizeOptions=["XXS","XS","S","M","L","XL","XXL","Custom"];
+  const projectTypes=["Scarf","Socks","Hat / Beanie","Shawl","Bag","Blanket","Amigurumi","Top","Cardigan","Jumper / Sweater","Vest","Dress","Other"];
+  const measurements=setup.bodyMeasurements||{};
+  const details=setup.itemDetails||{};
+  return {
+    craft:["Knitting","Crochet"].includes(setup.craft)?setup.craft:(/crochet/i.test(project.type||"")?"Crochet":"Knitting"),
+    projectType:projectTypes.includes(setup.projectType)?setup.projectType:projectTypes.includes(project.projectKind)?project.projectKind:"Other",
+    patternGauge:setup.patternGauge||project.gauge||"",
+    patternToolSize:setup.patternToolSize||project.needles||"",
+    patternYarnWeight:setup.patternYarnWeight||project.yarn||"",
+    userToolSize:setup.userToolSize||project.needles||"",
+    userYarnWeight:setup.userYarnWeight||project.yarn||"",
+    desiredSize:sizeOptions.includes(setup.desiredSize)?setup.desiredSize:(sizeOptions.includes(project.size)?project.size:"M"),
+    customSize:setup.customSize||project.size||"",
+    patternLanguage:["abbreviations","full"].includes(setup.patternLanguage)?setup.patternLanguage:"abbreviations",
+    bodyMeasurements:{
+      chest:measurements.chest||"",
+      waist:measurements.waist||"",
+      hip:measurements.hip||"",
+      sleeve:measurements.sleeve||"",
+      body:measurements.body||""
+    },
+    itemDetails:{
+      recipient:details.recipient||"Adult",
+      adultHeight:details.adultHeight||"160–170 cm",
+      scarfStyle:details.scarfStyle||"One wrap",
+      sockType:details.sockType||"Crew",
+      sockSizingMode:details.sockSizingMode||"Shoe Size",
+      shoeRegion:details.shoeRegion||"AU",
+      shoeSize:details.shoeSize||"",
+      footLength:details.footLength||"",
+      footCircumference:details.footCircumference||"",
+      heelToAnkle:details.heelToAnkle||"",
+      ankleCircumference:details.ankleCircumference||"",
+      calfCircumference:details.calfCircumference||"",
+      fitPreference:details.fitPreference||"Regular",
+      constructionMethod:details.constructionMethod||"Cuff-down",
+      heelStyle:details.heelStyle||"Pattern decides",
+      headCircumference:details.headCircumference||"",
+      hatStyle:details.hatStyle||"Fitted beanie",
+      hatDepth:details.hatDepth||"",
+      brimStyle:details.brimStyle||"Ribbed brim",
+      crownStyle:details.crownStyle||"Pattern decides",
+      bagType:details.bagType||"Tote",
+      width:details.width||"",
+      height:details.height||"",
+      length:details.length||"",
+      strapLength:details.strapLength||"",
+      depth:details.depth||"",
+      handleDrop:details.handleDrop||"",
+      closure:details.closure||"None",
+      lining:details.lining||"No lining",
+      structure:details.structure||"Medium",
+      blanketType:details.blanketType||"Throw Blanket",
+      blanketShape:details.blanketShape||"Rectangle",
+      warmth:details.warmth||"Medium",
+      borderWidth:details.borderWidth||"",
+      fringe:details.fringe||"None",
+      amigurumiType:details.amigurumiType||"Animal",
+      finishedHeight:details.finishedHeight||"",
+      finishedWidth:details.finishedWidth||"",
+      shape:details.shape||"Round",
+      stuffingFirmness:details.stuffingFirmness||"Medium",
+      safetyRecipient:details.safetyRecipient||"Adult",
+      originalHeight:details.originalHeight||"",
+      targetHeight:details.targetHeight||"",
+      shawlShape:details.shawlShape||"Triangle",
+      shawlFit:details.shawlFit||"Everyday Shawl",
+      wingspan:details.wingspan||""
+    },
+    updatedAt:setup.updatedAt||""
+  };
+}
+function ensureProjectSetup(p){
+  p.projectSetup=normalizeProjectSetup(p.projectSetup,p);
+  p.projectCalculations=calculateFlowProjectPlan(p,p.projectSetup);
+  return p.projectSetup;
+}
+function firstNumber(value,fallback=0){
+  const match=String(value||"").match(/-?\d+(?:\.\d+)?/);
+  return match?Number(match[0]):fallback;
+}
+function parseGaugePair(gauge=""){
+  const nums=String(gauge||"").match(/\d+(?:\.\d+)?/g)?.map(Number)||[];
+  return {stitches:nums[0]||20,rows:nums[1]||28,span:nums[2]||10};
+}
+function normalizeYarnWeightName(value=""){
+  const text=String(value||"").toLowerCase();
+  if(/lace|0\b/.test(text))return "Lace";
+  if(/fingering|sock|super fine|\b1\b/.test(text))return "Fingering";
+  if(/sport|\b2\b/.test(text))return "Sport";
+  if(/dk|light|8 ply|\b3\b/.test(text))return "DK";
+  if(/worsted|aran|medium|10 ply|12 ply|\b4\b/.test(text))return "Worsted";
+  if(/bulky|chunky|\b5\b/.test(text))return "Bulky";
+  if(/super bulky|super chunky|\b6\b/.test(text))return "Super Bulky";
+  return String(value||"").trim();
+}
+function yarnWeightRank(value=""){
+  const order=["Lace","Fingering","Sport","DK","Worsted","Bulky","Super Bulky"];
+  const normalized=normalizeYarnWeightName(value);
+  return order.indexOf(normalized);
+}
+function sizeMeasurementDefaults(size="M"){
+  return {
+    XXS:{chest:76,waist:61,hip:84,body:52,sleeve:43},
+    XS:{chest:82,waist:66,hip:90,body:54,sleeve:44},
+    S:{chest:90,waist:74,hip:98,body:56,sleeve:46},
+    M:{chest:100,waist:84,hip:108,body:58,sleeve:48},
+    L:{chest:110,waist:94,hip:118,body:60,sleeve:50},
+    XL:{chest:122,waist:106,hip:132,body:62,sleeve:52},
+    XXL:{chest:132,waist:118,hip:142,body:64,sleeve:54},
+    Custom:{chest:100,waist:84,hip:108,body:58,sleeve:48}
+  }[size]||{chest:100,waist:84,hip:108,body:58,sleeve:48};
+}
+function setupMeasurements(setup={}){
+  const defaults=sizeMeasurementDefaults(setup.desiredSize);
+  const values=setup.bodyMeasurements||{};
+  return Object.fromEntries(Object.entries(defaults).map(([key,value])=>[key,firstNumber(values[key],value)]));
+}
+function isGarmentProject(type=""){
+  return ["Top","Cardigan","Jumper / Sweater","Vest","Dress"].includes(type);
+}
+function blanketPresetSize(type="Throw Blanket"){
+  return {
+    Lovey:[30,30],"Baby Blanket":[90,100],"Crib Blanket":[90,130],"Stroller Blanket":[75,90],"Lap Blanket":[90,120],"Throw Blanket":[130,170],Twin:[165,230],"Full / Double":[200,230],Queen:[230,250],King:[270,250],Custom:[130,170]
+  }[type]||[130,170];
+}
+function flowProjectDimensions(setup={}){
+  const d=setup.itemDetails||{},m=setupMeasurements(setup),type=setup.projectType;
+  if(type==="Scarf"){
+    const lengths={"Neck warmer":65,"One wrap":130,"Two wraps":170,"Long winter scarf":190,"Oversized scarf":220,"Fashion scarf":150,"Custom length":firstNumber(d.length,160)};
+    return {width:firstNumber(d.width,22),length:lengths[d.scarfStyle]||160,sleeve:0,body:0};
+  }
+  if(type==="Socks"){
+    const foot=firstNumber(d.footLength,24),leg={ "No-show":3, Ankle:7, "Quarter Crew":12, Crew:18, "Mid-Calf":28, "Knee High":40, "Over-the-Knee":55 }[d.sockType]||18;
+    return {width:firstNumber(d.footCircumference,22),length:foot+leg,sleeve:0,body:leg};
+  }
+  if(type==="Hat / Beanie")return {width:firstNumber(d.headCircumference,56),length:firstNumber(d.hatDepth,22),sleeve:0,body:0};
+  if(type==="Bag")return {width:firstNumber(d.width,36),length:firstNumber(d.height,38),sleeve:firstNumber(d.strapLength,60),body:firstNumber(d.depth,8)};
+  if(type==="Blanket"){const preset=blanketPresetSize(d.blanketType);return {width:firstNumber(d.width,preset[0]),length:firstNumber(d.length,preset[1]),sleeve:0,body:0};}
+  if(type==="Amigurumi")return {width:firstNumber(d.finishedWidth,firstNumber(d.targetHeight,18)),length:firstNumber(d.finishedHeight,firstNumber(d.targetHeight,20)),sleeve:0,body:0};
+  if(type==="Shawl")return {width:firstNumber(d.wingspan,170),length:firstNumber(d.height,70),sleeve:0,body:0};
+  if(isGarmentProject(type))return {width:Math.max(20,m.chest+8),length:m.body,sleeve:m.sleeve,body:m.body};
+  return {width:firstNumber(d.width,Math.max(20,m.chest+8)),length:firstNumber(d.length,m.body),sleeve:m.sleeve,body:m.body};
+}
+function setupWarnings(setup={}){
+  const warnings=[];
+  const patternTool=firstNumber(setup.patternToolSize,0),userTool=firstNumber(setup.userToolSize,0);
+  if(patternTool&&userTool&&Math.abs(patternTool-userTool)>=.5){
+    warnings.push(`Your ${setup.craft==="Crochet"?"hook":"needle"} is ${userTool>patternTool?"larger":"smaller"} than the pattern. Your stitches may come out ${userTool>patternTool?"bigger and looser":"smaller and firmer"}, so the finished size may change.`);
+  }
+  const patternRank=yarnWeightRank(setup.patternYarnWeight),userRank=yarnWeightRank(setup.userYarnWeight);
+  if(patternRank>=0&&userRank>=0&&patternRank!==userRank){
+    warnings.push(`Your yarn is ${userRank>patternRank?"heavier":"lighter"} than the pattern yarn. The finished piece may be ${userRank>patternRank?"larger and use more yarn":"smaller and use less yarn"}.`);
+  }
+  return warnings;
+}
+function calculateFlowProjectPlan(p={},setup=normalizeProjectSetup(p.projectSetup,p)){
+  const gauge=parseGaugePair(setup.patternGauge),measurements=setupMeasurements(setup),toolDelta=Math.abs(firstNumber(setup.userToolSize)-firstNumber(setup.patternToolSize)),weightDelta=Math.abs((yarnWeightRank(setup.userYarnWeight)+1||0)-(yarnWeightRank(setup.patternYarnWeight)+1||0));
+  const dims=flowProjectDimensions(setup),width=Math.max(1,dims.width),length=Math.max(1,dims.length),sleeve=Math.max(0,dims.sleeve||0);
+  const stitchCount=Math.max(1,Math.round(width*gauge.stitches/gauge.span)),rowCount=Math.max(1,Math.round(length*gauge.rows/gauge.span)),sleeveRows=Math.max(1,Math.round(sleeve*gauge.rows/gauge.span));
+  const startCount=setup.craft==="Crochet"?Math.max(1,Math.round(stitchCount*.48)):stitchCount;
+  const yarnBase=Math.max(1,Math.round((stitchCount*rowCount)/75)),yarnUsage=Math.round(yarnBase*(1+toolDelta*.06+weightDelta*.12));
+  const shaping=Math.max(0,stitchCount-startCount),increaseEvery=shaping?Math.max(1,Math.round(rowCount/Math.max(1,Math.ceil(shaping/2)))):0;
+  return {
+    updatedAt:new Date().toISOString(),
+    castOnOrChain:startCount,
+    startingLabel:setup.craft==="Crochet"?"Starting chain":"Cast-on",
+    stitchCount,
+    rowCount,
+    widthCm:Math.round(width),
+    lengthCm:Math.round(length),
+    sleeveLengthCm:Math.round(sleeve),
+    bodyLengthCm:Math.round(dims.body||length),
+    shapingNotes:shaping?`Add about ${shaping} stitch${shaping===1?"":"es"} across the project, roughly every ${increaseEvery} row${increaseEvery===1?"":"s"} if your pattern does not already place them.`:"No extra shaping is suggested from these setup numbers.",
+    estimatedYarnUsage:`About ${yarnUsage} ball${yarnUsage===1?"":"s"} or skein${yarnUsage===1?"":"s"} as a planning estimate.`,
+    warnings:setupWarnings(setup)
+  };
+}
+function isLegacySymbolLearningSection(section={}){
+  const id=String(section.id||"").toLowerCase();
+  const name=String(section.name||"").toLowerCase();
+  const description=String(section.description||"").toLowerCase();
+  return ["symbol-learning","symbol-learning-library","symbol-learning-library-section"].includes(id)
+    || name==="symbol learning library"
+    || description.includes("local flow mode corrections");
+}
+function sanitizeLibrarySections(sections=[]){
+  return (sections||[]).filter(section=>!isLegacySymbolLearningSection(section));
 }
 
 function normalizeLearningRecord(raw={}){
@@ -211,7 +474,7 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     const merged = { ...starterData, ...saved };
-    merged.librarySections = saved.librarySections || structuredClone(starterData.librarySections);
+    merged.librarySections = sanitizeLibrarySections(saved.librarySections || structuredClone(starterData.librarySections));
     if(!merged.librarySections.some(s=>s.id==="materials"))merged.librarySections.push(structuredClone(starterData.librarySections.find(s=>s.id==="materials")));
     for(const id of ["symbols","symbol-learning","tool-manual","theory"]){
       if(!merged.librarySections.some(s=>s.id===id))merged.librarySections.push(structuredClone(starterData.librarySections.find(s=>s.id===id)));
@@ -224,6 +487,7 @@ function loadState() {
         tutorialSection.description="Your existing personal uploads from an earlier Yarncha version.";
       }else merged.librarySections=merged.librarySections.filter(section=>section.id!=="tutorials");
     }
+    merged.librarySections = sanitizeLibrarySections(merged.librarySections);
     merged.inventory = saved.inventory || structuredClone(starterData.inventory);
     merged.cart = saved.cart || [];
     merged.marketBudget = Number(saved.marketBudget) || starterData.marketBudget;
@@ -255,6 +519,7 @@ function loadState() {
       markers: (p.markers || []).map((m,index)=>({...m,id:m.id||`marker-${p.id}-${index}`,label:m.label||m.color})),
       assistantMessages: p.assistantMessages || [],
       projectTools: p.projectTools || {},
+      fitCheck:p.fitCheck || {},
       toolHistory: p.toolHistory || [],
       buyList: p.buyList || [],
       pdfReference: p.pdfReference || "",
@@ -272,6 +537,7 @@ function loadState() {
       annotationRedo:p.annotationRedo || [],
       annotationColor:p.annotationColor || "#d96572",
       annotationWidth:Number(p.annotationWidth)||4,
+      annotationOpacity:Number(p.annotationOpacity)||.72,
       eraserMode:p.eraserMode || "standard",
       eraserSize:Number(p.eraserSize)||28,
       selectedAnnotationId:p.selectedAnnotationId || null,
@@ -288,6 +554,8 @@ function loadState() {
       gauge:p.gauge || "",
       size:p.size || "",
       sizingNotes:p.sizingNotes || "",
+      patternSource:normalizePatternSource(p.patternSource,p),
+      projectSetup:normalizeProjectSetup(p.projectSetup,p),
       updatedAt:p.updatedAt || new Date().toISOString(),
       chartAnalysis:p.chartAnalysis ? {
         ...p.chartAnalysis,
@@ -295,8 +563,9 @@ function loadState() {
         legend:p.chartAnalysis.legend || "",
         columns:p.chartAnalysis.columns || null,
         gridStatus:p.chartAnalysis.gridStatus || "Grid and cell boundaries require user confirmation."
-      } : null
-    }));
+      } : null,
+      chartReader:normalizeChartReaderConfig(p.chartReader,p)
+    })).map(p=>({...p,projectCalculations:calculateFlowProjectPlan(p,p.projectSetup)}));
     return merged;
   }
   catch { return structuredClone(starterData); }
@@ -319,8 +588,9 @@ function saveStateSoon(delay=350){
 function updateSaveStatus(text){const el=document.getElementById("save-status");if(el)el.textContent=text;}
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
 function getProject(id = currentProjectId) { return state.projects.find(p => p.id === id) || state.projects[0]; }
-function escapeHtml(value = "") { return value.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
+function escapeHtml(value = "") { return String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
 const uiIconPaths={
+  touch:'<path d="M8.5 11.5V6.8a1.7 1.7 0 0 1 3.4 0v4.7"></path><path d="M11.9 11.1V9a1.55 1.55 0 0 1 3.1 0v3"></path><path d="M15 12V9.8a1.5 1.5 0 0 1 3 0v4.4c0 4-2.7 6.8-6.4 6.8h-.7a5.6 5.6 0 0 1-4-1.8l-2.8-3a1.55 1.55 0 0 1 2.1-2.3l2.3 1.8V11.5"></path><path d="M5.5 5.5 3.8 3.8M18.5 5.5l1.7-1.7M12 3V1"></path>',
   voice:'<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path>',
   camera:'<rect x="3.5" y="6.5" width="17" height="13" rx="2"></rect><path d="m8 6.5 1.3-2h5.4l1.3 2"></path><circle cx="12" cy="13" r="3.25"></circle>',
   image:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="m5.5 17 4.5-4 3 2.5 2.5-2 3 3.5"></path>',
@@ -449,11 +719,13 @@ function handleAppShellClick(e){
   const go = e.target.closest("[data-go]"); if (go) { showView(go.dataset.go); return; }
   const project = e.target.closest("[data-project]"); if (project) { openProject(project.dataset.project); return; }
   const add = e.target.closest("[data-add-project]"); if (add) { openProjectModal(); return; }
-  const tool = e.target.closest("[data-tool]"); if (tool) { showView("tools"); renderTool(tool.dataset.tool); return; }
+  const tool = e.target.closest("[data-tool]"); if (tool&&!tool.closest(".annotation-toolbar")) { showView("tools"); renderTool(tool.dataset.tool); return; }
   const tab = e.target.closest("[data-tool-tab]"); if (tab) { renderTool(tab.dataset.toolTab); return; }
   const space=e.target.closest("[data-library-space]"); if(space){currentLibrarySection=space.dataset.librarySpace;renderLibrary();}
 }
-if(!window.__yarnchaShellClickBound){document.addEventListener("click",handleAppShellClick);window.__yarnchaShellClickBound=true;}
+if(window.__yarnchaShellClickHandler)document.removeEventListener("click",window.__yarnchaShellClickHandler);
+window.__yarnchaShellClickHandler=handleAppShellClick;
+document.addEventListener("click",handleAppShellClick);
 
 function renderSidebar() {
   document.getElementById("sidebar-project-list").innerHTML = state.projects.map(p =>
@@ -522,20 +794,27 @@ function renderTimeGreeting(){
 }
 
 function renderProjects() {
-  document.getElementById("project-grid").innerHTML = state.projects.map(p => `<article class="project-card card" data-project="${p.id}">
+  document.getElementById("project-grid").innerHTML = state.projects.map(p => `<button class="project-card card" type="button" data-project="${p.id}" aria-label="Open ${escapeHtml(p.name)}">
     ${visual(p, true)}<div class="project-card-info"><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.type)} · ${rowSummary(p)}</p>
     <div class="progress-track"><div class="progress-fill" style="width:${progress(p) ?? Math.min(95, p.row)}%"></div></div></div>
-  </article>`).join("") + `<button class="add-project-card card" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
+  </button>`).join("") + `<button class="add-project-card card" type="button" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
   hydrateProjectCovers();
 }
 
 function openProject(id) {
+  const project = state.projects.find(p=>p.id===id);
+  if(!project){
+    console.warn("[Yarncha project navigation] Project not found", { projectId:id });
+    toast("Project not found. Please choose another project.");
+    showView("projects");
+    return;
+  }
   currentProjectId = id;
   state.activeProjectId = id;
   saveState();
-  renderProjectDetail();
   showView("project-detail");
 }
+const showProject=openProject;
 
 function renderProjectDetail() {
   const p = getProject();
@@ -586,30 +865,37 @@ function projectChartHtml(p){
   const chartMode=p.chartMode||"og";
   const hasChart=!!(p.chart||p.attachments?.length);
   const activeAssetId=p.activeChartAssetId&&p.attachments?.some(a=>a.id===p.activeChartAssetId)?p.activeChartAssetId:p.attachments?.[0]?.id;
-  return `<div class="chart-mode ${p.readingMode?"reading-mode":""}">
-    <div class="chart-mode-toolbar chart-action-bar card">
-      <div class="reading-title-wrap">${p.readingMode?`<span class="reading-cover-thumb">${visual(p,true)}</span>`:""}<div><p class="eyebrow">PROJECT CHART</p><h2>Chart Reading</h2><p>${chartMode==="flow"?"AI reads, you review, and Yarncha tracks your row.":"Zoom, pan, highlight the row, and annotate as you go."}</p></div></div>
-      <div class="chart-mode-actions"><button class="secondary-button" id="replace-chart">Upload chart</button><button class="primary-button" id="toggle-reading">${p.readingMode?"Exit Reading":"Reading Mode"}</button></div>
+  const patternSource=normalizePatternSource(p.patternSource,p);
+  const chartHidden=patternSource.type==="mixed"&&patternSource.chartCollapsed;
+  return `<div class="project-workspace-page chart-mode ${chartMode==="flow"?"flow-workflow":""} ${p.readingMode?"reading-mode":""}">
+    <div class="project-workspace-inner">
+    <div class="chart-mode-toolbar chart-action-bar card workspace-card">
+      <div class="reading-title-wrap">${p.readingMode?`<span class="reading-cover-thumb">${visual(p,true)}</span>`:""}<div><p class="eyebrow">PROJECT CHART</p><h2>Chart Reading</h2><p>Zoom, pan, highlight the row, and annotate as you go.</p></div></div>
+      <div class="chart-mode-actions"><div class="chart-mode-switch" role="radiogroup" aria-label="Chart mode">
+        <button class="${chartMode==="og"?"active":""}" data-chart-mode="og" aria-checked="${chartMode==="og"}"><strong>OG Mode</strong><small>Manual Reading</small></button>
+        <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}"><strong>Flow Mode</strong><small>Smart Reading</small></button>
+        <span>Recommended for accurate row-by-row tracking.</span>
+      </div></div>
       <input type="file" id="chart-upload" accept=".pdf,image/*" multiple hidden>
     </div>
-    <div class="chart-mode-switch card" role="radiogroup" aria-label="Chart mode">
-      <button class="${chartMode==="og"?"active":""}" data-chart-mode="og" aria-checked="${chartMode==="og"}">OG Mode</button>
-      <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}">Flow Mode</button>
-      <span>${chartMode==="flow"?"Project-only AI reader workflow. You review and correct every suggested row and symbol.":"Recommended for accurate row-by-row tracking."}</span>
+    <div class="reading-counter row-counter-card card workspace-card">
+      <div class="row-stepper">
+        <button data-counter="-1" aria-label="Previous row">−</button>
+        <label class="field row-current-field">Row <input id="manual-row-input" type="number" min="0" value="${p.row}"></label>
+        <button data-counter="1" aria-label="Next row">+</button>
+      </div>
+      <label class="field total-rows-field">Rows <input id="chart-rows" type="number" min="1" value="${p.chartRows || p.totalRows || ""}" placeholder="Planned"></label>
+      <div class="row-counter-actions">
+        <button class="mini-button" id="reset-main">Reset</button>
+        <button class="mini-button voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","button-icon")}</button>
+      </div>
     </div>
-    <div class="reading-counter card">
-      <button data-counter="-1" aria-label="Previous row">−</button>
-      <label>Row <input id="manual-row-input" type="number" min="0" value="${p.row}"></label>
-      <button data-counter="1">+</button>
-      <label>Rows <input id="chart-rows" type="number" min="1" value="${p.chartRows || p.totalRows || ""}" placeholder="Planned"></label>
-      <button class="mini-button" id="reset-main">Reset</button>
-      <button class="mini-button voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","button-icon")}</button>
-    </div>
-    <div class="annotation-toolbar card ${hasChart?"":"is-disabled"}" role="toolbar" aria-label="Annotation tools" aria-disabled="${!hasChart}">
-      ${["touch","pen","highlighter","eraser","rowMask","text","arrow","marker"].map(tool=>`<button class="${activeAnnotationTool===tool?"active":""}" data-annotation-tool="${tool}" ${hasChart?"":"disabled"}>${toolIcon(tool)}<span>${toolLabel(tool)}</span></button>`).join("")}
+    <div class="annotation-toolbar-shell card workspace-card">
+    <div class="annotation-toolbar ${hasChart?"":"is-disabled"}" role="toolbar" aria-label="Annotation tools" aria-disabled="${!hasChart}">
+      ${annotationTools.map(tool=>`<button type="button" class="${activeAnnotationTool===tool?"active":""}" data-tool="${tool}" aria-pressed="${activeAnnotationTool===tool}" ${hasChart?"":"disabled"}>${toolIcon(tool)}<span>${toolLabel(tool)}</span></button>`).join("")}
       <label class="annotation-control">Color <input id="annotation-color" type="color" value="${escapeHtml(p.annotationColor||"#d96572")}" ${hasChart?"":"disabled"}></label>
       <label class="annotation-control">Size <select id="annotation-width" ${hasChart?"":"disabled"}>${[2,4,6,10,14,20].map(w=>`<option value="${w}" ${Number(p.annotationWidth)===w?"selected":""}>${w}</option>`).join("")}</select></label>
-      <label class="annotation-control mask-only">Opacity <input id="row-mask-opacity" type="range" min=".2" max=".95" step=".05" value="${p.rowMask?.opacity??.72}" ${hasChart?"":"disabled"}></label>
+      <label class="annotation-control">Opacity <input id="annotation-opacity" type="range" min=".2" max=".95" step=".05" value="${p.annotationOpacity??p.rowMask?.opacity??.72}" ${hasChart?"":"disabled"}></label>
       <label class="annotation-control mask-only">Mask color <input id="row-mask-color" type="color" value="${escapeHtml(p.rowMask?.color||p.annotationColor||"#c9a66b")}" ${hasChart?"":"disabled"}></label>
       <label class="annotation-control">Eraser <select id="eraser-mode" ${hasChart?"":"disabled"}>${["standard","precise","stroke"].map(v=>`<option value="${v}" ${p.eraserMode===v?"selected":""}>${v[0].toUpperCase()+v.slice(1)}</option>`).join("")}</select></label>
       <label class="annotation-control">Eraser size <input id="eraser-size" type="range" min="8" max="80" step="2" value="${p.eraserSize||28}" ${hasChart?"":"disabled"}></label>
@@ -617,13 +903,13 @@ function projectChartHtml(p){
       <button id="undo-annotation" ${hasChart?"":"disabled"}>${uiIcon("undo","annotation-button-icon")}<span>Undo</span></button><button id="redo-annotation" ${hasChart?"":"disabled"}>${uiIcon("redo","annotation-button-icon")}<span>Redo</span></button><button class="danger-button" id="clear-annotations" ${hasChart?"":"disabled"}>Clear</button>
       <div class="zoom-tools"><button data-zoom="-0.15">−</button><strong>${Math.round((p.chartZoom||1)*100)}%</strong><button data-zoom="0.15">+</button></div>
     </div>
-    <div class="chart-reader card">
-      <div class="chart-stage og-chart-stage" id="chart-stage">${chartViewerHtml(p)}</div>
-      <div class="attachment-strip">${p.attachments.map(a=>`<div class="chart-file-pill ${activeAssetId===a.id?"active":""}"><button class="mini-button chart-file-open" data-project-asset="${a.id}">${escapeHtml(a.name||"Chart file")}</button><button class="mini-button danger-button chart-file-remove" data-delete-chart-asset="${a.id}" aria-label="Remove ${escapeHtml(a.name||"chart file")}">Remove</button></div>`).join("")}</div>
     </div>
-    <div class="manual-chart-tools">
-      <div class="sync-panel card"><strong>Chart sync</strong><span>${p.chartRows ? `Highlighting row ${p.row} of ${p.chartRows}` : "Enter planned row count to place the row highlight."}</span></div>
-      ${chartMode==="flow"?friendlyChartBetaHtml(p):friendlyChartBetaHtml(p)}
+    ${chartHidden?`<div class="chart-reader card workspace-card collapsed-workspace-panel"><strong>Visual chart is hidden.</strong><p class="muted-copy">Your original upload is still saved for Manual Reading Mode.</p><button class="secondary-button" data-pattern-collapse="show-chart">Show visual chart</button></div>`:`<div class="chart-reader card workspace-card">
+      <div class="chart-stage og-chart-stage" id="chart-stage">${chartViewerHtml(p)}</div>
+      <div class="attachment-strip">${p.attachments.map(a=>`<div class="chart-file-chip ${activeAssetId===a.id?"active":""}"><button class="chart-file-open" type="button" data-project-asset="${a.id}" aria-label="Open ${escapeHtml(a.name||"chart file")}"><span class="chart-file-icon" aria-hidden="true">${uiIcon("image","ui-icon")}</span><span class="chart-file-text"><strong>${escapeHtml(a.name||"Chart file")}</strong><small>Uploaded ✓</small></span></button><button class="chart-file-remove" type="button" data-delete-chart-asset="${a.id}" aria-label="Remove ${escapeHtml(a.name||"chart file")}">×</button></div>`).join("")}</div>
+    </div>`}
+    ${chartMode==="flow"?`<div class="manual-chart-tools">${friendlyChartBetaHtml(p)}</div>`:""}
+    <div class="bottom-nav-spacer" aria-hidden="true"></div>
     </div>
   </div>`;
 }
@@ -632,8 +918,8 @@ function chartViewerHtml(p){
   const hasChart=!!(p.chart||p.attachments?.length);
   const content = p.chart
     ? (p.chart.type === "application/pdf" ? `<iframe src="${p.chart.data}#toolbar=0"></iframe>` : `<img src="${p.chart.data}" alt="${escapeHtml(p.chart.name)}">`)
-    : `<label class="chart-placeholder upload-drop"><div class="upload-mark">▦</div><h3>Upload a chart image or PDF</h3><p>Manual Reading Mode is recommended for accurate tracking.</p><input type="file" id="chart-upload-inline" accept=".pdf,image/*" multiple hidden><span class="secondary-button">Choose chart</span></label>`;
-  const highlight=hasChart&&p.chartMode==="flow"&&p.flowMode!==false?`<div class="row-highlight" style="top:${rowHighlightTop(p)}"></div>`:"";
+    : `<label class="chart-placeholder upload-drop chart-upload-card"><span class="chart-upload-content"><span class="upload-mark">▦</span><h3>Upload a chart image or PDF</h3><p>Manual Reading Mode is recommended for accurate tracking.</p><input type="file" id="chart-upload-inline" accept=".pdf,image/*" multiple hidden><span class="secondary-button">Choose chart</span></span></label>`;
+  const highlight=hasChart&&p.chartMode==="flow"&&p.flowMode!==false?`<div class="row-highlight" style="${rowHighlightStyle(p)}"></div>`:"";
   const annotations=hasChart?annotationsHtml(p):"";
   return `<div class="chart-canvas ${hasChart?"has-chart":"empty-chart"}" style="transform:scale(${p.chartZoom||1});transform-origin:top left;">${content}${highlight}${annotations}</div>`;
 }
@@ -654,7 +940,7 @@ function svgArrowDefs(){return `<defs><marker id="ann-arrowhead" markerWidth="12
 function annotationSvg(a,selected=false){
   if(a.points?.length){
     const d=a.points.map((pt,i)=>`${i?"L":"M"}${pt.x} ${pt.y}`).join(" ");
-    const color=a.color||"#d96572",width=Number(a.width)||4,opacity=a.tool==="highlighter" ? .38 : 1;
+    const color=a.color||"#d96572",width=Number(a.width)||4,opacity=a.tool==="highlighter" ? (Number(a.opacity)||.38) : (Number(a.opacity)||1);
     return `<path class="annotation-stroke annotation-${a.tool}" data-ann-id="${a.id}" d="${d}" stroke="${escapeHtml(color)}" stroke-width="${width}" stroke-opacity="${opacity}" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>`;
   }
   if(a.tool==="text")return `<foreignObject class="annotation-object" data-ann-id="${a.id}" x="${(a.x||0)-55}" y="${(a.y||0)-22}" width="150" height="58"><div xmlns="http://www.w3.org/1999/xhtml" class="annotation-text">${escapeHtml(a.text||"Note")}</div></foreignObject>`;
@@ -662,19 +948,263 @@ function annotationSvg(a,selected=false){
     const x1=a.x1??a.x??0,y1=a.y1??a.y??0,x2=a.x2??((a.x??0)+120),y2=a.y2??((a.y??0)-80),color=escapeHtml(a.color||"#d96572"),width=Number(a.width)||6;
     return `<g class="annotation-arrow-object ${selected?"selected":""}" data-ann-id="${a.id}"><line class="annotation-arrow-line" data-ann-id="${a.id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}" marker-end="url(#ann-arrowhead)" stroke-linecap="round" vector-effect="non-scaling-stroke"></line>${selected?`<circle class="annotation-handle" data-ann-id="${a.id}" data-arrow-handle="start" cx="${x1}" cy="${y1}" r="13"></circle><circle class="annotation-handle" data-ann-id="${a.id}" data-arrow-handle="end" cx="${x2}" cy="${y2}" r="13"></circle>`:""}</g>`;
   }
-  return `<circle class="annotation-object" data-ann-id="${a.id}" cx="${a.x||0}" cy="${a.y||0}" r="${Math.max(8,Number(a.width)||12)}" fill="${escapeHtml(a.color||"#d96572")}" opacity=".9"></circle>`;
+  return `<circle class="annotation-object" data-ann-id="${a.id}" cx="${a.x||0}" cy="${a.y||0}" r="${Math.max(8,Number(a.width)||12)}" fill="${escapeHtml(a.color||"#d96572")}" opacity="${Number(a.opacity)||.9}"></circle>`;
 }
-function toolIcon(tool){return uiIcon(({touch:"voice",pen:"pen",highlighter:"highlighter",text:"text",arrow:"arrow",marker:"marker",eraser:"eraser",rowMask:"mask"})[tool]||"calculator","annotation-button-icon");}
-function toolLabel(tool){return ({touch:"Touch",rowMask:"Row Mask",highlighter:"Highlighter"}[tool]||tool);}
+function toolIcon(tool){return uiIcon(({touch:"touch",pen:"pen",highlighter:"highlighter",text:"text",arrow:"arrow",marker:"marker",eraser:"eraser","row-mask":"mask",rowMask:"mask"})[tool]||"calculator","annotation-button-icon");}
+function toolLabel(tool){return ({touch:"Touch","row-mask":"Row Mask",rowMask:"Row Mask",highlighter:"Highlighter"}[tool]||tool);}
 
 function friendlyChartBetaHtml(p){
+<<<<<<< HEAD
   const hasChart=p.chart||p.attachments.length,hasLegend=!!p.chartAnalysis?.legend,hasRows=!!(p.chartAnalysis?.rows||[]).length;
   const learnedCount=learningRecords().length;
   return `<div class="chart-analysis ai-beta-safe card" id="flow-ai-reader"><p class="eyebrow">PROJECT CHART</p><h3>Flow Mode / AI Chart Reader</h3><p>AI reads → you review → Yarncha tracks your row.</p><p class="muted-copy">Upload a chart, review symbol recognition, keep row tracking checked, use the highlight mask, and read aloud only after you approve uncertain results.</p><div class="learning-suggestion"><strong>Local learning first</strong><p>Before suggesting a detected symbol, Yarncha checks ${learnedCount} learned correction${learnedCount===1?"":"s"} saved on this device and shows a confidence level.</p></div><div class="beta-checks"><span>${hasChart?"✓":"○"} Chart uploaded</span><span>${hasLegend?"✓":"○"} Symbol recognition reviewed</span><span>${hasRows?"✓":"⚠"} Row tracking ${hasRows?"reviewed":"needs review"}</span><span>${learnedCount?"✓":"○"} Local learning checked</span><span>○ Highlight mask ready</span><span>○ Read aloud available</span><span>○ User correction required</span></div><div class="analysis-actions"><button class="mini-button" id="run-cloud-analysis-local">Analyse chart</button><button class="mini-button" id="review-chart-cells-local">Review cells</button><button class="mini-button" id="add-analysis-row">Add manual row</button><button class="mini-button" id="edit-chart-legend">Review legend</button></div><div id="cloud-chart-reader-slot" class="flow-ai-cloud-slot"></div></div>`;
+=======
+  const setup=ensureProjectSetup(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup),reader=normalizeChartReaderConfig(p.chartReader,p),hasChart=p.chart||p.attachments.length,results=reader.recognitionResults||[],hasUnclear=results.some(cell=>cell.confidenceLabel==="Low"||Number(cell.confidence)<55),ready=!!hasChart&&!hasUnclear,rowInstruction=flowCurrentRowInstruction(p,setup);
+  const simpleSetup=p.setup||{},lastSaved=setup.updatedAt||simpleSetup.updatedAt||p.updatedAt;
+  const options=(values,current,labels={})=>values.map(v=>`<option value="${v}" ${current===v?"selected":""}>${escapeHtml(labels[v]||v)}</option>`).join("");
+  const directionLabels={"left-to-right":"Left → Right","right-to-left":"Right → Left","alternating-rs-ws":"Alternating Rows"};
+  const voiceLabels={short:"Read only",teaching:"Read & explain",beginner:"Beginner friendly"};
+  const sizeOptions=["XXS","XS","S","M","L","XL","XXL","Custom"];
+  const projectTypes=["Scarf","Socks","Hat / Beanie","Shawl","Bag","Blanket","Amigurumi","Top","Cardigan","Jumper / Sweater","Vest","Dress","Other"];
+  return `<div class="chart-analysis ai-beta-safe flow-reader-card card workspace-card" id="flow-ai-reader">
+    <div class="flow-hero"><p class="eyebrow">PROJECT CHART</p><h3>Flow Mode</h3><p>Let Yarncha help you follow your pattern one row at a time.</p><p class="muted-copy">Yarncha looks at your chart and helps you keep track of your place. If something looks unclear, we'll ask you to confirm it before continuing.</p></div>
+    <section class="flow-ready-card ${ready?"ready":"almost"}"><h4>${ready?"Your chart is ready.":"You're almost ready."}</h4>${ready?`<p>✓ Chart added</p><p>✓ Ready to start</p>`:`<p>${hasChart?"Please review a few symbols before we begin.":"Add a chart, then Yarncha can guide you row by row."}</p>`}</section>
+    <section class="flow-reader-panel flow-project-card"><p class="eyebrow">YOUR PROJECT</p><h4>${escapeHtml(p.name||"Current project")}</h4><p>${escapeHtml(setup.craft||p.type||"Pattern")} · You are on row ${p.row}${p.chartRows||p.totalRows?` of ${p.chartRows||p.totalRows}`:""}</p></section>
+    <section class="flow-reader-panel flow-setup-panel"><h4>Project Setup</h4><p class="muted-copy">Add the pattern details once. Yarncha will reuse them across this project.</p>
+      <div class="form-grid compact-form">
+        <div class="field"><label>Craft</label><select id="flow-setup-craft">${options(["Knitting","Crochet"],setup.craft)}</select></div>
+        <div class="field"><label>Pattern gauge</label><input id="flow-pattern-gauge" value="${escapeHtml(setup.patternGauge)}" placeholder="22 sts × 30 rows / 10 cm"></div>
+        <div class="field"><label>Pattern hook / needle size</label><input id="flow-pattern-tool" value="${escapeHtml(setup.patternToolSize)}" placeholder="4 mm"></div>
+        <div class="field"><label>Pattern yarn weight</label><input id="flow-pattern-yarn-weight" value="${escapeHtml(setup.patternYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
+        <div class="field"><label>Your hook / needle size</label><input id="flow-user-tool" value="${escapeHtml(setup.userToolSize)}" placeholder="4.5 mm"></div>
+        <div class="field"><label>Your yarn weight</label><input id="flow-user-yarn-weight" value="${escapeHtml(setup.userYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
+        <div class="field full"><label>Project type</label><select id="flow-project-type">${options(projectTypes,setup.projectType)}</select></div>
+        ${flowProjectTypeFields(setup,options,sizeOptions)}
+      </div>
+      <div class="flow-setup-save-row"><button class="primary-button" id="save-flow-project-setup" type="button">Save project setup</button><span id="flow-setup-save-status" class="setup-save-status saved">Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
+      ${plan.warnings.length?`<div class="flow-warning-card"><strong>Before you begin</strong>${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<div class="flow-ready-card ready"><p>✓ Your hook or needle and yarn look close enough to the pattern to begin.</p></div>`}
+      ${resultSummaryHtml("Project Setup Summary",flowCalculationItems(plan),"flow-calculation-summary")}
+    </section>
+    <section class="flow-reader-panel flow-reading-mode-panel"><h4>Reading Progress</h4>
+      <div class="flow-current-row-card"><label for="flow-current-row">I'm currently on</label><div class="flow-row-line"><span>Row</span><input id="flow-current-row" type="number" min="0" max="${p.chartRows||reader.grid.rows||999}" value="${p.row}"></div><p>${escapeHtml(rowInstruction)}</p></div>
+      <div class="flow-row-buttons"><button class="secondary-button" id="flow-prev-row" type="button">Previous Row</button><button class="primary-button" id="flow-next-row" type="button">Next Row</button></div>
+      <div class="flow-next-card"><strong>What's next?</strong><p>${flowReadingSummary(p,reader)}</p></div>
+      <label class="flow-direction-field">Pattern Language<select id="flow-pattern-language">${options(["abbreviations","full"],setup.patternLanguage,{abbreviations:"Abbreviations",full:"Full wording"})}</select><small>Choose whether Yarncha shows short pattern notation or spells each stitch out.</small></label>
+      <label class="flow-direction-field">How do you read this chart?<select id="flow-row-direction">${options(["left-to-right","right-to-left","alternating-rs-ws"],reader.rowDirection,directionLabels)}</select><small>Choose the direction your eyes move across each row. Alternating Rows is common when right-side and wrong-side rows switch direction.</small></label>
+      <div class="analysis-actions"><button class="mini-button" id="flow-align-mask">Show current row</button><button class="mini-button" id="flow-cover-completed">${reader.coverCompletedRows?"Update finished cover":"Cover finished rows"}</button><button class="mini-button" id="flow-clear-cover">Remove cover</button></div>
+    </section>
+    <section class="flow-read-aloud">
+      <div><strong>Voice Assistant</strong><p class="muted-copy">Yarncha can read the current row while you knit or crochet.</p></div>
+      <div class="flow-read-controls"><button class="primary-button" id="flow-read-row">▶ Read Current Row</button><button class="secondary-button" id="flow-read-play">Play</button><button class="secondary-button" id="flow-read-pause">Pause</button><button class="secondary-button" id="flow-read-stop">Stop</button></div>
+      <div class="flow-reading-controls flow-voice-settings">
+        <label>Reading speed <input id="flow-voice-speed" type="range" min=".6" max="1.5" step=".05" value="${reader.readAloud.voiceSpeed}"><span>${reader.readAloud.voiceSpeed.toFixed(2)}x</span></label>
+        <label>Voice language <select id="flow-voice-language">${options(["en","zh-Hant","yue"],reader.readAloud.language,{en:"English","zh-Hant":"Traditional Chinese","yue":"Cantonese-ready"})}</select></label>
+        <label>Reading style <select id="flow-voice-mode">${options(["short","teaching","beginner"],reader.readAloud.mode,voiceLabels)}</select></label>
+      </div>
+    </section>
+    <details class="flow-advanced-tools"><summary>Advanced tools</summary>
+      <div class="flow-reader-grid">
+        <section class="flow-reader-panel"><h4>Chart setup</h4><div class="form-grid compact-form">
+          <div class="field"><label>Craft type</label><select id="flow-chart-type">${options(["Knitting","Crochet","Tunisian Crochet","Unknown"],reader.chartType)}</select></div>
+          <div class="field"><label>Starting direction</label><select id="flow-reading-direction">${options(["right-to-left","left-to-right","alternating-rs-ws","round","auto"],reader.readingDirection,{...directionLabels,round:"In the round",auto:"Let Yarncha choose"})}</select></div>
+          <div class="field"><label>Left edge</label><input id="flow-crop-x" type="number" min="0" max="100" value="${reader.crop.x}"></div>
+          <div class="field"><label>Top edge</label><input id="flow-crop-y" type="number" min="0" max="100" value="${reader.crop.y}"></div>
+          <div class="field"><label>Chart width</label><input id="flow-crop-width" type="number" min="1" max="100" value="${reader.crop.width}"></div>
+          <div class="field"><label>Chart height</label><input id="flow-crop-height" type="number" min="1" max="100" value="${reader.crop.height}"></div>
+        </div><button class="mini-button" id="save-flow-chart-setup">Save chart setup</button></section>
+        <section class="flow-reader-panel"><h4>Fine-tune rows</h4><div class="form-grid compact-form">
+          <div class="field"><label>Rows on chart</label><input id="flow-grid-rows" type="number" min="0" value="${reader.grid.rows||""}" placeholder="Optional"></div>
+          <div class="field"><label>Stitches across</label><input id="flow-grid-columns" type="number" min="0" value="${reader.grid.columns||""}" placeholder="Optional"></div>
+          <div class="field"><label>Guide left</label><input id="flow-grid-x" type="number" min="0" max="100" value="${reader.grid.x}"></div>
+          <div class="field"><label>Guide top</label><input id="flow-grid-y" type="number" min="0" max="100" value="${reader.grid.y}"></div>
+          <div class="field"><label>Guide width</label><input id="flow-grid-width" type="number" min="1" max="100" value="${reader.grid.width}"></div>
+          <div class="field"><label>Guide height</label><input id="flow-grid-height" type="number" min="1" max="100" value="${reader.grid.height}"></div>
+        </div><div class="analysis-actions"><button class="mini-button" id="detect-flow-grid">Prepare guide</button><button class="mini-button" id="save-flow-grid">Save guide</button></div><p class="muted-copy">${escapeHtml(reader.grid.status&&reader.grid.status!=="Grid not detected yet."?"Your chart guide has been saved.":"Adjust these only if your row highlight is in the wrong place.")}</p></section>
+      </div>
+      <section class="flow-reader-panel flow-reader-wide"><h4>Pattern review</h4><div class="analysis-actions"><button class="mini-button" id="run-flow-recognition">Check chart</button><button class="mini-button" id="review-chart-cells-local">Look over stitches</button><button class="mini-button" id="add-analysis-row">Add written row</button><button class="mini-button" id="edit-chart-legend">Edit stitch key</button></div>${flowRecognitionResultsHtml(results)}</section>
+    </details>
+    <p class="privacy-note">Yarncha remembers your corrections on this device so your next chart feels easier to follow.</p><div id="cloud-chart-reader-slot" class="flow-ai-cloud-slot"></div></div>`;
+}
+function flowCalculationItems(plan={}){
+  return [
+    {label:plan.startingLabel||"Start",value:String(plan.castOnOrChain||"Set gauge first")},
+    {label:"Stitch count",value:String(plan.stitchCount||"Set gauge first")},
+    {label:"Row count",value:String(plan.rowCount||"Set gauge first")},
+    {label:"Width",value:plan.widthCm?`${plan.widthCm} cm`:"Set size first"},
+    {label:"Length",value:plan.lengthCm?`${plan.lengthCm} cm`:"Set size first"},
+    {label:"Sleeve length",value:plan.sleeveLengthCm?`${plan.sleeveLengthCm} cm`:"If needed"},
+    {label:"Body length",value:plan.bodyLengthCm?`${plan.bodyLengthCm} cm`:"If needed"},
+    {label:"Shaping",value:plan.shapingNotes||"Pattern decides"},
+    {label:"Yarn",value:plan.estimatedYarnUsage||"Add yarn details"}
+  ];
+}
+function resultSummaryHtml(title,items=[],className=""){
+  return `<section class="result-summary ${className}" aria-label="${escapeHtml(title)}"><h4>${escapeHtml(title)}</h4><div class="result-summary-list">${items.map(item=>`<article class="result-summary-row"><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.value)}</p>${item.description?`<small>${escapeHtml(item.description)}</small>`:""}</article>`).join("")}</div></section>`;
+}
+function flowField(id,label,value="",placeholder="Optional",full=false){
+  return `<div class="field ${full?"full":""}"><label>${escapeHtml(label)}</label><input id="${id}" value="${escapeHtml(value||"")}" placeholder="${escapeHtml(placeholder)}"></div>`;
+}
+function flowSelect(id,label,values,current,options,full=false,help=""){
+  return `<div class="field ${full?"full":""}"><label>${escapeHtml(label)}</label><select id="${id}">${options(values,current)}</select>${help?`<small>${escapeHtml(help)}</small>`:""}</div>`;
+}
+function flowProjectTypeFields(setup={},options=(values,current)=>"",sizeOptions=[]){
+  const d=setup.itemDetails||{},type=setup.projectType;
+  const recipient=["Baby","Child","Teen","Adult","Custom"];
+  if(isGarmentProject(type)){
+    return `${flowSelect("flow-desired-size","Desired garment size",sizeOptions,setup.desiredSize,options)}${flowField("flow-custom-size","Custom size notes",setup.customSize)}${flowField("flow-body-chest","Chest / bust cm",setup.bodyMeasurements.chest)}${flowField("flow-body-waist","Waist cm",setup.bodyMeasurements.waist)}${flowField("flow-body-hip","Hip cm",setup.bodyMeasurements.hip)}${flowField("flow-body-sleeve","Sleeve length cm",setup.bodyMeasurements.sleeve)}${flowField("flow-body-body","Body length cm",setup.bodyMeasurements.body)}`;
+  }
+  if(type==="Scarf")return `${flowSelect("flow-recipient","Who are you making this for?",recipient,d.recipient,options)}${d.recipient==="Adult"?flowSelect("flow-adult-height","Approximate height",["Under 150 cm","150–160 cm","160–170 cm","170–180 cm","180–190 cm","190+ cm"],d.adultHeight,options):""}${flowSelect("flow-scarf-style","How do you want the scarf to fit?",["Neck warmer","One wrap","Two wraps","Long winter scarf","Oversized scarf","Fashion scarf","Custom length"],d.scarfStyle,options)}${d.scarfStyle==="Custom length"?flowField("flow-item-length","Custom length cm",d.length):""}${flowField("flow-item-width","Scarf width cm",d.width)}`;
+  if(type==="Socks")return `${flowSelect("flow-sock-type","Sock type",["No-show","Ankle","Quarter Crew","Crew","Mid-Calf","Knee High","Over-the-Knee"],d.sockType,options,false,"This changes the pattern length and shaping.")}${flowSelect("flow-recipient","Who are you making these for?",recipient,d.recipient,options)}${flowSelect("flow-sock-sizing-mode","How would you like to size the socks?",["Shoe Size","Foot Measurements"],d.sockSizingMode,options)}${d.sockSizingMode==="Shoe Size"?`${flowSelect("flow-shoe-region","Region",["AU","US","UK","EU","JP"],d.shoeRegion,options)}${flowField("flow-shoe-size","Shoe size",d.shoeSize)}`:""}${flowField("flow-foot-length","Foot length cm",d.footLength)}${flowField("flow-foot-circumference","Foot circumference cm",d.footCircumference)}${flowField("flow-heel-to-ankle","Heel to ankle cm",d.heelToAnkle)}${flowField("flow-ankle-circumference","Ankle circumference cm",d.ankleCircumference)}${["Mid-Calf","Knee High","Over-the-Knee"].includes(d.sockType)?flowField("flow-calf-circumference","Calf circumference cm",d.calfCircumference):""}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-construction-method","Construction method",["Toe-up","Cuff-down"],d.constructionMethod,options)}${flowSelect("flow-heel-style","Heel style",["Heel Flap","Short Row","Afterthought","Fish Lips Kiss","Pattern decides"],d.heelStyle,options)}`;
+  if(type==="Hat / Beanie")return `${flowSelect("flow-recipient","Recipient",recipient,d.recipient,options)}${flowField("flow-head-circumference","Head circumference cm",d.headCircumference)}${flowSelect("flow-hat-style","Hat style",["Fitted beanie","Slouchy beanie","Folded brim","Bucket hat","Beret","Bonnet / baby hat","Custom"],d.hatStyle,options)}${flowField("flow-hat-depth","Desired hat depth cm",d.hatDepth)}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-brim-style","Brim style",["No brim","Ribbed brim","Folded brim","Rolled brim"],d.brimStyle,options)}${flowSelect("flow-crown-style","Crown style",["Rounded crown","Pointed crown","Flat top","Pattern decides"],d.crownStyle,options)}`;
+  if(type==="Bag")return `${flowSelect("flow-bag-type","Bag type",["Tote","Market bag","Crossbody","Shoulder bag","Drawstring pouch","Mini bag","Project bag","Custom"],d.bagType,options)}${flowField("flow-item-width","Desired width cm",d.width)}${flowField("flow-item-height","Desired height cm",d.height)}${flowField("flow-strap-length","Strap length cm",d.strapLength)}<details class="flow-inline-advanced"><summary>Advanced bag options</summary>${flowField("flow-item-depth","Bag depth / gusset cm",d.depth)}${flowField("flow-handle-drop","Handle drop cm",d.handleDrop)}${flowSelect("flow-closure","Closure",["None","Button","Zip","Drawstring","Flap"],d.closure,options)}${flowSelect("flow-lining","Lining",["No lining","Fabric lining"],d.lining,options)}${flowSelect("flow-structure","Fit / structure",["Soft","Medium","Firm"],d.structure,options)}</details>`;
+  if(type==="Blanket"){
+    const preset=blanketPresetSize(d.blanketType);
+    return `${flowSelect("flow-blanket-type","Blanket type",["Lovey","Baby Blanket","Crib Blanket","Stroller Blanket","Lap Blanket","Throw Blanket","Twin","Full / Double","Queen","King","Custom"],d.blanketType,options)}<div class="flow-ready-card ready"><p>Recommended size: ${preset[0]} × ${preset[1]} cm. Use this size or edit below.</p></div>${flowField("flow-item-width","Finished width cm",d.width||preset[0])}${flowField("flow-item-length","Finished length cm",d.length||preset[1])}${flowSelect("flow-blanket-shape","Blanket shape",["Rectangle","Square","Circle","Hexagon","Custom"],d.blanketShape,options)}${flowSelect("flow-warmth","Warmth",["Lightweight","Medium","Thick & Cozy"],d.warmth,options)}${flowField("flow-border-width","Border width cm",d.borderWidth)}${flowSelect("flow-fringe","Fringe / tassels",["None","Short","Long"],d.fringe,options)}`;
+  }
+  if(type==="Amigurumi")return `${flowSelect("flow-amigurumi-type","What are you making?",["Animal","Doll","Character","Food","Plant","Keychain","Decoration","Plush","Custom"],d.amigurumiType,options)}${flowField("flow-finished-height","Desired finished height cm",d.finishedHeight)}${flowField("flow-finished-width","Desired finished width cm",d.finishedWidth)}${flowSelect("flow-shape","Overall shape",["Round","Oval","Long","Chubby","Standing","Sitting","Custom"],d.shape,options)}${flowSelect("flow-stuffing-firmness","Stuffing firmness",["Soft","Medium","Firm"],d.stuffingFirmness,options)}${flowSelect("flow-safety-recipient","Who is it for?",["Baby","Child","Adult","Display only"],d.safetyRecipient,options)}${d.safetyRecipient==="Baby"?`<div class="flow-warning-card"><p>For babies, embroidered eyes are safer than plastic safety eyes.</p></div>`:""}<details class="flow-inline-advanced" open><summary>Scale Existing Pattern</summary>${flowField("flow-original-height","Original pattern height cm",d.originalHeight)}${flowField("flow-target-height","I want cm",d.targetHeight)}</details>`;
+  if(type==="Shawl")return `${flowSelect("flow-shawl-shape","Shawl shape",["Triangle","Crescent","Half Circle","Rectangle","Wrap","Asymmetrical","Custom"],d.shawlShape,options)}${flowSelect("flow-shawl-fit","Size",["Small Shoulder Shawl","Everyday Shawl","Large Wrap","Oversized Wrap","Custom"],d.shawlFit,options)}${flowField("flow-wingspan","Desired wingspan cm",d.wingspan)}${flowField("flow-item-height","Desired depth cm",d.height)}${flowSelect("flow-recipient","Who is it for?",["Child","Teen","Adult","Custom"],d.recipient,options)}`;
+  return `${flowField("flow-item-width","Width cm",d.width)}${flowField("flow-item-length","Length cm",d.length)}${flowField("flow-item-height","Height cm",d.height)}`;
+}
+function readFlowSetupDetails(previous={}){
+  const value=id=>document.getElementById(id)?.value?.trim();
+  const pick=(id,key)=>value(id)??previous[key]??"";
+  return {
+    recipient:pick("flow-recipient","recipient"),
+    adultHeight:pick("flow-adult-height","adultHeight"),
+    scarfStyle:pick("flow-scarf-style","scarfStyle"),
+    sockType:pick("flow-sock-type","sockType"),
+    sockSizingMode:pick("flow-sock-sizing-mode","sockSizingMode"),
+    shoeRegion:pick("flow-shoe-region","shoeRegion"),
+    shoeSize:pick("flow-shoe-size","shoeSize"),
+    footLength:pick("flow-foot-length","footLength"),
+    footCircumference:pick("flow-foot-circumference","footCircumference"),
+    heelToAnkle:pick("flow-heel-to-ankle","heelToAnkle"),
+    ankleCircumference:pick("flow-ankle-circumference","ankleCircumference"),
+    calfCircumference:pick("flow-calf-circumference","calfCircumference"),
+    fitPreference:pick("flow-fit-preference","fitPreference"),
+    constructionMethod:pick("flow-construction-method","constructionMethod"),
+    heelStyle:pick("flow-heel-style","heelStyle"),
+    headCircumference:pick("flow-head-circumference","headCircumference"),
+    hatStyle:pick("flow-hat-style","hatStyle"),
+    hatDepth:pick("flow-hat-depth","hatDepth"),
+    brimStyle:pick("flow-brim-style","brimStyle"),
+    crownStyle:pick("flow-crown-style","crownStyle"),
+    bagType:pick("flow-bag-type","bagType"),
+    width:pick("flow-item-width","width"),
+    height:pick("flow-item-height","height"),
+    length:pick("flow-item-length","length"),
+    strapLength:pick("flow-strap-length","strapLength"),
+    depth:pick("flow-item-depth","depth"),
+    handleDrop:pick("flow-handle-drop","handleDrop"),
+    closure:pick("flow-closure","closure"),
+    lining:pick("flow-lining","lining"),
+    structure:pick("flow-structure","structure"),
+    blanketType:pick("flow-blanket-type","blanketType"),
+    blanketShape:pick("flow-blanket-shape","blanketShape"),
+    warmth:pick("flow-warmth","warmth"),
+    borderWidth:pick("flow-border-width","borderWidth"),
+    fringe:pick("flow-fringe","fringe"),
+    amigurumiType:pick("flow-amigurumi-type","amigurumiType"),
+    finishedHeight:pick("flow-finished-height","finishedHeight"),
+    finishedWidth:pick("flow-finished-width","finishedWidth"),
+    shape:pick("flow-shape","shape"),
+    stuffingFirmness:pick("flow-stuffing-firmness","stuffingFirmness"),
+    safetyRecipient:pick("flow-safety-recipient","safetyRecipient"),
+    originalHeight:pick("flow-original-height","originalHeight"),
+    targetHeight:pick("flow-target-height","targetHeight"),
+    shawlShape:pick("flow-shawl-shape","shawlShape"),
+    shawlFit:pick("flow-shawl-fit","shawlFit"),
+    wingspan:pick("flow-wingspan","wingspan")
+  };
+}
+function sharedProjectSetupSummaryHtml(p){
+  const setup=ensureProjectSetup(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup);
+  const summaryItems=[
+    {label:"Craft",value:setup.craft},
+    {label:"Project type",value:setup.projectType},
+    {label:"Pattern yarn",value:setup.patternYarnWeight||"Add yarn weight"},
+    {label:"Your tool",value:setup.userToolSize||setup.patternToolSize||"Add hook / needle"},
+    {label:"Start",value:`${plan.startingLabel||"Start"} ${plan.castOnOrChain||""}`.trim()},
+    {label:"Rows",value:String(plan.rowCount||"Add gauge")}
+  ];
+  return `<div class="card mobile-card shared-project-setup"><p class="eyebrow">SHARED SETUP</p><h2>Project guide</h2><p class="muted-copy">These details are used by Flow Mode and project tools so you do not need to enter them again.</p>
+    ${resultSummaryHtml("Saved project settings",summaryItems,"shared-setup-summary")}
+    ${plan.warnings.length?`<div class="flow-warning-card">${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<p class="shared-setup-note">Your yarn and hook or needle look close enough to begin.</p>`}
+  </div>`;
+}
+function fitCheckNumber(value,fallback=0){
+  const number=Number(String(value??"").replace(/[^\d.-]/g,""));
+  return Number.isFinite(number)&&number>0?number:fallback;
+}
+function projectFitCheck(p){
+  const setup=ensureProjectSetup(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup),saved=p.fitCheck||{},measurements=setupMeasurements(setup);
+  const bodyChest=fitCheckNumber(saved.bodyChest,measurements.chest||0);
+  const finishedChest=fitCheckNumber(saved.finishedChest,plan.widthCm||0);
+  const intendedEase=Number(saved.intendedEase??8);
+  const targetLength=fitCheckNumber(saved.targetLength,plan.lengthCm||0);
+  const currentLength=fitCheckNumber(saved.currentLength,0);
+  const ease=bodyChest&&finishedChest?finishedChest-bodyChest:null;
+  const easeGap=ease!==null?ease-intendedEase:null;
+  const lengthGap=currentLength&&targetLength?targetLength-currentLength:null;
+  const warnings=[];
+  if(easeGap!==null&&Math.abs(easeGap)>4)warnings.push(easeGap>0?"Finished width may be looser than planned.":"Finished width may be tighter than planned.");
+  if(lengthGap!==null&&Math.abs(lengthGap)>5)warnings.push(lengthGap>0?"You still have noticeable length to add.":"Length is already past the target.");
+  if((setupWarnings(setup)||[]).length)warnings.push("Gauge, hook, needle, or yarn mismatch may change the fit.");
+  const status=warnings.length?"Needs a quick check":"Looks close";
+  const action=warnings.length?warnings.join(" "):"Keep going, and try it on again before bind-off or final shaping.";
+  return {setup,plan,saved,bodyChest,finishedChest,intendedEase,targetLength,currentLength,ease,easeGap,lengthGap,status,action};
+}
+function projectFitCheckHtml(p){
+  const check=projectFitCheck(p);
+  const value=(key,fallback="")=>escapeHtml(check.saved[key]??fallback);
+  const metric=(label,value,description="")=>`<article class="fit-check-metric"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(value)}</p>${description?`<small>${escapeHtml(description)}</small>`:""}</article>`;
+  const easeText=check.ease===null?"Add body and finished width":`${check.ease>0?"+":""}${check.ease.toFixed(1)} cm`;
+  const lengthText=check.lengthGap===null?"Add current length":`${check.lengthGap>0?`${check.lengthGap.toFixed(1)} cm to go`:`${Math.abs(check.lengthGap).toFixed(1)} cm over`}`;
+  return `<section class="card mobile-card fit-check-card">
+    <div class="section-heading compact-row"><div><p class="eyebrow">FIT CHECK</p><h2>Check the fit before you continue</h2><p class="muted-copy">Use this on desktop while planning, or on mobile while trying the project on.</p></div><span class="fit-check-status ${check.status==="Looks close"?"ok":"warn"}">${escapeHtml(check.status)}</span></div>
+    <div class="fit-check-grid">
+      <div class="fit-check-form form-grid compact-form">
+        <div class="field"><label>Body chest / main measurement cm</label><input id="fit-body-chest" type="number" min="0" step=".5" value="${value("bodyChest",check.bodyChest||"")}" placeholder="e.g. 100"></div>
+        <div class="field"><label>Finished width / chest cm</label><input id="fit-finished-chest" type="number" min="0" step=".5" value="${value("finishedChest",check.finishedChest||"")}" placeholder="e.g. 108"></div>
+        <div class="field"><label>Intended ease cm</label><input id="fit-intended-ease" type="number" step=".5" value="${value("intendedEase",check.intendedEase)}" placeholder="e.g. 8"></div>
+        <div class="field"><label>Target length cm</label><input id="fit-target-length" type="number" min="0" step=".5" value="${value("targetLength",check.targetLength||"")}" placeholder="e.g. 58"></div>
+        <div class="field"><label>Current length cm</label><input id="fit-current-length" type="number" min="0" step=".5" value="${value("currentLength",check.currentLength||"")}" placeholder="Measure now"></div>
+        <div class="field"><label>Fit feeling</label><select id="fit-feeling">${["Not checked yet","Too tight","Feels right","Too loose","Length unsure"].map(option=>`<option ${check.saved.feeling===option?"selected":""}>${option}</option>`).join("")}</select></div>
+        <div class="field full"><label>Try-on notes</label><textarea id="fit-notes" rows="3" placeholder="Armhole, sleeve, length, shoulder, bust, waist...">${escapeHtml(check.saved.notes||"")}</textarea></div>
+      </div>
+      <div class="fit-check-summary">
+        ${metric("Actual ease",easeText,`Planned ease: ${check.intendedEase} cm`)}
+        ${metric("Length check",lengthText,`Target length: ${check.targetLength||"not set"} cm`)}
+        ${metric("Fit advice",check.action)}
+      </div>
+    </div>
+    <div class="fit-check-actions"><button class="secondary-button" id="save-fit-check">Save Fit Check</button><button class="mini-button" id="open-fit-tools">Open sizing tools</button></div>
+  </section>`;
+}
+function flowCurrentRowInstruction(p=getProject(),setup=normalizeProjectSetup(p.projectSetup,p)){
+  const analysed=highlightedRowAnalysis(p);
+  const raw=analysed?.sequence||highlightedRowRecognition(p).map(cell=>cell.candidates?.[0]?.abbreviation||cell.detectedSymbol||"").filter(Boolean).join(", ");
+  const fallback=setup.craft==="Crochet"?"sc, 2(sc, inc), sc":"K, K, K, SSK, P, P, YO";
+  const sequence=raw||fallback;
+  if(setup.patternLanguage==="full")return sequenceToSpokenInstructions(sequence,{readAloud:{mode:"teaching",language:"en",voiceSpeed:1}},setup.craft);
+  return sequence;
+}
+function flowRecognitionResultsHtml(results=[]){
+  if(!results.length)return `<div class="flow-recognition-empty">Nothing to look over yet. Use Check chart or add a written row when you want extra help.</div>`;
+  const matchLabel=cell=>cell.confidenceLabel==="Low"||Number(cell.confidence)<55?"Please check":"Looks helpful";
+  return `<div class="flow-results-table">${results.slice(0,12).map(cell=>`<article class="flow-cell-result ${cell.confidenceLabel==="Low"?"needs-review":""}"><div><strong>Row ${cell.row}, stitch ${cell.column}</strong><span>${matchLabel(cell)}</span></div><div>${cell.candidates.slice(0,3).map((candidate,index)=>`<span class="candidate-chip ${index===0?"best":""}">${escapeHtml(candidate.nameEn||candidate.abbreviation||"Pattern mark")}</span>`).join("")}</div><p>${cell.confidenceLabel==="Low"?"Please check this stitch before Yarncha reads it aloud.":"This looks ready to use."}</p></article>`).join("")}</div>`;
+}
+function flowReadingSummary(p,reader=normalizeChartReaderConfig(p.chartReader,p)){
+  const rows=reader.grid.rows||p.chartRows||p.totalRows||0;
+  const direction={ "left-to-right":"left to right", "right-to-left":"right to left", "alternating-rs-ws":"alternating rows", round:"in the round" }[reader.rowDirection]||"alternating rows";
+  return `You are on row ${p.row}${rows?` of ${rows}`:""}. Keep following the chart ${direction}, then tap Next Row when you finish this row.`;
+>>>>>>> feature/flowmode
 }
 
 function projectProjectHtml(p){
   return `<div class="project-info-grid">
+    ${sharedProjectSetupSummaryHtml(p)}
+    ${projectFitCheckHtml(p)}
     <div class="card mobile-card"><p class="eyebrow">MATERIALS</p><h2>Project setup</h2><div class="form-grid compact-form">
       <div class="field full"><label>Yarn</label><input id="project-yarn" value="${escapeHtml(p.yarn)}" placeholder="Fibre, weight, colour, dye lot"></div>
       <div class="field"><label>Needles / hooks</label><input id="project-needles" value="${escapeHtml(p.needles)}" placeholder="e.g. 4 mm circular"></div>
@@ -724,20 +1254,35 @@ function themeGalleryCardHtml(t,activeTheme,index=0){
 }
 function styleLabel(s){return designStyles.find(style=>style.id===normalizeDesignStyle(s))?.name||s;}
 
-function rowHighlightTop(p) { return `${p.chartRows ? Math.min(92, Math.max(0, (p.row / p.chartRows) * 92)) : 0}%`; }
-function chartAnalysisHtml(p){
-  if(!p.chartAnalysis)return `<div class="chart-analysis">
-    <strong>Analysis report</strong>
-    <span>No chart analysed yet. Add rows manually or upload a chart to create an uncertain draft for review.</span>
-    <div class="analysis-actions"><button class="mini-button" id="edit-chart-legend">Review legend</button><button class="mini-button" id="add-analysis-row">+ Add row</button></div>
-  </div>`;
-  const a=p.chartAnalysis;
-  const rows=a.rows||[];
-  return `<details class="chart-analysis" open><summary><strong>Analysis report</strong> · ${a.detectedRows?`${a.detectedRows} rows detected`:"row total needs confirmation"}</summary><p>${escapeHtml(a.summary)}</p>
-    <div class="verification-flow"><strong>AI reads</strong><span>→</span><strong>You check and edit</strong><span>→</span><strong>Final written pattern</strong></div>
-    <div class="analysis-actions"><button class="mini-button" id="edit-chart-legend">Review legend</button><button class="mini-button" id="add-analysis-row">+ Add row</button><button class="mini-button" id="generate-final-pattern">Generate checked pattern</button></div>
-    ${rows.length?`<div class="chart-row-table">${rows.map(r=>chartRowHtml(r)).join("")}</div>`:`<div class="empty-analysis">No trustworthy grid rows were detected. Add rows manually instead of relying on a guess.</div>`}
-    <small>Low resolution, watermarks, compression and unfamiliar symbols reduce confidence. Unclear cells remain marked “uncertain”.</small></details>`;
+function chartRowMetrics(p){
+  const reader=normalizeChartReaderConfig(p.chartReader,p),grid=reader.grid||{},rows=Math.max(1,Number(grid.rows)||Number(p.chartRows)||Number(p.totalRows)||1);
+  const row=Math.max(1,Math.min(rows,Number(p.row)||1)),rowHeight=(Number(grid.height)||100)/rows;
+  return {reader,grid,rows,row,rowHeight,x:Number(grid.x)||0,y:Number(grid.y)||0,width:Number(grid.width)||100,height:Number(grid.height)||100,top:(Number(grid.y)||0)+(row-1)*rowHeight};
+}
+function rowHighlightStyle(p){
+  const m=chartRowMetrics(p);
+  return `left:${m.x}%;right:auto;width:${m.width}%;top:${Math.max(0,Math.min(100,m.top))}%;height:${Math.max(1.4,m.rowHeight)}%;`;
+}
+function rowHighlightTop(p) { return `${chartRowMetrics(p).top}%`; }
+function patternReadingSpaceHtml(p){
+  const source=normalizePatternSource(p.patternSource,p),text=(source.userCorrectedText||source.extractedText||"").trim();
+  if(source.type==="none"&&!text)return "";
+  const lines=text.split(/\n+/).map(line=>line.trim()).filter(Boolean),lineIndex=Math.max(0,Math.min(lines.length-1,(source.currentLine||1)-1));
+  const currentLine=lines[lineIndex]||"Add or review the scanned pattern text here.";
+  const fallback=source.ocrStatus==="failed"?`<div class="flow-warning-card"><p>We could not read this clearly. You can still use the image as a visual chart, or paste the written pattern text manually.</p></div>`:"";
+  const modeLabel={ "written-pattern":"Written pattern", "visual-chart":"Visual chart", mixed:"Mixed pattern", none:"Not chosen" }[source.type]||"Not chosen";
+  const mixedActions=source.type==="mixed"?`<div class="pattern-source-actions"><button class="mini-button" data-pattern-collapse="${source.textCollapsed?"show-text":"hide-text"}">${source.textCollapsed?"Show scanned text":"Hide scanned text"}</button><button class="mini-button" data-pattern-collapse="${source.chartCollapsed?"show-chart":"hide-chart"}">${source.chartCollapsed?"Show visual chart":"Hide visual chart"}</button></div>`:"";
+  return `<section class="pattern-reading-space card workspace-card">
+    <div class="section-heading compact-row"><div><p class="eyebrow">PATTERN READING SPACE</p><h3>${modeLabel}</h3><p>Review the scanned text before Yarncha uses it for row help.</p></div><button class="mini-button" id="review-pattern-source">Review scan</button></div>
+    ${fallback}
+    ${mixedActions}
+    ${source.textCollapsed?`<div class="collapsed-workspace-panel"><strong>Scanned text is hidden.</strong><p class="muted-copy">Your corrected text is still saved with this project.</p></div>`:text?`<div class="pattern-reading-grid">
+      <div class="pattern-line-focus"><span>Current line ${lineIndex+1}${lines.length?` of ${lines.length}`:""}</span><strong>${escapeHtml(currentLine)}</strong></div>
+      <div class="pattern-line-controls"><button class="secondary-button" id="pattern-prev-line">Previous line</button><button class="primary-button" id="pattern-next-line">Next line</button></div>
+      <label class="field full"><span>Scanned text</span><textarea id="pattern-source-text" rows="8">${escapeHtml(source.userCorrectedText||source.extractedText)}</textarea></label>
+      <div class="pattern-source-actions"><button class="secondary-button" id="save-pattern-source-text">Save text edits</button><span>${source.ocrStatus==="success"?"Scan looks readable":source.ocrStatus==="low-confidence"?"Please review carefully":"You can still continue manually"}</span></div>
+    </div>`:`<p class="muted-copy">No readable text has been saved yet. You can still use the original upload as a visual chart.</p>`}
+  </section>`;
 }
 function chartRowHtml(r){return `<div class="chart-row ${r.status==="uncertain"?"uncertain":""}"><div><strong>Row ${r.number}</strong><span>${escapeHtml(r.side||"Side uncertain")} · ${Number(r.stitchCount)||"?"} stitches</span></div><p>${escapeHtml(r.sequence||"uncertain")}</p><small>${escapeHtml(r.shaping||"No increase/decrease detected")}</small><div class="row-actions"><button class="mini-button" data-edit-analysis-row="${r.id}">Edit</button><button class="mini-button danger-button" data-delete-analysis-row="${r.id}">Delete</button></div></div>`;}
 function subCounterHtml(s) {
@@ -786,6 +1331,7 @@ function projectToolModeCopy(p,tool){
 }
 function projectToolsHtml(p) {
   p.projectTools=p.projectTools||{};
+  const sharedSetup=ensureProjectSetup(p),sharedPlan=p.projectCalculations||calculateFlowProjectPlan(p,sharedSetup);
   const linked = p.projectTools.linked !== false;
   const categories=projectToolkitCategoryOptions(p);
   let categoryId=p.projectTools.category||projectToolkitCategories.find(cat=>cat.tools.includes(p.projectTools.selectedTool))?.id||"stitch";
@@ -801,7 +1347,7 @@ function projectToolsHtml(p) {
   const def=categoryId==="rendering"?{id:"rendering-studio",name:"Project Rendering Studio",desc:"Visual planning before making: grid, stripes and colour pooling in one tidy workspace.",crafts:["all"]}:toolkitToolDefs.find(t=>t.id===selected)||toolOptions[0]||toolkitToolDefs[0];
   const cat=categories.find(c=>c.id===categoryId)||projectToolkitCategories[0];
   const tabs=categoryId==="rendering"?toolsInProjectCategory(p,"rendering"):[];
-  return `<div class="project-tools card toolkit-card compact-toolkit"><div class="section-heading" style="margin:0"><div><p class="eyebrow">PROJECT TOOLKIT</p><h2>Choose a focused tool</h2><p class="muted-copy">Showing ${escapeHtml(normalizeProjectType(p.type).toLowerCase())} tools plus shared tools. Budget stays in Buy List / Budget.</p><p class="unit-preference-note">Preferred units: ${escapeHtml(unitSystemLabel())}</p></div><label class="link-toggle"><input id="link-project-tools" type="checkbox" ${linked ? "checked" : ""}> Save results to this project</label></div>
+  return `<div class="project-tools card toolkit-card compact-toolkit"><div class="section-heading" style="margin:0"><div><p class="eyebrow">PROJECT TOOLKIT</p><h2>Choose a focused tool</h2><p class="muted-copy">Showing ${escapeHtml(normalizeProjectType(p.type).toLowerCase())} tools plus shared tools. Budget stays in Buy List / Budget.</p><p class="unit-preference-note">Preferred units: ${escapeHtml(unitSystemLabel())}</p><p class="shared-tool-note">Using your saved setup: ${escapeHtml(sharedSetup.projectType)} · ${escapeHtml(sharedSetup.patternGauge||"add gauge")} · ${escapeHtml(sharedPlan.widthCm?`${sharedPlan.widthCm} cm wide`:"add size")}</p></div><label class="link-toggle"><input id="link-project-tools" type="checkbox" ${linked ? "checked" : ""}> Save results to this project</label></div>
     <div class="toolkit-selector-panel">
       <div class="field"><label>Category</label><select id="project-tool-category">${categories.map(c=>`<option value="${c.id}" ${c.id===categoryId?"selected":""}>${escapeHtml(c.title)}</option>`).join("")}</select><small>${escapeHtml(cat.desc)}</small></div>
       <div class="field"><label>Tool</label><select id="project-tool-picker">${toolOptions.map(t=>`<option value="${t.id}" ${(categoryId==="rendering"&&t.id==="rendering-studio")||t.id===selected?"selected":""}>${escapeHtml(t.name)}</option>`).join("")}</select><small>${escapeHtml(projectToolModeCopy(p,def))}</small></div>
@@ -915,9 +1461,15 @@ function bindProjectDetail() {
   document.getElementById("flow-toggle")?.addEventListener("click",()=>{p.flowMode=!p.flowMode;saveProjectTouch(p);renderProjectDetail();});
   document.getElementById("edit-chart-legend")?.addEventListener("click",openChartLegendModal);
   document.getElementById("add-analysis-row")?.addEventListener("click",()=>openChartRowModal());
-  document.getElementById("run-cloud-analysis-local")?.addEventListener("click",()=>{const button=document.getElementById("run-cloud-analysis");if(button)button.click();else toast("Chart saved locally. Sign in and upload to cloud for AI analysis, or use Review cells and Add manual row.");});
+  document.getElementById("run-cloud-analysis-local")?.addEventListener("click",()=>{const button=document.getElementById("run-cloud-analysis");if(button)button.click();else document.getElementById("run-flow-recognition")?.click();});
   document.getElementById("review-chart-cells-local")?.addEventListener("click",()=>{const button=document.getElementById("load-cloud-cells");if(button)button.click();else openChartLegendModal();});
+  bindFlowModeReader(p);
   document.getElementById("generate-final-pattern")?.addEventListener("click",generateFinalPattern);
+  document.getElementById("review-pattern-source")?.addEventListener("click",()=>openPatternSourceReviewModal(p.patternSource?.originalFileBlobId||p.activeChartAssetId));
+  document.getElementById("save-pattern-source-text")?.addEventListener("click",()=>savePatternSourceText());
+  document.getElementById("pattern-prev-line")?.addEventListener("click",()=>movePatternLine(-1));
+  document.getElementById("pattern-next-line")?.addEventListener("click",()=>movePatternLine(1));
+  document.querySelectorAll("[data-pattern-collapse]").forEach(b=>b.onclick=()=>togglePatternWorkspacePanel(b.dataset.patternCollapse));
   document.querySelectorAll("[data-edit-analysis-row]").forEach(b=>b.onclick=()=>openChartRowModal(b.dataset.editAnalysisRow));
   document.querySelectorAll("[data-delete-analysis-row]").forEach(b=>b.onclick=()=>{p.chartAnalysis.rows=p.chartAnalysis.rows.filter(r=>r.id!==b.dataset.deleteAnalysisRow);saveState();renderProjectDetail();});
   document.getElementById("chart-rows")?.addEventListener("change", e => { p.chartRows = Math.max(1, +e.target.value || 0) || null; p.totalRows=p.chartRows||p.totalRows; saveProjectTouch(p); renderProjectDetail(); });
@@ -940,6 +1492,8 @@ function bindProjectDetail() {
   });
   document.getElementById("open-selected-project-tool")?.addEventListener("click",()=>document.getElementById("project-tool-content")?.scrollIntoView({behavior:"smooth",block:"start"}));
   document.getElementById("project-tool-select")?.addEventListener("change",e=>{currentProjectTool=e.target.value;p.projectTools.selectedTool=currentProjectTool;saveProjectTouch(p);renderProjectDetail();});
+  document.getElementById("save-fit-check")?.addEventListener("click",saveProjectFitCheck);
+  document.getElementById("open-fit-tools")?.addEventListener("click",openProjectFitTools);
   document.querySelectorAll("[data-toolkit-category]").forEach(b=>b.onclick=()=>{p.projectTools.view="category";p.projectTools.category=b.dataset.toolkitCategory;saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-open-project-tool]").forEach(b=>b.onclick=()=>{p.projectTools.view="tool";p.projectTools.selectedTool=b.dataset.openProjectTool;currentProjectTool=b.dataset.openProjectTool;saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-rendering-tab]").forEach(b=>b.onclick=()=>{p.projectTools.view="category";p.projectTools.category="rendering";p.projectTools.selectedTool=b.dataset.renderingTab;currentProjectTool=b.dataset.renderingTab;saveProjectTouch(p);renderProjectDetail();});
@@ -968,10 +1522,11 @@ function bindProjectDetail() {
   const uploadInline = document.getElementById("chart-upload-inline"); if(uploadInline)uploadInline.onchange=e=>handleChartFiles(e.target.files);
   document.querySelectorAll("[data-project-asset]").forEach(b=>b.onclick=()=>showProjectAsset(b.dataset.projectAsset));
   document.querySelectorAll("[data-delete-chart-asset]").forEach(b=>b.onclick=()=>removeProjectChartAsset(b.dataset.deleteChartAsset));
-  document.querySelectorAll("[data-annotation-tool]").forEach(b=>b.onclick=()=>{activeAnnotationTool=b.dataset.annotationTool;renderProjectDetail();});
-  document.getElementById("annotation-color")?.addEventListener("input",e=>{p.annotationColor=e.target.value;saveProjectTouch(p);});
-  document.getElementById("annotation-width")?.addEventListener("change",e=>{p.annotationWidth=Number(e.target.value)||4;saveProjectTouch(p);});
-  document.getElementById("row-mask-opacity")?.addEventListener("input",e=>{ensureRowMask(p);p.rowMask.opacity=Number(e.target.value)||.72;saveProjectTouch(p);paintRowMask(p);});
+  bindAnnotationToolbar();
+  syncAnnotationSettingsFromProject(p);
+  document.getElementById("annotation-color")?.addEventListener("input",e=>setAnnotationSetting("color",e.target.value));
+  document.getElementById("annotation-width")?.addEventListener("change",e=>setAnnotationSetting("size",Number(e.target.value)||4));
+  document.getElementById("annotation-opacity")?.addEventListener("input",e=>setAnnotationSetting("opacity",Number(e.target.value)||.72));
   document.getElementById("row-mask-color")?.addEventListener("input",e=>{ensureRowMask(p);p.rowMask.color=e.target.value;saveProjectTouch(p);paintRowMask(p);});
   document.getElementById("eraser-mode")?.addEventListener("change",e=>{p.eraserMode=e.target.value;saveProjectTouch(p);});
   document.getElementById("eraser-size")?.addEventListener("input",e=>{p.eraserSize=Number(e.target.value)||28;saveProjectTouch(p);});
@@ -988,6 +1543,174 @@ function bindProjectDetail() {
   document.getElementById("redo-annotation")?.addEventListener("click",redoAnnotation);
   document.getElementById("clear-annotations")?.addEventListener("click",()=>{pushAnnotationHistory(p);p.annotations=[];p.annotationRedo=[];saveProjectTouch(p);renderProjectDetail();});
   ["project-yarn","project-needles","project-gauge","project-sizing"].forEach(id=>document.getElementById(id)?.addEventListener("input",e=>{const key={ "project-yarn":"yarn","project-needles":"needles","project-gauge":"gauge","project-sizing":"sizingNotes"}[id];p[key]=e.target.value;saveProjectTouch(p);}));
+}
+function saveProjectFitCheck(){
+  const p=getProject();
+  const value=id=>document.getElementById(id)?.value?.trim()||"";
+  p.fitCheck={
+    bodyChest:value("fit-body-chest"),
+    finishedChest:value("fit-finished-chest"),
+    intendedEase:value("fit-intended-ease"),
+    targetLength:value("fit-target-length"),
+    currentLength:value("fit-current-length"),
+    feeling:value("fit-feeling"),
+    notes:value("fit-notes"),
+    updatedAt:new Date().toISOString()
+  };
+  saveProjectTouch(p);
+  renderProjectDetail();
+  toast("Fit Check saved.");
+}
+function openProjectFitTools(){
+  const p=getProject();
+  p.projectTools=p.projectTools||{};
+  p.projectTools.category="fit";
+  p.projectTools.selectedTool=isGarmentProject(ensureProjectSetup(p).projectType)?"garment":"swatch";
+  saveProjectTouch(p);
+  renderProjectDetail();
+  setTimeout(()=>document.getElementById("project-tool-content")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
+}
+function bindFlowModeReader(p){
+  const num=id=>Number(document.getElementById(id)?.value)||0;
+  const value=id=>document.getElementById(id)?.value?.trim()||"";
+  const setupForm=()=>normalizeProjectSetup({
+    craft:value("flow-setup-craft")||p.projectSetup?.craft,
+    projectType:value("flow-project-type")||p.projectSetup?.projectType||"Other",
+    patternGauge:value("flow-pattern-gauge"),
+    patternToolSize:value("flow-pattern-tool"),
+    patternYarnWeight:value("flow-pattern-yarn-weight"),
+    userToolSize:value("flow-user-tool"),
+    userYarnWeight:value("flow-user-yarn-weight"),
+    desiredSize:value("flow-desired-size")||p.projectSetup?.desiredSize||"M",
+    customSize:value("flow-custom-size")||p.projectSetup?.customSize||"",
+    patternLanguage:value("flow-pattern-language")||p.projectSetup?.patternLanguage||"abbreviations",
+    bodyMeasurements:{
+      chest:value("flow-body-chest")||p.projectSetup?.bodyMeasurements?.chest||"",
+      waist:value("flow-body-waist")||p.projectSetup?.bodyMeasurements?.waist||"",
+      hip:value("flow-body-hip")||p.projectSetup?.bodyMeasurements?.hip||"",
+      sleeve:value("flow-body-sleeve")||p.projectSetup?.bodyMeasurements?.sleeve||"",
+      body:value("flow-body-body")||p.projectSetup?.bodyMeasurements?.body||""
+    },
+    itemDetails:readFlowSetupDetails(p.projectSetup?.itemDetails||{}),
+    updatedAt:new Date().toISOString()
+  },p);
+  const saveFlowSetup=({render=true}={})=>{
+    const setup=setupForm();
+    const simpleSetup={
+      craft:setup.craft,
+      patternGauge:setup.patternGauge,
+      updatedAt:new Date().toISOString()
+    };
+    p.projectSetup=setup;
+    p.setup=simpleSetup;
+    p.type=setup.craft;
+    p.projectKind=setup.projectType;
+    p.gauge=setup.patternGauge;
+    p.needles=setup.userToolSize||setup.patternToolSize;
+    p.yarn=setup.userYarnWeight||setup.patternYarnWeight;
+    p.size=isGarmentProject(setup.projectType)?(setup.desiredSize==="Custom"?(setup.customSize||"Custom"):setup.desiredSize):setup.projectType;
+    p.sizingNotes=isGarmentProject(setup.projectType)?(setup.customSize||p.size||""):`${setup.projectType} setup saved`;
+    p.projectCalculations=calculateFlowProjectPlan(p,setup);
+    if(p.projectCalculations?.rowCount){p.chartRows=p.chartRows||p.projectCalculations.rowCount;p.totalRows=p.totalRows||p.projectCalculations.rowCount;}
+    saveProjectTouch(p);
+    if(render)renderProjectDetail();
+  };
+  const markFlowSetupUnsaved=()=>{
+    const status=document.getElementById("flow-setup-save-status");
+    if(status){status.textContent="Unsaved changes";status.classList.remove("saved");status.classList.add("unsaved");}
+  };
+  const chartSetup=()=>({
+    chartType:document.getElementById("flow-chart-type")?.value||p.type||"Unknown",
+    readingDirection:document.getElementById("flow-reading-direction")?.value||"auto",
+    rowDirection:document.getElementById("flow-row-direction")?.value||p.chartReader?.rowDirection||"alternating-rs-ws",
+    readAloud:{
+      voiceSpeed:Number(document.getElementById("flow-voice-speed")?.value)||p.chartReader?.readAloud?.voiceSpeed||1,
+      language:document.getElementById("flow-voice-language")?.value||p.chartReader?.readAloud?.language||"en",
+      mode:document.getElementById("flow-voice-mode")?.value||p.chartReader?.readAloud?.mode||"teaching"
+    },
+    crop:{
+      x:Math.max(0,Math.min(100,num("flow-crop-x"))),
+      y:Math.max(0,Math.min(100,num("flow-crop-y"))),
+      width:Math.max(1,Math.min(100,num("flow-crop-width")||100)),
+      height:Math.max(1,Math.min(100,num("flow-crop-height")||100))
+    }
+  });
+  const gridSetup=()=>({
+    x:Math.max(0,Math.min(100,num("flow-grid-x"))),
+    y:Math.max(0,Math.min(100,num("flow-grid-y"))),
+    width:Math.max(1,Math.min(100,num("flow-grid-width")||100)),
+    height:Math.max(1,Math.min(100,num("flow-grid-height")||100)),
+    rows:Math.max(0,Math.round(num("flow-grid-rows"))),
+    columns:Math.max(0,Math.round(num("flow-grid-columns")))
+  });
+  document.getElementById("save-flow-chart-setup")?.addEventListener("click",()=>{
+    chartImageService.prepare(p,chartSetup());
+    saveProjectTouch(p);renderProjectDetail();toast("Chart setup saved.");
+  });
+  document.getElementById("save-flow-project-setup")?.addEventListener("click",()=>{saveFlowSetup();toast("Project setup saved.");});
+  document.getElementById("flow-pattern-language")?.addEventListener("change",()=>{saveFlowSetup();toast("Pattern language saved.");});
+  document.getElementById("detect-flow-grid")?.addEventListener("click",()=>{
+    chartImageService.prepare(p,chartSetup());
+    gridDetectionService.detect(p);
+    saveProjectTouch(p);renderProjectDetail();toast("Chart guide prepared.");
+  });
+  document.getElementById("save-flow-grid")?.addEventListener("click",()=>{
+    chartImageService.prepare(p,chartSetup());
+    gridDetectionService.saveManual(p,gridSetup());
+    saveProjectTouch(p);renderProjectDetail();toast("Chart guide saved.");
+  });
+  ["flow-setup-craft","flow-project-type","flow-recipient","flow-scarf-style","flow-sock-type","flow-sock-sizing-mode","flow-bag-type","flow-blanket-type","flow-amigurumi-type","flow-safety-recipient","flow-shawl-shape","flow-shawl-fit"].forEach(id=>{
+    document.getElementById(id)?.addEventListener("change",()=>{saveFlowSetup();toast("Project setup updated.");});
+  });
+  ["flow-pattern-gauge","flow-pattern-tool","flow-pattern-yarn-weight","flow-user-tool","flow-user-yarn-weight","flow-custom-size","flow-body-chest","flow-body-waist","flow-body-hip","flow-body-sleeve","flow-body-body"].forEach(id=>{
+    document.getElementById(id)?.addEventListener("input",markFlowSetupUnsaved);
+  });
+  document.getElementById("run-flow-recognition")?.addEventListener("click",()=>{
+    chartImageService.prepare(p,chartSetup());
+    gridDetectionService.saveManual(p,gridSetup());
+    const results=symbolRecognitionService.recognize(p);
+    saveProjectTouch(p);renderProjectDetail();
+    toast(results.length ? "Chart check ready. Look over anything Yarncha marked for review." : "Add rows or a written row first, then try again.");
+  });
+  document.getElementById("flow-current-row")?.addEventListener("change",e=>{
+    chartImageService.prepare(p,chartSetup());
+    setMainRow(Math.max(0,Math.round(Number(e.target.value)||0)));
+  });
+  document.getElementById("flow-prev-row")?.addEventListener("click",()=>{chartImageService.prepare(p,chartSetup());setMainRow((Number(p.row)||0)-1);});
+  document.getElementById("flow-next-row")?.addEventListener("click",()=>{chartImageService.prepare(p,chartSetup());setMainRow((Number(p.row)||0)+1);});
+  document.getElementById("flow-row-direction")?.addEventListener("change",()=>{
+    chartImageService.prepare(p,chartSetup());
+    saveProjectTouch(p);renderProjectDetail();toast("Chart reading direction saved.");
+  });
+  document.getElementById("flow-align-mask")?.addEventListener("click",()=>{
+    chartImageService.prepare(p,chartSetup());
+    alignMaskToCurrentRow(p);
+    saveProjectTouch(p);renderProjectDetail();toast("Current row shown.");
+  });
+  document.getElementById("flow-cover-completed")?.addEventListener("click",()=>{
+    chartImageService.prepare(p,{...chartSetup(),coverCompletedRows:true});
+    coverCompletedRows();
+  });
+  document.getElementById("flow-clear-cover")?.addEventListener("click",()=>{
+    const reader=normalizeChartReaderConfig(p.chartReader,p);
+    p.chartReader=normalizeChartReaderConfig({...reader,coverCompletedRows:false},p);
+    p.rowMask=null;
+    saveProjectTouch(p);renderProjectDetail();toast("Finished-row cover removed.");
+  });
+  document.getElementById("flow-read-row")?.addEventListener("click",()=>{
+    chartImageService.prepare(p,chartSetup());
+    readHighlightedRowAloud(p);
+  });
+  document.getElementById("flow-read-play")?.addEventListener("click",()=>{
+    if("speechSynthesis" in window && speechSynthesis.paused)speechSynthesis.resume();
+    else readHighlightedRowAloud(p);
+  });
+  document.getElementById("flow-read-pause")?.addEventListener("click",()=>{"speechSynthesis" in window ? speechSynthesis.pause() : toast("Speech is not supported in this browser.");});
+  document.getElementById("flow-read-stop")?.addEventListener("click",()=>{"speechSynthesis" in window ? speechSynthesis.cancel() : toast("Speech is not supported in this browser.");});
+  ["flow-voice-speed","flow-voice-language","flow-voice-mode"].forEach(id=>document.getElementById(id)?.addEventListener("change",()=>{
+    chartImageService.prepare(p,chartSetup());
+    saveProjectTouch(p);renderProjectDetail();toast("Voice settings saved.");
+  }));
 }
 function saveProjectTouch(p){p.updatedAt=new Date().toISOString();saveState();}
 function setManualRowFromInput(){const p=getProject(),input=document.getElementById("manual-row-input");if(!input)return;const next=Math.max(0,Math.round(+input.value||0));setMainRow(next);}
@@ -1008,6 +1731,7 @@ function setMainRow(nextRow,{render=true}={}){
       if(delta>0)s.lastForwardMainRow=next;
     });
   }
+  if(normalizeChartReaderConfig(p.chartReader,p).coverCompletedRows)coverCompletedRows({render:false});
   saveProjectTouch(p);
   if(render)renderProjectDetail();
 }
@@ -1022,8 +1746,47 @@ function bindAnnotationStage(){
   stage.onpointercancel=endAnnotation;
   stage.onpointerleave=endAnnotation;
 }
+function bindAnnotationToolbar(){
+  const toolbar=document.querySelector(".annotation-toolbar");
+  if(!toolbar)return;
+  toolbar.onclick=event=>{
+    const button=event.target.closest?.("button[data-tool]");
+    if(!button||button.disabled)return;
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveAnnotationTool(button.dataset.tool);
+  };
+}
+function normalizeAnnotationTool(tool){
+  const value=tool==="rowMask"?"row-mask":tool;
+  return annotationTools.includes(value)?value:"touch";
+}
+function setActiveAnnotationTool(tool){
+  activeAnnotationTool=normalizeAnnotationTool(tool);
+  document.querySelectorAll(".annotation-toolbar button[data-tool]").forEach(button=>{
+    const active=button.dataset.tool===activeAnnotationTool;
+    button.classList.toggle("active",active);
+    button.setAttribute("aria-pressed",String(active));
+  });
+  document.getElementById("chart-stage")?.setAttribute("data-active-tool",activeAnnotationTool);
+  if(typeof window!=="undefined"&&location.hostname==="127.0.0.1")console.debug(`Annotation tool selected: ${activeAnnotationTool}`);
+}
+const selectAnnotationTool=setActiveAnnotationTool;
+function syncAnnotationSettingsFromProject(p=getProject()){
+  annotationSettings={color:p.annotationColor||"#d96572",size:Number(p.annotationWidth)||4,opacity:Number(p.annotationOpacity??p.rowMask?.opacity??.72)||.72};
+  setActiveAnnotationTool(activeAnnotationTool);
+}
+function setAnnotationSetting(name,value){
+  const p=getProject();
+  if(name==="color"){annotationSettings.color=value;p.annotationColor=value;if(p.rowMask)p.rowMask.color=value;}
+  if(name==="size"){annotationSettings.size=Number(value)||4;p.annotationWidth=annotationSettings.size;}
+  if(name==="opacity"){annotationSettings.opacity=Math.max(.2,Math.min(.95,Number(value)||.72));p.annotationOpacity=annotationSettings.opacity;if(p.rowMask)p.rowMask.opacity=annotationSettings.opacity;paintRowMask(p);}
+  saveProjectTouch(p);
+  if(typeof window!=="undefined"&&location.hostname==="127.0.0.1")console.debug(`Annotation setting changed: ${name}`);
+}
 function ensureRowMask(p=getProject()){
-  if(!p.rowMask)p.rowMask={type:"rowMask",x:50,y:420,width:900,height:90,color:"#c9a66b",opacity:.72,locked:false};
+  if(!p.rowMask)p.rowMask={type:"row-mask",x:50,y:420,width:900,height:90,color:annotationSettings.color||"#c9a66b",opacity:annotationSettings.opacity??.72,locked:false};
+  p.rowMask.type="row-mask";
   return p.rowMask;
 }
 function pointFromEvent(event){
@@ -1069,17 +1832,17 @@ function beginAnnotation(event){
     event.currentTarget.setPointerCapture?.(event.pointerId);
     return;
   }
-  if(activeAnnotationTool==="rowMask"){
+  if(activeAnnotationTool==="row-mask"){
     event.preventDefault();
     const m=ensureRowMask(p);
-    m.x=Math.max(0,Math.min(900,pt.x-450));m.y=Math.max(0,Math.min(940,pt.y-45));m.width=900;m.height=90;m.color=p.annotationColor||m.color;m.opacity=m.opacity??.72;
+    m.x=Math.max(0,Math.min(900,pt.x-450));m.y=Math.max(0,Math.min(940,pt.y-45));m.width=900;m.height=90;m.color=annotationSettings.color||p.annotationColor||m.color;m.opacity=annotationSettings.opacity??m.opacity??.72;
     saveProjectTouch(p);renderProjectDetail();return;
   }
   p.selectedAnnotationId=null;
   if(["pen","highlighter"].includes(activeAnnotationTool)){
     event.preventDefault();
     pushAnnotationHistory(p);
-    drawingStroke={id:`ann${Date.now()}`,tool:activeAnnotationTool,points:[pt],color:p.annotationColor||"#d96572",width:Number(p.annotationWidth)||4};
+    drawingStroke={id:`ann${Date.now()}`,tool:activeAnnotationTool,points:[pt],color:annotationSettings.color||p.annotationColor||"#d96572",width:Number(annotationSettings.size)||Number(p.annotationWidth)||4,opacity:activeAnnotationTool==="highlighter"?(annotationSettings.opacity??.38):1};
     p.annotations=[...(p.annotations||[]),drawingStroke];
     event.currentTarget.setPointerCapture?.(event.pointerId);
     scheduleAnnotationPaint(p);
@@ -1091,7 +1854,7 @@ function beginAnnotation(event){
     event.preventDefault();
     pushAnnotationHistory(p);
     const id=`ann${Date.now()}`;
-    const ann={id,tool:"arrow",x1:pt.x,y1:pt.y,x2:Math.min(1000,pt.x+140),y2:Math.max(0,pt.y-90),color:p.annotationColor||"#d96572",width:Number(p.annotationWidth)||6};
+    const ann={id,tool:"arrow",x1:pt.x,y1:pt.y,x2:Math.min(1000,pt.x+140),y2:Math.max(0,pt.y-90),color:annotationSettings.color||p.annotationColor||"#d96572",width:Number(annotationSettings.size)||Number(p.annotationWidth)||6,opacity:annotationSettings.opacity??1};
     p.annotations=[...(p.annotations||[]),ann];
     p.selectedAnnotationId=id;
     arrowDrag={id,mode:"end",start:pt,original:{...ann}};
@@ -1102,7 +1865,7 @@ function beginAnnotation(event){
     pushAnnotationHistory(p);
     const text=activeAnnotationTool==="text"?(prompt("Note text")||"Note"):"";
     const id=`ann${Date.now()}`;
-    p.annotations=[...(p.annotations||[]),{id,tool:activeAnnotationTool,x:pt.x,y:pt.y,text,color:p.annotationColor||"#d96572",width:Number(p.annotationWidth)||10}];
+    p.annotations=[...(p.annotations||[]),{id,tool:activeAnnotationTool,x:pt.x,y:pt.y,text,color:annotationSettings.color||p.annotationColor||"#d96572",width:Number(annotationSettings.size)||Number(p.annotationWidth)||10,opacity:annotationSettings.opacity??.9}];
     p.selectedAnnotationId=id;
     paintAnnotations(p);saveProjectTouch(p);
   }
@@ -1165,8 +1928,26 @@ function paintRowMask(p){
   if(!el||!m)return;
   el.style.left=`${m.x/10}%`;el.style.top=`${m.y/10}%`;el.style.width=`${m.width/10}%`;el.style.height=`${m.height/10}%`;el.style.setProperty("--mask-color",m.color||"#c9a66b");el.style.setProperty("--mask-opacity",m.opacity??.72);
 }
-function moveRowMask(direction){const p=getProject(),m=ensureRowMask(p),step=p.chartRows?1000/p.chartRows:36;m.y=Math.max(0,Math.min(1000-m.height,m.y+direction*step));saveProjectTouch(p);paintRowMask(p);}
-function coverCompletedRows(){const p=getProject(),m=ensureRowMask(p),rowHeight=p.chartRows?1000/p.chartRows:36;m.x=0;m.y=0;m.width=1000;m.height=Math.max(rowHeight,Math.min(1000,p.row*rowHeight));saveProjectTouch(p);renderProjectDetail();}
+function alignMaskToCurrentRow(p=getProject()){
+  const metrics=chartRowMetrics(p),m=ensureRowMask(p);
+  m.x=metrics.x*10;
+  m.y=Math.max(0,Math.min(1000,metrics.top*10));
+  m.width=metrics.width*10;
+  m.height=Math.max(24,metrics.rowHeight*10);
+  m.color=annotationSettings.color||p.annotationColor||m.color||"#c9a66b";
+  m.opacity=m.opacity??.48;
+  return m;
+}
+function moveRowMask(direction){const p=getProject(),m=ensureRowMask(p),step=chartRowMetrics(p).rowHeight*10;m.y=Math.max(0,Math.min(1000-m.height,m.y+direction*step));saveProjectTouch(p);paintRowMask(p);}
+function coverCompletedRows({render=true}={}){
+  const p=getProject(),metrics=chartRowMetrics(p),m=ensureRowMask(p),completedHeight=Math.max(0,(metrics.row-1)*metrics.rowHeight*10);
+  m.x=metrics.x*10;m.y=metrics.y*10;m.width=metrics.width*10;m.height=Math.min(1000-m.y,completedHeight);
+  m.color=annotationSettings.color||p.annotationColor||m.color||"#c9a66b";m.opacity=Math.max(.28,Math.min(.72,annotationSettings.opacity??m.opacity??.42));
+  const reader=normalizeChartReaderConfig(p.chartReader,p);
+  p.chartReader=normalizeChartReaderConfig({...reader,coverCompletedRows:true},p);
+  saveProjectTouch(p);
+  if(render)renderProjectDetail();else paintRowMask(p);
+}
 function paintAnnotations(p){
   const layer=document.querySelector("#chart-stage .annotation-layer");
   if(layer)layer.innerHTML=svgArrowDefs()+(p.annotations||[]).map(a=>annotationSvg(a,p.selectedAnnotationId===a.id)).join("");
@@ -1229,8 +2010,12 @@ function handleTouchRead(pt){
   openTouchReadModal(rowNumber,column,row);
 }
 function openTouchReadModal(rowNumber,column,row=null){
+<<<<<<< HEAD
   const p=getProject(),guess=row?.sequence||"",suggestion=learnedSymbolSuggestion({craftType:p.type,originalAiGuess:guess,sequence:guess});
   openModal(`<p class="eyebrow">TOUCH TO READ</p><h2>${row?.status==="checked"?"Checked row":"Needs review"}</h2><p class="muted-copy">Touched ${column?`row ${rowNumber}, column ${column}`:`row ${rowNumber}`}. Correct the row or symbol, then save it for future reads.</p>${learningSuggestionHtml({craftType:p.type,originalAiGuess:guess,sequence:guess})}<div class="form-grid"><div class="field"><label>Row</label><input id="touch-row-number" type="number" min="1" value="${rowNumber}"></div><div class="field"><label>Column / symbol</label><input id="touch-column" value="${column||""}" placeholder="Optional"></div><div class="field"><label>Original AI guess</label><input id="touch-original-guess" value="${escapeHtml(guess)}" placeholder="Needs review"></div><div class="field"><label>Abbreviation</label><input id="touch-abbreviation" value="${escapeHtml(suggestion?.abbreviation||"")}" placeholder="e.g. YO, SC, k2tog"></div><div class="field full"><label>What should Yarncha read?</label><textarea id="touch-sequence" rows="4" placeholder="e.g. k2, yo, ssk, repeat">${escapeHtml(suggestion?.correctedSymbolName||row?.sequence||"")}</textarea></div><div class="field"><label>Verification</label><select id="touch-status"><option value="uncertain" ${row?.status!=="checked"?"selected":""}>Needs review</option><option value="checked" ${row?.status==="checked"?"selected":""}>Checked by me</option></select></div><div class="field"><label>Learning confidence</label><input id="touch-learning-confidence" type="number" min="0" max="100" value="${suggestion?.matchConfidence||70}"></div><div class="field full"><label>Learning notes</label><input id="touch-learning-notes" value="${escapeHtml(suggestion?.notes||"")}" placeholder="What made this symbol clear?"></div></div><label class="check-row"><input id="save-touch-learning" type="checkbox" checked><span>Save this correction to my symbol learning library?</span></label><div class="privacy-note">Local learning only: Yarncha remembers your corrections on this device. This does not retrain the AI model.</div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-touch-read">Save correction</button></div>`);
+=======
+  openModal(`<p class="eyebrow">TOUCH TO READ</p><h2>${row?.status==="checked"?"Checked row":"Needs review"}</h2><p class="muted-copy">Touched ${column?`row ${rowNumber}, column ${column}`:`row ${rowNumber}`}. Correct the row or symbol, then save it for future reads.</p><div class="form-grid"><div class="field"><label>Row</label><input id="touch-row-number" type="number" min="1" value="${rowNumber}"></div><div class="field"><label>Column / symbol</label><input id="touch-column" value="${column||""}" placeholder="Optional"></div><div class="field full"><label>What should Yarncha read?</label><textarea id="touch-sequence" rows="4" placeholder="e.g. k2, yo, ssk, repeat">${escapeHtml(row?.sequence||"")}</textarea></div><div class="field"><label>Verification</label><select id="touch-status"><option value="uncertain" ${row?.status!=="checked"?"selected":""}>Needs review</option><option value="checked" ${row?.status==="checked"?"selected":""}>Checked by me</option></select></div><div class="field full"><label>Correction destination</label><select id="touch-correction-destination"><option value="flow">Save only as Flow Mode correction</option><option value="database">Save to Symbol Database</option></select></div></div><label class="check-row"><input id="touch-learn-toggle" type="checkbox" checked><span>Learn from this symbol</span></label><p class="privacy-note">Yarncha will remember this symbol for future chart reading. Yarncha remembers your corrections on this device.</p><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-touch-read">Save correction</button></div>`);
+>>>>>>> feature/flowmode
   document.getElementById("save-touch-read").onclick=()=>{
     const p=getProject(),a=p.chartAnalysis||(p.chartAnalysis={rows:[],legend:"",detectedRows:null,summary:"Manual touch review started."});
     a.rows ||= [];
@@ -1240,9 +2025,13 @@ function openTouchReadModal(rowNumber,column,row=null){
     if(existing)Object.assign(existing,values);else a.rows.push({id:`analysis-row-${Date.now()}`,...values});
     a.rows.sort((x,y)=>x.number-y.number);
     if(!p.chartRows&&a.detectedRows)p.chartRows=a.detectedRows;
+<<<<<<< HEAD
     if(document.getElementById("save-touch-learning").checked){
       saveLearningRecord({...currentChartLearningRef(),originalAiGuess:document.getElementById("touch-original-guess").value.trim()||"Needs review",correctedSymbolName:sequence,abbreviation:document.getElementById("touch-abbreviation").value.trim(),craftType:p.type,notes:document.getElementById("touch-learning-notes").value.trim(),confidence:+document.getElementById("touch-learning-confidence").value||70,source:"touch-to-read"});
     }
+=======
+    if(document.getElementById("touch-learn-toggle")?.checked)saveFlowModeCorrection({guess:document.getElementById("touch-column").value.trim(),corrected:sequence,craft:p.type,saveToDatabase:document.getElementById("touch-correction-destination").value==="database",source:"touch-to-read",chartType:p.chartReader?.chartType||p.type,readingDirection:p.chartReader?.readingDirection||"",row:rowNumber,column:column||null});
+>>>>>>> feature/flowmode
     saveProjectTouch(p);closeModal();renderProjectDetail();toast("Touch reading saved.");
   };
 }
@@ -1253,7 +2042,71 @@ function buildRowGuidance(p) {
   const linked = p.subCounters.filter(s=>s.linked).map(s=>`${s.name} is at repeat ${s.count}, advancing every ${s.every} rows.`).join(" ");
   const marker = p.markers.filter(m=>m.row===p.row).map(m=>`${m.color} marker here.`).join(" ");
   const rowText=analysed?`${analysed.side||"Side uncertain"}. ${analysed.sequence||"Sequence uncertain"}. Stitch count ${analysed.stitchCount||"uncertain"}. ${analysed.shaping||""}`:"No checked written instruction is saved for this row.";
-  return `Row ${p.row}. ${rowText} ${linked} ${marker} ${p.notes ? `Project note: ${p.notes}` : "Check the highlighted chart row."}`.trim();
+  return `${chartReadingContext(p)} ${rowText} ${linked} ${marker} ${p.notes ? `Project note: ${p.notes}` : "Check the highlighted chart row."}`.trim();
+}
+function chartReadingContext(p){
+  const reader=normalizeChartReaderConfig(p.chartReader,p),metrics=chartRowMetrics(p),direction={ "left-to-right":"left to right", "right-to-left":"right to left", "alternating-rs-ws":"alternating rows", round:"in the round" }[reader.rowDirection]||"alternating rows";
+  return `You are following row ${p.row}${metrics.rows?` of ${metrics.rows}`:""}. Read this chart ${direction}.`;
+}
+function highlightedRowAnalysis(p=getProject()){
+  return p.chartAnalysis?.rows?.find(r=>Number(r.number)===Number(p.row))||null;
+}
+function highlightedRowRecognition(p=getProject()){
+  return normalizeChartReaderConfig(p.chartReader,p).recognitionResults.filter(cell=>Number(cell.row)===Number(p.row));
+}
+function highlightedRowConfidence(p=getProject()){
+  const analysed=highlightedRowAnalysis(p);
+  if(analysed?.status==="checked")return "High";
+  const cells=highlightedRowRecognition(p);
+  if(cells.length&&cells.every(cell=>cell.confidenceLabel==="High"||Number(cell.confidence)>=78))return "High";
+  if(cells.some(cell=>cell.confidenceLabel==="Low"||Number(cell.confidence)<55)||analysed?.status==="uncertain")return "Low";
+  return "Low";
+}
+function readHighlightedRowAloud(p=getProject()){
+  const reader=normalizeChartReaderConfig(p.chartReader,p);
+  p.chartReader=reader;saveProjectTouch(p);
+  const confidence=highlightedRowConfidence(p);
+  if(confidence!=="High"){
+    return speakFlowRow("Please check this row before Yarncha reads it aloud.", reader);
+  }
+  speakFlowRow(buildHighlightedRowSpeech(p,reader), reader);
+}
+function buildHighlightedRowSpeech(p=getProject(),reader=normalizeChartReaderConfig(p.chartReader,p)){
+  const analysed=highlightedRowAnalysis(p),side=analysed?.side||inferRowSide(p,reader),sequence=analysed?.sequence||highlightedRowRecognition(p).map(cell=>cell.candidates?.[0]?.abbreviation||cell.detectedSymbol||"unknown").join(" ");
+  const spoken=sequenceToSpokenInstructions(sequence,reader,p.type);
+  return flowLocalizedSpeech(`Row ${p.row}, ${side}. ${spoken}`, reader);
+}
+function inferRowSide(p,reader){
+  if(reader.rowDirection==="round")return "round";
+  if(reader.rowDirection==="alternating-rs-ws")return Number(p.row)%2?"right side":"wrong side";
+  return reader.rowDirection.replace(/-/g," ");
+}
+function sequenceToSpokenInstructions(sequence="",reader=normalizeChartReaderConfig(getProject().chartReader,getProject()),craft="Knitting"){
+  const mode=reader.readAloud.mode;
+  return String(sequence).split(/[\s,;]+/).filter(Boolean).map(token=>spokenSymbolPhrase(token,{mode,craft})).join(", ") || "No checked written instruction is saved for this row.";
+}
+function spokenSymbolPhrase(token,{mode="teaching",craft="Knitting"}={}){
+  const clean=String(token||"").trim(),lower=clean.toLowerCase(),match=matchSymbolKnowledge({guess:clean,craft});
+  const common={k:"knit",knit:"knit",p:"purl",purl:"purl",yo:"yarn over",ssk:"slip slip knit",k2tog:"knit 2 together",p2tog:"purl 2 together",ch:"chain",sc:"single crochet",dc:"double crochet",hdc:"half double crochet",tr:"treble crochet",slst:"slip stitch",sl:"slip stitch",inc:"increase",dec:"decrease",rep:"repeat",repeat:"repeat"};
+  const name=match?.nameEn||common[lower]||clean;
+  const abbr=match?.abbreviation||clean;
+  if(mode==="short")return abbr;
+  if(mode==="beginner"&&match?.beginnerExplanation)return `${name}, ${match.beginnerExplanation}`;
+  if(/\d/.test(clean)&&!match)return clean.replace(/([a-zA-Z]+)(\d+)/g,(_,a,n)=>`${common[a.toLowerCase()]||a} ${n}`);
+  return name;
+}
+function flowLocalizedSpeech(text,reader){
+  if(reader.readAloud.language==="zh-Hant")return text.replace(/^Row /,"第 ").replace(/, /," 行，").replace(/right side/,"正面").replace(/wrong side/,"反面").replace(/round/,"圈").replace(/repeat/g,"重複").replace(/knit/g,"織下針").replace(/purl/g,"織上針").replace(/yarn over/g,"掛針");
+  if(reader.readAloud.language==="yue")return text.replace(/^Row /,"第 ").replace(/, /," 行，").replace(/right side/,"正面").replace(/wrong side/,"反面").replace(/round/,"圈").replace(/repeat/g,"重複").replace(/knit/g,"織低針").replace(/purl/g,"織高針").replace(/yarn over/g,"掛針");
+  return text;
+}
+function speakFlowRow(text,reader=normalizeChartReaderConfig(getProject().chartReader,getProject())){
+  if (!("speechSynthesis" in window)) return toast("Speech is not supported in this browser.");
+  speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(text);
+  utterance.rate=reader.readAloud.voiceSpeed;
+  utterance.lang=reader.readAloud.language==="en"?"en-US":"zh-HK";
+  speechSynthesis.speak(utterance);
 }
 function calculatorValueList(data={}){
   return Object.entries(data).map(([key,value])=>`<div><span>${escapeHtml(key.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase()))}</span><strong>${escapeHtml(typeof value==="object"?JSON.stringify(value):String(value))}</strong></div>`).join("");
@@ -1560,7 +2413,12 @@ function askProjectAssistant() {
   p.assistantMessages.push({role:"user",text:question});
   const reference=findPdfReference(`${p.pdfReference||""}\n\n${techniqueKnowledgeText()}`,question,p.row);
   const calculation=/group|stitch|chain|panel|组|针|锁针|花样|グループ|目|鎖編み|パネル/i.test(question)&&p.patternPlan?.result?` Saved checked calculation: ${p.patternPlan.result}`:"";
-  const chinese=/[\u3400-\u9fff]|唔|嘅|咩|點|係|喺|冇|嗰|佢/.test(question),context=chinese?`你目前在第 ${p.row} 行${p.chartRows?`，圖表共有 ${p.chartRows} 行`:""}。`:`You are on row ${p.row}${p.chartRows?` of a ${p.chartRows}-row chart`:""}. `;
+  const chartContext=chartReadingContext(p),rowQuestion=/what row|which row|what.*next|do next|where am i|row am i|下一|下一步|第幾|做咩|做什么/i.test(question);
+  const chinese=/[\u3400-\u9fff]|唔|嘅|咩|點|係|喺|冇|嗰|佢/.test(question),context=chinese?`你目前在第 ${p.row} 行${p.chartRows?`，圖表共有 ${p.chartRows} 行`:""}。${chartContext} `:`You are on row ${p.row}${p.chartRows?` of a ${p.chartRows}-row chart`:""}. ${chartContext} `;
+  if(rowQuestion){
+    const guidance=buildRowGuidance(p);
+    p.assistantMessages.push({role:"assistant",text:chinese?`${context}${guidance}`:`${context}${guidance}`}); saveState(); renderProjectDetail(); return;
+  }
   const answer=reference ? (chinese?`${context}我在已上載檔案的文字中找到：「${reference}」${calculation?` 已儲存的核對計算：${p.patternPlan.result}`:""} 請同時對照目前反白的圖表行及你的專案筆記。`:`${context}I found this in the uploaded PDF text: “${reference}”${calculation} Check it against the highlighted chart row and your project notes.`)
     : /repeat|重複|重复|循環|循环|リピート/i.test(question) ? (chinese?`${context}請檢查重複段落的起點、終點及已連結的副計數器。已擷取文字中暫時找不到相符指示。`:`${context}Check the repeat boundary and your linked sub-counters. I could not find a matching instruction in the extracted PDF text.`)
     : (chinese?`${context}${calculation?`已儲存的核對計算：${p.patternPlan.result}`:"我已儲存這條問題，但在已擷取文字中找不到接近的內容。"} 純圖像符號仍須在 ChatGPT 中作視覺分析和人工核對。`:`${context}${calculation||"I saved this question, but could not find a close match in the extracted PDF text."} Image-only symbols still need visual analysis in ChatGPT.`);
@@ -1616,32 +2474,198 @@ function handleChart(file) {
 async function handleChartFiles(fileList){
   const files=[...fileList];if(!files.length)return;
   const p=getProject(),total=files.reduce((s,f)=>s+f.size,0);if(total>80_000_000)return toast("Please keep each selection below 80 MB.");
-  p.readerStatus=`Saving ${files.length} chart file(s) locally…`;saveState();renderProjectDetail();
+  p.readerStatus=`Saving ${files.length} pattern file(s) locally…`;saveState();renderProjectDetail();
   const allText=[];
+  let lastSource=null;
   for(const file of files){
     const id=`asset${Date.now()}${Math.random().toString(16).slice(2)}`;await putAsset(id,file);p.attachments.push({id,name:file.name,type:file.type,size:file.size});
     p.activeChartAssetId=id;
+    chartImageService.prepare(p,{chartType:p.chartReader?.chartType||p.type||"Unknown",readingDirection:p.chartReader?.readingDirection||"auto"});
     window.YarnchaCloud?.queueChartUpload?.(p.id,id,file);
     if(!p.chart){p.chart={name:file.name,type:file.type,data:null,assetId:id};}
-    let text="";if(file.type==="application/pdf")text=await extractPdfText(file);
-    const ocr=await ocrFile(file);const combined=[text,ocr].filter(Boolean).join("\n");
-    if(combined){p.pdfReference=`${p.pdfReference}\n\nSOURCE: ${file.name}\n${combined}`.trim();allText.push(combined);}
+    p.patternSource=normalizePatternSource({type:"none",fileType:fileTypeForPattern(file),originalFileBlobId:id,ocrStatus:"scanning",workspaceMode:"og-visual"},p);
+    saveProjectTouch(p);
+    const scan=await scanPatternFile(file,p.patternSource.scanSettings);
+    const sourceType=classifyPatternSource(scan.text,file,scan.status);
+    lastSource=normalizePatternSource({
+      type:sourceType,
+      fileType:fileTypeForPattern(file),
+      originalFileBlobId:id,
+      extractedText:scan.text,
+      ocrConfidence:scan.confidence,
+      ocrStatus:scan.status,
+      selectedPages:scan.pages.map(page=>page.pageNumber).filter(Boolean),
+      pageModes:Object.fromEntries(scan.pages.map(page=>[page.pageNumber,sourceType])),
+      workspaceMode:workspaceModeForPatternType(sourceType),
+      scanSettings:p.patternSource.scanSettings
+    },p);
+    p.patternSource=lastSource;
+    if(scan.text){allText.push(scan.text);}
   }
+  const reviewedText=p.patternSource?.userCorrectedText||p.patternSource?.extractedText||"";
+  if(reviewedText)p.pdfReference=`${p.pdfReference}\n\nSOURCE: ${p.attachments.at(-1)?.name||"Pattern upload"}\n${reviewedText}`.trim();
   p.chartAnalysis=analysePatternText(allText.join("\n"));
   if(!p.chartRows&&p.chartAnalysis.detectedRows)p.chartRows=p.chartAnalysis.detectedRows;
-  p.readerStatus=allText.length ? `Chart saved. Text reference found; please review rows manually.` : `Chart saved. Manual Reading Mode is recommended.`;
+  p.readerStatus=allText.length ? `Pattern saved. Please review the scanned text before using it.` : `Pattern saved. Manual Reading Mode is still available.`;
   p.activeTab="chart";saveProjectTouch(p);renderProjectDetail();showProjectAsset(p.activeChartAssetId||p.attachments.at(-1).id);toast("Chart saved for Reading Mode");
+  if(lastSource)setTimeout(()=>openPatternSourceReviewModal(lastSource.originalFileBlobId),150);
+}
+function fileTypeForPattern(file={}){
+  const type=String(file.type||"").toLowerCase(),name=String(file.name||"").toLowerCase();
+  if(type.includes("pdf")||name.endsWith(".pdf"))return "pdf";
+  if(type.startsWith("image/")||/\.(png|jpe?g|webp|gif)$/i.test(name))return "image";
+  if(name.endsWith(".docx"))return "docx";
+  if(type.startsWith("text/")||name.endsWith(".txt"))return "text";
+  return "none";
+}
+function workspaceModeForPatternType(type){
+  return type==="written-pattern"?"reading-text":type==="mixed"?"mixed":type==="visual-chart"?"og-visual":"og-visual";
+}
+function classifyPatternSource(text="",file={},status="success"){
+  if(status==="failed")return "visual-chart";
+  const clean=String(text||"").trim();
+  if(!clean)return "visual-chart";
+  const rowLines=(clean.match(/(?:^|\n)\s*(?:row|round|rnd|第)?\s*\d{1,4}\s*(?:[:：.)]|行|段|圈)/gim)||[]).length;
+  const words=(clean.match(/[A-Za-z\u3400-\u9fff]{2,}/g)||[]).length;
+  if(words>90||rowLines>=5)return "written-pattern";
+  if(words>18||rowLines>=2)return "mixed";
+  return "visual-chart";
 }
 function analysePatternText(text){
   const clean=text.replace(/\s+/g," ").trim(),rowMatches=[...clean.matchAll(/(?:row|round|rnd|第)\s*([0-9]{1,4})(?:\s*(?:行|段|圈|段目))?/gi)].map(m=>+m[1]).filter(n=>n>0&&n<2000);
   const lineMatches=[...text.matchAll(/(?:^|\n)\s*(?:row|round|rnd|第)?\s*([0-9]{1,4})\s*(?:[:：.)]|行|段|圈|段目)\s*([^\n]{3,180})/gim)];
   const detectedRows=rowMatches.length?Math.max(...rowMatches):null;
   const rowSamples=lineMatches.slice(0,10).map(m=>`Row ${m[1]}: ${m[2].trim()}`);
-  const rows=lineMatches.slice(0,200).map((m,index)=>({id:`analysis-row-${Date.now()}-${index}`,number:+m[1],side:+m[1]%2?"Right side (inferred)":"Wrong side (inferred)",sequence:m[2].trim(),stitchCount:null,shaping:/inc|increase|加针|加針|増し目/i.test(m[2])?"Possible increase":/dec|decrease|减针|減針|減らし目/i.test(m[2])?"Possible decrease":"No increase/decrease detected",status:"uncertain"}));
+  const rows=lineMatches.slice(0,200).map((m,index)=>{const sequence=m[2].trim(),tokens=sequence.split(/[\s,;]+/).slice(0,8),matches=tokens.map(token=>matchSymbolKnowledge({guess:token})).filter(Boolean);return{id:`analysis-row-${Date.now()}-${index}`,number:+m[1],side:+m[1]%2?"Right side (inferred)":"Wrong side (inferred)",sequence,stitchCount:null,shaping:/inc|increase|加针|加針|増し目/i.test(m[2])?"Possible increase":/dec|decrease|减针|減針|減らし目/i.test(m[2])?"Possible decrease":"No increase/decrease detected",status:"uncertain",symbolSuggestions:matches.map(item=>({symbolId:item.id,nameEn:item.nameEn,abbreviation:item.abbreviation,source:item.source||"symbol-database",verificationStatus:item.verificationStatus,confidence:item.confidence||70}))};});
   const languages=[/[\u3040-\u30ff]/.test(text)?"Japanese":null,/[\u3400-\u9fff]/.test(text)?"Chinese":null,/[A-Za-z]{4}/.test(text)?"English":null].filter(Boolean);
   const repeats=(clean.match(/repeat|重複|重复|繰り返し|リピート/gi)||[]).length;
-  return {detectedRows,rowSamples,rows,legend:"",columns:null,gridStatus:"Row numbering needs manual confirmation.",summary:`Confidence: ${rowSamples.length?"Medium":"Low"}. Chart file saved. ${rowSamples.length?"Some row-like text was found, but please review it manually.":"Row numbering is unclear."} Recommendation: use OG Chart Mode and verify rows yourself.`};
+  const suggestionCount=rows.reduce((sum,row)=>sum+(row.symbolSuggestions?.length||0),0);
+  return {detectedRows,rowSamples,rows,legend:"",columns:null,gridStatus:"Row numbering needs manual confirmation.",summary:`Confidence: ${rowSamples.length?"Medium":"Low"}. Chart file saved. ${suggestionCount} symbol suggestion${suggestionCount===1?"":"s"} came from Yarncha's local symbol knowledge. ${rowSamples.length?"Some row-like text was found, but please review it manually.":"Row numbering is unclear."} Recommendation: use OG Chart Mode and verify rows yourself.`};
 }
+const chartImageService={
+  prepare(project,updates={}){
+    const reader=normalizeChartReaderConfig(project.chartReader,project);
+    const activeAssetId=project.activeChartAssetId||project.chart?.assetId||project.attachments?.[0]?.id||"";
+    project.chartReader=normalizeChartReaderConfig({
+      ...reader,
+      ...updates,
+      activeAssetId,
+      updatedAt:new Date().toISOString()
+    },project);
+    return project.chartReader;
+  }
+};
+const gridDetectionService={
+  detect(project){
+    const reader=normalizeChartReaderConfig(project.chartReader,project);
+    const rows=Number(project.chartAnalysis?.detectedRows)||Number(project.chartRows)||Number(project.totalRows)||reader.grid.rows||0;
+    const columns=Number(project.chartAnalysis?.columns)||reader.grid.columns||inferColumnCount(project);
+    const rowNumbers=rows?Array.from({length:Math.min(rows,300)},(_,i)=>i+1):[];
+    const columnNumbers=columns?Array.from({length:Math.min(columns,200)},(_,i)=>i+1):[];
+    const status=rows&&columns?"Grid draft detected from row/column hints. Please review the crop and adjust manually if cells do not line up.":"Auto-detection needs user confirmation. Add row and column counts manually.";
+    project.chartReader=normalizeChartReaderConfig({...reader,grid:{...reader.grid,rows,columns,rowNumbers,columnNumbers,manualAdjusted:false,status},updatedAt:new Date().toISOString()},project);
+    if(!project.chartAnalysis)project.chartAnalysis={rows:[],legend:"",detectedRows:rows||null,columns:columns||null,gridStatus:status,summary:"Flow Mode grid preparation started."};
+    project.chartAnalysis.detectedRows=rows||project.chartAnalysis.detectedRows;
+    project.chartAnalysis.columns=columns||project.chartAnalysis.columns;
+    project.chartAnalysis.gridStatus=status;
+    return project.chartReader.grid;
+  },
+  saveManual(project,gridUpdates={}){
+    const reader=normalizeChartReaderConfig(project.chartReader,project),grid={...reader.grid,...gridUpdates,manualAdjusted:true,status:"Manual grid saved. Yarncha will use these rows and columns for review."};
+    grid.rowNumbers=grid.rows?Array.from({length:Math.min(grid.rows,300)},(_,i)=>i+1):[];
+    grid.columnNumbers=grid.columns?Array.from({length:Math.min(grid.columns,200)},(_,i)=>i+1):[];
+    project.chartReader=normalizeChartReaderConfig({...reader,grid,updatedAt:new Date().toISOString()},project);
+    return project.chartReader.grid;
+  }
+};
+const symbolRecognitionService={
+  recognize(project){
+    const reader=normalizeChartReaderConfig(project.chartReader,project);
+    const cells=buildChartCells(project,reader).slice(0,80);
+    const results=cells.map(cell=>{
+      const candidates=rankSymbolCandidates(cell,reader.chartType).slice(0,3);
+      const best=candidates[0]||{nameEn:"Needs user confirmation",abbreviation:cell.detectedSymbol||"",confidence:20,confidenceLabel:"Low",source:"unmatched"};
+      return {
+        ...cell,
+        candidates,
+        confidence:best.confidence,
+        confidenceLabel:confidenceLabel(best.confidence),
+        source:best.source||"symbol knowledge",
+        explanation:chartReasoningService.explainCandidate({candidate:best,cell,chartType:reader.chartType,readingDirection:reader.readingDirection})
+      };
+    });
+    project.chartReader=normalizeChartReaderConfig({...reader,recognitionResults:results,lastExplanation:results[0]?.explanation||"",updatedAt:new Date().toISOString()},project);
+    project.chartAnalysis=project.chartAnalysis||{rows:[],legend:"",detectedRows:reader.grid.rows||null,columns:reader.grid.columns||null,gridStatus:"Recognition draft created.",summary:"Flow Mode recognition draft needs review."};
+    project.chartAnalysis.summary=`Confidence: ${results.some(r=>r.confidenceLabel==="High")?"Medium":"Low"}. ${results.length} chart cell${results.length===1?"":"s"} prepared for review. Needs user confirmation before read aloud or final pattern output.`;
+    return results;
+  }
+};
+const chartReasoningService={
+  explainCandidate({candidate={},cell={},chartType="Unknown",readingDirection="auto"}={}){
+    const notes=[];
+    if(candidate.source)notes.push(`source: ${candidate.source}`);
+    if(candidate.verificationStatus==="Manually Verified")notes.push("you manually verified this symbol before");
+    if(candidate.symbolImageAsset)notes.push("it has an uploaded symbol picture reference");
+    if(chartType==="Knitting")notes.push(Number(cell.row)%2?"RS row rule checked":"WS row rule checked");
+    if(chartType==="Crochet")notes.push(readingDirection==="round"?"crochet round direction checked":"crochet chart direction checked");
+    if(chartType==="Tunisian Crochet")notes.push("Tunisian forward/return pass context checked");
+    if(/no\s*-?\s*stitch|empty/i.test(candidate.nameEn||candidate.abbreviation||""))notes.push("empty/no-stitch cell rule checked");
+    if(/inc|increase|dec|decrease|ssk|k2tog/i.test(candidate.nameEn||candidate.abbreviation||""))notes.push("stitch-count change rule checked");
+    if(/cable|cross/i.test(candidate.nameEn||candidate.abbreviation||""))notes.push("cable symbols may span multiple stitches");
+    if(!candidate.nameEn||candidate.confidence<55)notes.push("Needs user confirmation.");
+    return `Best local match: ${candidate.nameEn||candidate.abbreviation||"unknown"}. ${notes.join(" · ") || "Yarncha needs your review."}`;
+  }
+};
+const userLearningService={
+  rememberCorrection({project,cell={},corrected="",abbreviation="",saveToDatabase=false}={}){
+    return saveFlowModeCorrection({
+      guess:cell.detectedSymbol||cell.candidates?.[0]?.abbreviation||"",
+      corrected:corrected||abbreviation,
+      craft:project?.type||"Shared",
+      saveToDatabase,
+      source:"flow-mode-correction",
+      chartType:project?.chartReader?.chartType,
+      row:cell.row,
+      column:cell.column,
+      detectedSymbolImageAsset:cell.symbolImageAsset||"",
+      notes:"Saved from Flow Mode cell review. Yarncha remembers your corrections on this device."
+    });
+  }
+};
+function inferColumnCount(project){
+  const samples=(project.chartAnalysis?.rows||[]).map(row=>String(row.sequence||"").split(/[\s,;]+/).filter(Boolean).length).filter(Boolean);
+  return samples.length?Math.max(...samples.slice(0,20)):0;
+}
+function buildChartCells(project,reader){
+  const rows=project.chartAnalysis?.rows||[];
+  if(rows.length){
+    return rows.flatMap(row=>String(row.sequence||"").split(/[\s,;]+/).filter(Boolean).slice(0,Math.max(1,reader.grid.columns||12)).map((token,index)=>({
+      id:`cell-${row.id}-${index+1}`,
+      row:Number(row.number)||1,
+      column:index+1,
+      detectedSymbol:token,
+      symbolImageRef:"text/OCR token",
+      rowContext:row.sequence||"",
+      chartType:reader.chartType
+    })));
+  }
+  const rowsToBuild=Math.min(Number(reader.grid.rows)||1,8),colsToBuild=Math.min(Number(reader.grid.columns)||1,8);
+  return Array.from({length:rowsToBuild*colsToBuild},(_,index)=>({id:`cell-draft-${index}`,row:Math.floor(index/colsToBuild)+1,column:index%colsToBuild+1,detectedSymbol:"",symbolImageRef:"manual cell review needed",chartType:reader.chartType}));
+}
+function rankSymbolCandidates(cell,chartType){
+  const guess=String(cell.detectedSymbol||"").toLowerCase();
+  const craft=chartType==="Unknown"?"":chartType;
+  return symbolKnowledgeLayer().map(item=>{
+    const fields=[item.abbreviation,item.visualSymbol,item.nameEn,item.nameZh,item.symbolType].filter(Boolean).map(value=>String(value).toLowerCase());
+    const exact=guess&&fields.some(value=>value===guess);
+    const partial=guess&&fields.some(value=>value.includes(guess)||guess.includes(value));
+    const craftBoost=!craft||item.craft===craft||item.craft==="Shared"?10:-8;
+    const sourceBoost=item.verificationStatus==="Manually Verified"?24:item.symbolImageAsset?18:item.source&&item.source!=="symbol-database-edit"?14:item.verificationStatus==="Confirmed"?8:0;
+    const confidence=Math.max(18,Math.min(98,(exact?64:partial?46:24)+craftBoost+sourceBoost));
+    return {...item,confidence,confidenceLabel:confidenceLabel(confidence)};
+  }).filter(item=>guess?item.confidence>=35:true).sort((a,b)=>b.confidence-a.confidence).slice(0,3);
+}
+function confidenceLabel(confidence){return confidence>=78?"High":confidence>=55?"Medium":"Low";}
 const chartSymbolReference={
   knitting:["— knit stitch (上針 in the supplied Chinese reference)","| purl stitch (下針)","○ yarn over (鏤空針)","twisted stitch / knit through back loop","right- and left-leaning 2-stitch decreases","centred double decrease","right- and left-leaning increases","cable crossings over 2–5 stitches","bobble and multi-row bobble symbols"],
   crochet:["oval = chain (CH)","filled dot = slip stitch (SL)","+ or × = single crochet (X / sc)","T = half double crochet","crossed T = double crochet","multi-bar T = taller crochet stitches","V-family = increases in one stitch","A-family = decreases worked together","FLO / BLO = front or back loop only","post-stitch symbols","shell, popcorn, cluster and crossed-stitch symbols"]
@@ -1664,8 +2688,8 @@ function openChartRowModal(rowId=null){
   const p=getProject(),a=p.chartAnalysis||(p.chartAnalysis={rows:[],legend:"",detectedRows:null,summary:"Manual review started."});
   a.rows ||= [];
   const row=a.rows.find(r=>r.id===rowId);
-  openModal(`<p class="eyebrow">CHECKED ROW</p><h2>${row?"Edit":"Add"} written row</h2><div class="form-grid"><div class="field"><label>Row number</label><input id="analysis-row-number" type="number" min="1" value="${row?.number||p.row||1}"></div><div class="field"><label>Side</label><select id="analysis-row-side">${["Right side","Wrong side","Worked in the round","Side uncertain"].map(v=>`<option ${row?.side===v?"selected":""}>${v}</option>`).join("")}</select></div><div class="field full"><label>Stitch sequence</label><textarea id="analysis-row-sequence" rows="4" placeholder="Use “uncertain” for every unreadable cell">${escapeHtml(row?.sequence||"")}</textarea></div><div class="field"><label>Resulting stitch count</label><input id="analysis-stitch-count" type="number" min="0" value="${row?.stitchCount||""}" placeholder="Leave blank if uncertain"></div><div class="field"><label>Confidence</label><select id="analysis-row-status"><option value="uncertain" ${row?.status!=="checked"?"selected":""}>Uncertain</option><option value="checked" ${row?.status==="checked"?"selected":""}>Checked by me</option></select></div><div class="field full"><label>Increase / decrease notes</label><input id="analysis-shaping" value="${escapeHtml(row?.shaping||"")}" placeholder="e.g. 2 increases, final count 24"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-analysis-row">Save row</button></div>`);
-  document.getElementById("save-analysis-row").onclick=()=>{const values={number:Math.max(1,+document.getElementById("analysis-row-number").value||1),side:document.getElementById("analysis-row-side").value,sequence:document.getElementById("analysis-row-sequence").value.trim()||"uncertain",stitchCount:+document.getElementById("analysis-stitch-count").value||null,status:document.getElementById("analysis-row-status").value,shaping:document.getElementById("analysis-shaping").value.trim()||"No increase/decrease confirmed"};if(row)Object.assign(row,values);else a.rows.push({id:`analysis-row-${Date.now()}`,...values});a.rows.sort((x,y)=>x.number-y.number);saveState();closeModal();renderProjectDetail();};
+  openModal(`<p class="eyebrow">CHECKED ROW</p><h2>${row?"Edit":"Add"} written row</h2><div class="form-grid"><div class="field"><label>Row number</label><input id="analysis-row-number" type="number" min="1" value="${row?.number||p.row||1}"></div><div class="field"><label>Side</label><select id="analysis-row-side">${["Right side","Wrong side","Worked in the round","Side uncertain"].map(v=>`<option ${row?.side===v?"selected":""}>${v}</option>`).join("")}</select></div><div class="field full"><label>Stitch sequence</label><textarea id="analysis-row-sequence" rows="4" placeholder="Use “uncertain” for every unreadable cell">${escapeHtml(row?.sequence||"")}</textarea></div><div class="field"><label>Resulting stitch count</label><input id="analysis-stitch-count" type="number" min="0" value="${row?.stitchCount||""}" placeholder="Leave blank if uncertain"></div><div class="field"><label>Confidence</label><select id="analysis-row-status"><option value="uncertain" ${row?.status!=="checked"?"selected":""}>Uncertain</option><option value="checked" ${row?.status==="checked"?"selected":""}>Checked by me</option></select></div><div class="field full"><label>Increase / decrease notes</label><input id="analysis-shaping" value="${escapeHtml(row?.shaping||"")}" placeholder="e.g. 2 increases, final count 24"></div><div class="field full"><label>Correction destination</label><select id="analysis-correction-destination"><option value="flow">Save only as Flow Mode correction</option><option value="database">Save to Symbol Database</option></select></div></div><label class="check-row"><input id="analysis-learn-toggle" type="checkbox" checked><span>Learn from this symbol</span></label><p class="privacy-note">Yarncha will remember this symbol for future chart reading. Yarncha remembers your corrections on this device.</p><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-analysis-row">Save row</button></div>`);
+  document.getElementById("save-analysis-row").onclick=()=>{const values={number:Math.max(1,+document.getElementById("analysis-row-number").value||1),side:document.getElementById("analysis-row-side").value,sequence:document.getElementById("analysis-row-sequence").value.trim()||"uncertain",stitchCount:+document.getElementById("analysis-stitch-count").value||null,status:document.getElementById("analysis-row-status").value,shaping:document.getElementById("analysis-shaping").value.trim()||"No increase/decrease confirmed"};if(row)Object.assign(row,values);else a.rows.push({id:`analysis-row-${Date.now()}`,...values});a.rows.sort((x,y)=>x.number-y.number);if(document.getElementById("analysis-learn-toggle")?.checked)saveFlowModeCorrection({guess:firstSymbolToken(row?.sequence||""),corrected:firstSymbolToken(values.sequence),craft:p.type,saveToDatabase:document.getElementById("analysis-correction-destination").value==="database",source:"flow-mode-correction",chartType:p.chartReader?.chartType||p.type,readingDirection:p.chartReader?.readingDirection||"",row:values.number,column:null});saveState();closeModal();renderProjectDetail();};
 }
 function generateFinalPattern(){
   const p=getProject(),rows=p.chartAnalysis?.rows||[],checked=rows.filter(r=>r.status==="checked");
@@ -1675,7 +2699,7 @@ function generateFinalPattern(){
 }
 async function showProjectAsset(id){
   const file=await getAsset(id);if(!file)return toast("This file is no longer available.");
-  const p=getProject(),url=URL.createObjectURL(file),stage=document.getElementById("chart-stage"),highlight=p.chartMode==="flow"&&p.flowMode!==false?`<div class="row-highlight" style="top:${rowHighlightTop(p)}"></div>`:"";
+  const p=getProject(),url=URL.createObjectURL(file),stage=document.getElementById("chart-stage"),highlight=p.chartMode==="flow"&&p.flowMode!==false?`<div class="row-highlight" style="${rowHighlightStyle(p)}"></div>`:"";
   if(!stage)return;
   if(p.activeChartAssetId!==id){p.activeChartAssetId=id;saveProjectTouch(p);}
   stage.innerHTML=`<div class="chart-canvas" style="transform:scale(${p.chartZoom||1});transform-origin:top left;">${file.type==="application/pdf"?`<iframe src="${url}#toolbar=0"></iframe>`:`<img src="${url}" alt="Pattern attachment">`}${highlight}${annotationsHtml(p)}</div>`;
@@ -1688,18 +2712,20 @@ async function removeProjectChartAsset(id){
   p.attachments=(p.attachments||[]).filter(a=>a.id!==id);
   if(p.chart?.assetId===id)p.chart=p.attachments[0]?{name:p.attachments[0].name,type:p.attachments[0].type,data:null,assetId:p.attachments[0].id}:null;
   if(p.activeChartAssetId===id)p.activeChartAssetId=p.attachments[0]?.id||null;
+  if(p.patternSource?.originalFileBlobId===id)p.patternSource=normalizePatternSource({type:"none",fileType:"none",ocrStatus:"not-started",workspaceMode:"og-visual"},p);
   await deleteAsset(id);
   saveProjectTouch(p);
   renderProjectDetail();
   if(p.activeChartAssetId)setTimeout(()=>showProjectAsset(p.activeChartAssetId),0);
   toast("Chart file removed.");
 }
-async function extractPdfText(file){
+async function extractPdfText(file,selectedPages=[]){
   try{
     const {pdfjsLib:pdfjs}=await getDocumentTools();
     const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
     const pages=[];
-    for(let pageNumber=1;pageNumber<=Math.min(pdf.numPages,30);pageNumber++){
+    const wanted=selectedPages.length?selectedPages:Array.from({length:Math.min(pdf.numPages,30)},(_,index)=>index+1);
+    for(const pageNumber of wanted.filter(n=>n>=1&&n<=pdf.numPages).slice(0,30)){
       const page=await pdf.getPage(pageNumber),content=await page.getTextContent();
       pages.push(`Page ${pageNumber}\n${content.items.map(item=>item.str).join(" ")}`);
     }
@@ -1713,18 +2739,172 @@ async function getDocumentTools(){
     window.addEventListener("yarncha:document-tools-ready",()=>{clearTimeout(timeout);resolve(window.YarnchaDocumentTools);},{once:true});
   });
 }
-async function ocrFile(file){
+async function scanPatternFile(file,settings={}){
+  const fileType=fileTypeForPattern(file);
+  try{
+    const selectedPages=parsePageList(settings.selectedPages||"");
+    const selectable=fileType==="pdf"?await extractPdfText(file,selectedPages):"";
+    const ocr=await ocrFile(file,{...settings,selectedPages});
+    const text=[selectable,ocr.text].filter(Boolean).join("\n\n").trim().slice(0,160000);
+    const confidence=Math.max(Number(ocr.confidence)||0,selectable.trim()?88:0);
+    return {
+      text,
+      confidence,
+      status:scanStatusForText(text,confidence),
+      pages:ocr.pages.length?ocr.pages:(selectable?[{pageNumber:1,text:selectable,confidence:88,mode:classifyPatternSource(selectable,file,"success")}]:[]),
+      selectableText:selectable,
+      ocrText:ocr.text,
+      error:ocr.error||""
+    };
+  }catch(error){
+    return {text:"",confidence:0,status:"failed",pages:[],selectableText:"",ocrText:"",error:error.message||String(error)};
+  }
+}
+function scanStatusForText(text="",confidence=0){
+  if(!String(text||"").trim())return "failed";
+  return Number(confidence)>=55?"success":"low-confidence";
+}
+function parsePageList(value){
+  if(Array.isArray(value))return value.map(Number).filter(Boolean);
+  return String(value||"").split(/[,\s]+/).map(part=>Number(part.trim())).filter(Boolean);
+}
+async function ocrFile(file,options={}){
   try{
     const tools=await getDocumentTools();
     const worker=await tools.createOcrWorker("eng+chi_tra+chi_sim+jpn",m=>{const p=getProject();if(m.status==="recognizing text"){p.readerStatus=`OCR ${file.name}: ${Math.round((m.progress||0)*100)}%`;const el=document.querySelector(".reader-status");if(el)el.innerHTML=`<strong>Reader status:</strong> ${escapeHtml(p.readerStatus)}`;}});
-    const outputs=[];
+    const outputs=[],pages=[];
     if(file.type==="application/pdf"){
       const pdfjs=tools.pdfjsLib;
       const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
-      for(let n=1;n<=Math.min(pdf.numPages,30);n++){const page=await pdf.getPage(n),viewport=page.getViewport({scale:1.7}),canvas=document.createElement("canvas");canvas.width=viewport.width;canvas.height=viewport.height;await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;const result=await worker.recognize(canvas);if(result.data.text.trim())outputs.push(`OCR page ${n}\n${result.data.text.trim()}`);}
-    }else{const result=await worker.recognize(file);if(result.data.text.trim())outputs.push(`OCR image\n${result.data.text.trim()}`);}
-    await worker.terminate();return outputs.join("\n\n");
-  }catch(error){return `OCR notice: automatic image-text reading failed for ${file.name}. Please add a clearer image or paste the printed instructions manually.`;}
+      const wanted=options.selectedPages?.length?options.selectedPages:Array.from({length:Math.min(pdf.numPages,30)},(_,index)=>index+1);
+      for(const n of wanted.filter(page=>page>=1&&page<=pdf.numPages).slice(0,30)){
+        const page=await pdf.getPage(n),viewport=page.getViewport({scale:1.9,rotation:Number(options.rotation)||0}),canvas=document.createElement("canvas");
+        canvas.width=viewport.width;canvas.height=viewport.height;
+        await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;
+        const prepared=options.improve?improveCanvasForOcr(canvas):canvas;
+        const result=await worker.recognize(prepared),text=result.data.text.trim(),confidence=Number(result.data.confidence)||0;
+        if(text){outputs.push(`OCR page ${n}\n${text}`);pages.push({pageNumber:n,text,confidence,mode:classifyPatternSource(text,file,scanStatusForText(text,confidence))});}
+      }
+    }else{
+      const prepared=await prepareImageForOcr(file,options);
+      const result=await worker.recognize(prepared),text=result.data.text.trim(),confidence=Number(result.data.confidence)||0;
+      if(text){outputs.push(`OCR image\n${text}`);pages.push({pageNumber:1,text,confidence,mode:classifyPatternSource(text,file,scanStatusForText(text,confidence))});}
+    }
+    await worker.terminate();
+    const confidence=pages.length?Math.round(pages.reduce((sum,page)=>sum+(Number(page.confidence)||0),0)/pages.length):0;
+    return {text:outputs.join("\n\n"),confidence,status:scanStatusForText(outputs.join("\n\n"),confidence),pages,error:""};
+  }catch(error){return {text:"",confidence:0,status:"failed",pages:[],error:error.message||String(error)};}
+}
+async function prepareImageForOcr(file,options={}){
+  const url=URL.createObjectURL(file);
+  try{
+    const image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=url;});
+    const rotation=Number(options.rotation)||0,crop=options.crop||{},sx=image.naturalWidth*(Number(crop.x)||0)/100,sy=image.naturalHeight*(Number(crop.y)||0)/100,sw=image.naturalWidth*Math.max(1,Number(crop.width)||100)/100,sh=image.naturalHeight*Math.max(1,Number(crop.height)||100)/100;
+    const rotated=rotation===90||rotation===270,canvas=document.createElement("canvas"),scale=Math.max(1,Number(options.zoom)||1);
+    canvas.width=(rotated?sh:sw)*scale;canvas.height=(rotated?sw:sh)*scale;
+    const ctx=canvas.getContext("2d");ctx.save();ctx.scale(scale,scale);
+    if(rotation===90){ctx.translate(sh,0);ctx.rotate(Math.PI/2);}
+    else if(rotation===180){ctx.translate(sw,sh);ctx.rotate(Math.PI);}
+    else if(rotation===270){ctx.translate(0,sw);ctx.rotate(3*Math.PI/2);}
+    ctx.drawImage(image,sx,sy,sw,sh,0,0,sw,sh);ctx.restore();
+    return options.improve?improveCanvasForOcr(canvas):canvas;
+  }finally{URL.revokeObjectURL(url);}
+}
+function improveCanvasForOcr(canvas){
+  const ctx=canvas.getContext("2d"),imageData=ctx.getImageData(0,0,canvas.width,canvas.height),data=imageData.data;
+  for(let i=0;i<data.length;i+=4){
+    const gray=(data[i]*.299+data[i+1]*.587+data[i+2]*.114);
+    const contrasted=Math.max(0,Math.min(255,(gray-128)*1.45+140));
+    data[i]=data[i+1]=data[i+2]=contrasted;
+  }
+  ctx.putImageData(imageData,0,0);
+  return canvas;
+}
+async function openPatternSourceReviewModal(assetId=null){
+  const p=getProject(),source=normalizePatternSource(p.patternSource,p);
+  const id=assetId||source.originalFileBlobId||p.activeChartAssetId;
+  const file=id?await getAsset(id):null;
+  const previewUrl=file?URL.createObjectURL(file):"";
+  const text=source.userCorrectedText||source.extractedText||"";
+  const pageList=source.selectedPages?.length?source.selectedPages.join(", "):"";
+  const fallback=source.ocrStatus==="failed"?`<div class="flow-warning-card"><p>We could not read this clearly. You can still use the image as a visual chart, or paste the written pattern text manually.</p></div>`:"";
+  openModal(`<p class="eyebrow">PATTERN SCAN REVIEW</p><h2>Review scanned text</h2><p class="muted-copy">OCR can misread craft abbreviations and row numbers. Please edit anything that looks wrong before Yarncha uses it.</p>
+    <div class="ocr-review-layout">
+      <div class="ocr-preview">${file?file.type==="application/pdf"?`<iframe src="${previewUrl}#toolbar=0"></iframe>`:`<img src="${previewUrl}" alt="Uploaded pattern preview">`:`<div class="empty-state">Original file preview is unavailable, but saved text can still be edited.</div>`}</div>
+      <div class="ocr-review-panel">
+        ${fallback}
+        <div class="form-grid compact-form">
+          <div class="field"><label>PDF pages</label><input id="ocr-selected-pages" value="${escapeHtml(pageList)}" placeholder="1, 2, 3"></div>
+          <div class="field"><label>Rotate image</label><select id="ocr-rotation">${[0,90,180,270].map(v=>`<option value="${v}" ${source.scanSettings.rotation===v?"selected":""}>${v}°</option>`).join("")}</select></div>
+          <div class="field"><label>Zoom preview</label><input id="ocr-zoom" type="number" min=".5" max="3" step=".1" value="${source.scanSettings.zoom}"></div>
+          <div class="field"><label>Crop left %</label><input id="ocr-crop-x" type="number" min="0" max="100" value="${source.scanSettings.crop.x}"></div>
+          <div class="field"><label>Crop top %</label><input id="ocr-crop-y" type="number" min="0" max="100" value="${source.scanSettings.crop.y}"></div>
+          <div class="field"><label>Crop width %</label><input id="ocr-crop-width" type="number" min="1" max="100" value="${source.scanSettings.crop.width}"></div>
+          <div class="field"><label>Crop height %</label><input id="ocr-crop-height" type="number" min="1" max="100" value="${source.scanSettings.crop.height}"></div>
+          <label class="check-row"><input id="ocr-improve" type="checkbox" ${source.scanSettings.improve?"checked":""}><span>Improve scan contrast</span></label>
+        </div>
+        <label class="field full"><span>Extracted text</span><textarea id="ocr-review-text" class="ocr-textarea" rows="14" placeholder="Paste or correct the written pattern text here.">${escapeHtml(text)}</textarea></label>
+        <p class="privacy-note">Original upload is preserved. Scanned text and your corrections are saved locally with this project.</p>
+      </div>
+    </div>
+    <div class="modal-actions ocr-review-actions">
+      <button class="secondary-button" id="ocr-scan-again">Scan Again / Try Better Quality</button>
+      <button class="secondary-button" id="use-visual-chart">Use as Visual Chart</button>
+      <button class="secondary-button" id="use-mixed-pattern">Use as Mixed Pattern</button>
+      <button class="primary-button" id="use-written-pattern">Use as Written Pattern</button>
+    </div>`);
+  const readSettings=()=>({
+    selectedPages:document.getElementById("ocr-selected-pages")?.value||"",
+    rotation:Number(document.getElementById("ocr-rotation")?.value)||0,
+    improve:!!document.getElementById("ocr-improve")?.checked,
+    zoom:Number(document.getElementById("ocr-zoom")?.value)||1,
+    crop:{
+      x:Number(document.getElementById("ocr-crop-x")?.value)||0,
+      y:Number(document.getElementById("ocr-crop-y")?.value)||0,
+      width:Number(document.getElementById("ocr-crop-width")?.value)||100,
+      height:Number(document.getElementById("ocr-crop-height")?.value)||100
+    }
+  });
+  const finish=type=>{
+    const corrected=document.getElementById("ocr-review-text")?.value||"";
+    const settings=readSettings(),selectedPages=parsePageList(settings.selectedPages);
+    p.patternSource=normalizePatternSource({...source,type,fileType:file?fileTypeForPattern(file):source.fileType,originalFileBlobId:id,extractedText:source.extractedText,userCorrectedText:corrected,ocrConfidence:source.ocrConfidence,ocrStatus:corrected.trim()?source.ocrStatus==="failed"?"low-confidence":source.ocrStatus:source.ocrStatus,selectedPages,workspaceMode:workspaceModeForPatternType(type),scanSettings:settings,reviewedAt:new Date().toISOString()},p);
+    if(corrected.trim())p.pdfReference=`${p.pdfReference}\n\nSOURCE: ${file?.name||"Pattern scan"}\n${corrected}`.trim();
+    if(corrected.trim())p.chartAnalysis=analysePatternText(corrected);
+    saveProjectTouch(p);closeModal();renderProjectDetail();if(p.activeChartAssetId)setTimeout(()=>showProjectAsset(p.activeChartAssetId),0);toast("Pattern scan saved.");
+    if(previewUrl)URL.revokeObjectURL(previewUrl);
+  };
+  document.getElementById("use-written-pattern").onclick=()=>finish("written-pattern");
+  document.getElementById("use-visual-chart").onclick=()=>finish("visual-chart");
+  document.getElementById("use-mixed-pattern").onclick=()=>finish("mixed");
+  document.getElementById("ocr-scan-again").onclick=async()=>{
+    if(!file)return toast("Original file is unavailable for rescanning.");
+    const settings=readSettings();
+    p.readerStatus="Scanning again with your settings…";p.patternSource=normalizePatternSource({...source,ocrStatus:"scanning",scanSettings:settings},p);saveProjectTouch(p);renderProjectDetail();
+    const scan=await scanPatternFile(file,settings),type=classifyPatternSource(scan.text,file,scan.status);
+    p.patternSource=normalizePatternSource({...p.patternSource,type,fileType:fileTypeForPattern(file),originalFileBlobId:id,extractedText:scan.text,ocrConfidence:scan.confidence,ocrStatus:scan.status,selectedPages:scan.pages.map(page=>page.pageNumber).filter(Boolean),workspaceMode:workspaceModeForPatternType(type),scanSettings:settings},p);
+    saveProjectTouch(p);openPatternSourceReviewModal(id);
+  };
+}
+function savePatternSourceText(){
+  const p=getProject(),source=normalizePatternSource(p.patternSource,p),text=document.getElementById("pattern-source-text")?.value||"";
+  p.patternSource=normalizePatternSource({...source,userCorrectedText:text,ocrStatus:text.trim()?source.ocrStatus==="failed"?"low-confidence":source.ocrStatus:source.ocrStatus,reviewedAt:new Date().toISOString()},p);
+  if(text.trim()){p.pdfReference=`${p.pdfReference}\n\nSOURCE: Pattern Reading Space\n${text}`.trim();p.chartAnalysis=analysePatternText(text);}
+  saveProjectTouch(p);renderProjectDetail();toast("Scanned text saved.");
+}
+function movePatternLine(delta){
+  const p=getProject(),source=normalizePatternSource(p.patternSource,p),text=source.userCorrectedText||source.extractedText||"",lines=text.split(/\n+/).map(line=>line.trim()).filter(Boolean);
+  source.currentLine=Math.max(1,Math.min(Math.max(1,lines.length),source.currentLine+delta));
+  p.patternSource=source;saveProjectTouch(p);renderProjectDetail();
+}
+function togglePatternWorkspacePanel(action){
+  const p=getProject(),source=normalizePatternSource(p.patternSource,p);
+  if(action==="hide-chart")source.chartCollapsed=true;
+  if(action==="show-chart")source.chartCollapsed=false;
+  if(action==="hide-text")source.textCollapsed=true;
+  if(action==="show-text")source.textCollapsed=false;
+  p.patternSource=source;saveProjectTouch(p);renderProjectDetail();
+  if(p.activeChartAssetId&&!source.chartCollapsed)setTimeout(()=>showProjectAsset(p.activeChartAssetId),0);
 }
 
 function defaultYarnMaterials(){return [
@@ -1984,15 +3164,134 @@ function normalizeEditableSymbol(raw={}){
   const needsReview=raw.needsReview===undefined?status==="To Be Confirmed":!!raw.needsReview;
   return {...normalized,...raw,nameEn:raw.nameEn||normalized.nameEn,nameEnglish:raw.nameEn||normalized.nameEnglish,fullName:raw.nameEn||normalized.fullName,nameZh:raw.nameZh||normalized.nameZh,nameTraditionalChinese:raw.nameZh||normalized.nameTraditionalChinese,symbolType:raw.symbolType||raw.symbolIcon||normalized.symbolType,symbolIcon:raw.symbolType||raw.symbolIcon||normalized.symbolIcon,section:symbolSectionForCraft(raw.craft||normalized.craft),tags:Array.isArray(raw.tags)?raw.tags:typeof raw.tags==="string"?raw.tags.split(",").map(tag=>tag.trim()).filter(Boolean):normalized.tags||[],notes:raw.notes||"",customSvg:raw.customSvg||"",symbolImageAsset:raw.symbolImageAsset||"",symbolImageName:raw.symbolImageName||"",verificationStatus:status,verifiedDate:raw.verifiedDate||"",verifiedBy:raw.verifiedBy||"",verificationNotes:raw.verificationNotes||"",needsReview,flowModeReady:!needsReview,reviewStatus:needsReview?"needs-review":"reviewed-foundation"};
 }
+function normalizeLearningRecord(raw={}){
+  const updatedAt=raw.updatedAt||raw.dateAdded||new Date().toISOString();
+  const confidence=Number(raw.confidence);
+  return {
+    id:raw.id||raw.symbolId||`learned-symbol-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    symbolId:raw.symbolId||raw.id||"",
+    nameEn:String(raw.nameEn||raw.englishName||raw.correctedSymbolName||raw.name||"").trim(),
+    nameZh:String(raw.nameZh||raw.chineseName||raw.nameTraditionalChinese||"").trim(),
+    abbreviation:String(raw.abbreviation||"").trim(),
+    craft:raw.craft||raw.craftType||"Shared",
+    category:raw.category||"Basic",
+    symbolType:raw.symbolType||raw.symbolIcon||"legend-specific",
+    visualSymbol:raw.visualSymbol||raw.symbol||"",
+    symbolImageAsset:raw.symbolImageAsset||raw.detectedSymbolImageAsset||"",
+    symbolImageName:raw.symbolImageName||raw.detectedSymbolImageName||"",
+    originalAiGuess:raw.originalAiGuess||raw.originalGuess||"",
+    correctedSymbolName:raw.correctedSymbolName||raw.nameEn||raw.englishName||"",
+    detectedSymbolImageAsset:raw.detectedSymbolImageAsset||raw.symbolImageAsset||"",
+    detectedSymbolImageName:raw.detectedSymbolImageName||raw.symbolImageName||"",
+    chartType:raw.chartType||raw.craftType||"",
+    readingDirection:raw.readingDirection||"",
+    row:Number(raw.row)||null,
+    column:Number(raw.column)||null,
+    rowColumnContext:raw.rowColumnContext||raw.context||"",
+    source:raw.source||"symbol-database-edit",
+    verificationStatus:["To Be Confirmed","Confirmed","Manually Verified"].includes(raw.verificationStatus)?raw.verificationStatus:"To Be Confirmed",
+    confidence:Math.max(0,Math.min(100,Number.isFinite(confidence)?confidence:raw.verificationStatus==="Manually Verified"?96:raw.verificationStatus==="Confirmed"?86:62)),
+    notes:String(raw.notes||"").trim(),
+    updatedAt,
+    dateAdded:raw.dateAdded||updatedAt
+  };
+}
+function learningRecords(){return (state.symbolLearningLibrary||[]).map(normalizeLearningRecord);}
+function symbolLearningKey(record){
+  const normalized=normalizeLearningRecord(record);
+  if(normalized.symbolId)return `symbol:${normalized.symbolId}`;
+  return `abbr:${normalized.abbreviation.toLowerCase()}|craft:${normalized.craft.toLowerCase()}`;
+}
+function upsertLearningRecord(record,{save=true}={}){
+  const next=normalizeLearningRecord(record),key=symbolLearningKey(next),records=learningRecords();
+  const index=records.findIndex(item=>symbolLearningKey(item)===key || (next.abbreviation&&item.abbreviation.toLowerCase()===next.abbreviation.toLowerCase()&&item.craft.toLowerCase()===next.craft.toLowerCase()));
+  if(index>=0)records[index]={...records[index],...next,id:records[index].id,updatedAt:new Date().toISOString()};
+  else records.unshift({...next,id:next.id||`learned-symbol-${Date.now()}`});
+  state.symbolLearningLibrary=records;
+  if(save)saveState();
+  return index>=0?records[index]:records[0];
+}
+function learningRecordFromSymbolEntry(entry){
+  return normalizeLearningRecord({
+    id:`learn-${entry.id}`,
+    symbolId:entry.id,
+    nameEn:entry.nameEn||entry.nameEnglish,
+    nameZh:entry.nameZh||entry.nameTraditionalChinese,
+    abbreviation:entry.abbreviation||entry.abbreviationUS||entry.visualSymbol||"",
+    craft:entry.craft,
+    category:entry.category,
+    symbolType:entry.symbolType||entry.symbolIcon,
+    visualSymbol:entry.visualSymbol||entry.symbol,
+    symbolImageAsset:entry.symbolImageAsset||"",
+    symbolImageName:entry.symbolImageName||"",
+    source:"symbol-database-edit",
+    verificationStatus:entry.verificationStatus,
+    confidence:entry.verificationStatus==="Manually Verified"?96:entry.verificationStatus==="Confirmed"?86:64,
+    notes:"Yarncha will remember this symbol for future chart reading.",
+    updatedAt:new Date().toISOString()
+  });
+}
+function syncLearningFromSymbolEntry(entry,{save=true}={}){
+  return upsertLearningRecord(learningRecordFromSymbolEntry(entry),{save});
+}
+function symbolKnowledgeLayer(){
+  const database=window.YarnchaSymbolDatabase;
+  const defaults=database?database.defaultSymbols.map(entry=>normalizeEditableSymbol(entry)):[];
+  const overrides=Object.values(loadSymbolOverrides()).filter(entry=>entry&&!entry.deleted).map(normalizeEditableSymbol);
+  const learned=learningRecords();
+  const fromLearned=learned.map(record=>({
+    id:record.symbolId||record.id,
+    nameEn:record.nameEn||record.correctedSymbolName,
+    nameZh:record.nameZh,
+    abbreviation:record.abbreviation,
+    craft:record.craft,
+    category:record.category,
+    symbolType:record.symbolType,
+    symbolImageAsset:record.symbolImageAsset,
+    visualSymbol:record.visualSymbol,
+    verificationStatus:record.verificationStatus,
+    source:record.source,
+    confidence:record.confidence,
+    updatedAt:record.updatedAt
+  }));
+  const rank=item=>{
+    if(item.verificationStatus==="Manually Verified")return 1;
+    if(item.symbolImageAsset)return 2;
+    if(item.source&&item.source!=="symbol-database-edit")return 3;
+    if(item.verificationStatus==="Confirmed")return 4;
+    return 5;
+  };
+  return [...overrides,...fromLearned,...defaults].sort((a,b)=>rank(a)-rank(b)||String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+}
+function matchSymbolKnowledge(input={}){
+  const guess=String(input.guess||input.originalAiGuess||input.symbol||input.sequence||"").toLowerCase().trim(),craft=String(input.craft||input.craftType||"").toLowerCase();
+  if(!guess)return null;
+  return symbolKnowledgeLayer().find(item=>{
+    const names=[item.abbreviation,item.visualSymbol,item.nameEn,item.nameZh,item.symbolType].filter(Boolean).map(value=>String(value).toLowerCase());
+    return (!craft||String(item.craft||"").toLowerCase()===craft||item.craft==="Shared") && names.some(value=>value===guess||guess.includes(value)||value.includes(guess));
+  })||null;
+}
+function firstSymbolToken(text=""){return String(text).trim().split(/[\s,;]+/).find(Boolean)||"";}
+function saveFlowModeCorrection({guess="",corrected="",craft="Shared",saveToDatabase=false,source="flow-mode-correction",chartType="",readingDirection="",row=null,column=null,detectedSymbolImageAsset="",detectedSymbolImageName="",notes=""}={}){
+  const token=firstSymbolToken(corrected||guess),match=matchSymbolKnowledge({guess:guess||token,craft});
+  const symbolId=match?.id||`flow-symbol-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const record=upsertLearningRecord({symbolId,nameEn:corrected||token,abbreviation:token,craft,category:match?.category||"Basic",symbolType:match?.symbolType||"legend-specific",visualSymbol:guess||token,symbolImageAsset:detectedSymbolImageAsset||match?.symbolImageAsset||"",detectedSymbolImageAsset,detectedSymbolImageName,chartType:chartType||craft,readingDirection,row,column,rowColumnContext:row&&column?`Row ${row}, column ${column}`:"",source,verificationStatus:"Manually Verified",confidence:92,notes:notes||"Yarncha remembers your corrections on this device.",updatedAt:new Date().toISOString()},{save:false});
+  if(saveToDatabase){
+    const entry=normalizeEditableSymbol({...match,id:symbolId,nameEn:corrected||match?.nameEn||token,nameZh:match?.nameZh||"需核對",abbreviation:token,visualSymbol:guess||match?.visualSymbol||token,symbol:guess||token,craft:craft||match?.craft||"Shared",category:match?.category||"Basic",difficulty:match?.difficulty||"Beginner",symbolType:match?.symbolType||"legend-specific",explanation:match?.explanation||"Saved from a user-corrected Flow Mode chart result.",verificationStatus:"Manually Verified",needsReview:false,flowModeReady:true,isCustom:!match});
+    saveSymbolOverride(entry,{learn:true});
+  }else saveState();
+  return record;
+}
 function mergedSymbolEntries(){
   const database=window.YarnchaSymbolDatabase,overrides=loadSymbolOverrides(),defaultIds=new Set(database.defaultSymbols.map(entry=>entry.id));
   const merged=database.defaultSymbols.flatMap(entry=>{const override=overrides[entry.id];if(override?.deleted)return[];return[normalizeEditableSymbol(override?{...entry,...override}:entry)];});
   for(const [id,override] of Object.entries(overrides)){if(!defaultIds.has(id)&&!override?.deleted)merged.push(normalizeEditableSymbol({...override,id,isCustom:true}));}
   return merged;
 }
-function saveSymbolOverride(entry){
+function saveSymbolOverride(entry,{learn=true}={}){
   const normalized=normalizeEditableSymbol(entry);
   state.userSymbolsOverride={...loadSymbolOverrides(),[normalized.id]:structuredClone(normalized)};
+  if(learn)syncLearningFromSymbolEntry(normalized,{save:false});
   saveState();return normalized;
 }
 function resetSymbolOverride(id){const overrides={...loadSymbolOverrides()};delete overrides[id];state.userSymbolsOverride=overrides;saveState();}
@@ -2031,7 +3330,7 @@ function validateSymbolEntry(entry){
 }
 function safeSourceLink(entry){return /^https:\/\//i.test(entry.sourceUrl||"")?`<a href="${escapeHtml(entry.sourceUrl)}" target="_blank" rel="noopener noreferrer">Open source</a>`:"Uploaded or pattern-specific reference";}
 function exportSymbolsJson(){
-  const payload={app:"Yarncha",kind:"symbol-database-overrides",schemaVersion:7,exportedAt:new Date().toISOString(),overrides:loadSymbolOverrides(),symbols:mergedSymbolEntries()};
+  const payload={app:"Yarncha",kind:"symbol-database-overrides",schemaVersion:8,exportedAt:new Date().toISOString(),overrides:loadSymbolOverrides(),symbols:mergedSymbolEntries(),symbolLearningLibrary:learningRecords()};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=document.createElement("a");
   link.href=url;link.download=`yarncha-symbols-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(url);toast("Symbol database exported");
 }
@@ -2043,10 +3342,10 @@ async function importSymbolsJson(file){
     for(const raw of incoming){
       if(raw?.deleted&&raw.id){next[raw.id]={id:raw.id,deleted:true};imported++;continue;}
       const candidate=normalizeEditableSymbol({...raw,id:raw.id||`custom-symbol-${Date.now()}-${imported}`,verificationStatus:raw.verificationStatus||"To Be Confirmed",isCustom:raw.isCustom!==false});
-      const result=validateSymbolEntry(candidate);if(!result.valid){skipped++;continue;}next[candidate.id]=structuredClone(result.entry);imported++;
+      const result=validateSymbolEntry(candidate);if(!result.valid){skipped++;continue;}next[candidate.id]=structuredClone(result.entry);syncLearningFromSymbolEntry(result.entry,{save:false});imported++;
     }
     if(!imported)throw new Error("No valid entries found");
-    state.userSymbolsOverride=next;saveState();renderLibrary();toast(`${imported} symbol entries imported${skipped?` · ${skipped} skipped`:""}`);
+    state.userSymbolsOverride=next;(parsed.symbolLearningLibrary||[]).forEach(record=>upsertLearningRecord(record,{save:false}));saveState();renderLibrary();toast(`${imported} symbol entries imported${skipped?` · ${skipped} skipped`:""}`);
   }catch(error){toast(`Symbol import failed: ${error.message}`);}
 }
 function symbolIconSvg(entry,className="symbol-svg-icon"){
@@ -2082,7 +3381,7 @@ function symbolVerificationBadge(entry){
 }
 function symbolEditFormHtml(entry,isNew=false){
   const picture=entry.symbolImageAsset?`<div class="symbol-edit-picture" data-symbol-picture="${escapeHtml(entry.symbolImageAsset)}" data-symbol-picture-name="${escapeHtml(entry.symbolImageName||entry.nameEn||"Symbol picture")}">${symbolIconSvg(entry)}</div><div><strong>Uploaded symbol picture</strong><p>${escapeHtml(entry.symbolImageName||"Personal symbol image")}</p></div>`:`<div class="symbol-edit-picture">${symbolIconSvg(entry)}</div><div><strong>No uploaded picture</strong><p>The default Yarncha symbol will be used.</p></div>`;
-  return `<form class="symbol-edit-form edit-project-form" id="symbol-edit-form" novalidate><p class="eyebrow">SYMBOL DATABASE</p><h2>${isNew?"Add Symbol":"Edit Symbol"}</h2><p class="muted-copy">Edit the wording or add your own symbol picture. Yarncha keeps the original default available.</p><div id="symbol-edit-errors" class="form-error-list" role="alert" hidden></div><div class="form-grid"><div class="field"><label>English name *</label><input id="symbol-edit-name-en" value="${escapeHtml(entry.nameEn||"")}"></div><div class="field"><label>Chinese name</label><input id="symbol-edit-name-zh" value="${escapeHtml(entry.nameZh||"")}"></div><div class="field"><label>Abbreviation</label><input id="symbol-edit-abbreviation" value="${escapeHtml(entry.abbreviation||"")}"></div><div class="field"><label>Chart symbol / character</label><input id="symbol-edit-visual" value="${escapeHtml(entry.visualSymbol||entry.symbol||"")}" placeholder="e.g. ○, ×, /, \\" maxlength="24"></div><div class="field"><label>Craft type *</label><select id="symbol-edit-craft">${symbolCraftOptions.map(value=>`<option ${entry.craft===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Category</label><select id="symbol-edit-category">${window.YarnchaSymbolDatabase.categoryOrder.map(value=>`<option ${entry.category===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Difficulty</label><select id="symbol-edit-difficulty">${symbolDifficultyOptions.map(value=>`<option ${entry.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Verification status</label><select id="symbol-edit-verification">${symbolVerificationOptions.map(value=>`<option ${entry.verificationStatus===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field full"><label>Tags</label><input id="symbol-edit-tags" value="${escapeHtml((entry.tags||[]).join(", "))}" placeholder="lace, shaping, beginner"></div><div class="field full"><label>Symbol picture</label><div class="symbol-picture-editor" id="symbol-picture-editor">${picture}</div><div class="button-row symbol-picture-actions"><button class="secondary-button" type="button" id="choose-symbol-picture">${entry.symbolImageAsset?"Replace symbol picture":"Upload symbol picture"}</button><button class="secondary-button danger-button" type="button" id="remove-symbol-picture" ${entry.symbolImageAsset?"":"hidden"}>Remove uploaded picture</button></div><input id="symbol-picture-file" type="file" accept="image/*" hidden><small>If the default mark is wrong, upload a clear symbol image. It stays in this browser.</small></div><div class="field full"><label>Explanation</label><textarea id="symbol-edit-explanation" rows="4">${escapeHtml(entry.explanation||"")}</textarea></div></div><div class="symbol-editor-secondary-actions">${!isNew&&window.YarnchaSymbolDatabase.defaultSymbols.some(item=>item.id===entry.id)?`<button class="secondary-button" type="button" id="reset-symbol-default">Reset to default</button>`:""}${!isNew?`<button class="secondary-button" type="button" id="duplicate-symbol">Duplicate symbol</button><button class="secondary-button danger-button" id="delete-symbol" type="button">Delete symbol</button>`:""}</div><div class="modal-actions"><button class="secondary-button" type="button" id="cancel-symbol-edit">Cancel</button><button class="primary-button" type="submit">Save Symbol</button></div></form>`;
+  return `<form class="symbol-edit-form edit-project-form" id="symbol-edit-form" novalidate><p class="eyebrow">SYMBOL DATABASE</p><h2>${isNew?"Add Symbol":"Edit Symbol"}</h2><p class="muted-copy">Edit the wording or add your own symbol picture. Yarncha keeps the original default available.</p><div id="symbol-edit-errors" class="form-error-list" role="alert" hidden></div><div class="form-grid"><div class="field"><label>English name *</label><input id="symbol-edit-name-en" value="${escapeHtml(entry.nameEn||"")}"></div><div class="field"><label>Chinese name</label><input id="symbol-edit-name-zh" value="${escapeHtml(entry.nameZh||"")}"></div><div class="field"><label>Abbreviation</label><input id="symbol-edit-abbreviation" value="${escapeHtml(entry.abbreviation||"")}"></div><div class="field"><label>Chart symbol / character</label><input id="symbol-edit-visual" value="${escapeHtml(entry.visualSymbol||entry.symbol||"")}" placeholder="e.g. ○, ×, /, \\" maxlength="24"></div><div class="field"><label>Craft type *</label><select id="symbol-edit-craft">${symbolCraftOptions.map(value=>`<option ${entry.craft===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Category</label><select id="symbol-edit-category">${window.YarnchaSymbolDatabase.categoryOrder.map(value=>`<option ${entry.category===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Difficulty</label><select id="symbol-edit-difficulty">${symbolDifficultyOptions.map(value=>`<option ${entry.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Verification status</label><select id="symbol-edit-verification">${symbolVerificationOptions.map(value=>`<option ${entry.verificationStatus===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field full"><label>Tags</label><input id="symbol-edit-tags" value="${escapeHtml((entry.tags||[]).join(", "))}" placeholder="lace, shaping, beginner"></div><div class="field full"><label>Symbol picture</label><div class="symbol-picture-editor" id="symbol-picture-editor">${picture}</div><div class="button-row symbol-picture-actions"><button class="secondary-button" type="button" id="choose-symbol-picture">${entry.symbolImageAsset?"Replace symbol picture":"Upload symbol picture"}</button><button class="secondary-button danger-button" type="button" id="remove-symbol-picture" ${entry.symbolImageAsset?"":"hidden"}>Remove uploaded picture</button></div><input id="symbol-picture-file" type="file" accept="image/*" hidden><small>If the default mark is wrong, upload a clear symbol image. It stays in this browser and becomes a recognition reference for Flow Mode.</small></div><div class="field full"><label>Explanation</label><textarea id="symbol-edit-explanation" rows="4">${escapeHtml(entry.explanation||"")}</textarea></div></div><label class="check-row"><input id="symbol-learn-toggle" type="checkbox" checked><span>Learn from this symbol</span></label><p class="privacy-note">Yarncha will remember this symbol for future chart reading. Yarncha remembers your corrections on this device.</p><div class="symbol-editor-secondary-actions">${!isNew&&window.YarnchaSymbolDatabase.defaultSymbols.some(item=>item.id===entry.id)?`<button class="secondary-button" type="button" id="reset-symbol-default">Reset to default</button>`:""}${!isNew?`<button class="secondary-button" type="button" id="duplicate-symbol">Duplicate symbol</button><button class="secondary-button danger-button" id="delete-symbol" type="button">Delete symbol</button>`:""}</div><div class="modal-actions"><button class="secondary-button" type="button" id="cancel-symbol-edit">Cancel</button><button class="primary-button" type="submit">Save Symbol</button></div></form>`;
 }
 function symbolEntryFromEditForm(base){
   const visualSymbol=document.getElementById("symbol-edit-visual").value.trim();
@@ -2094,6 +3393,7 @@ async function deleteSymbolEntry(entry){
   if(entry.symbolImageAsset)await deleteAsset(entry.symbolImageAsset);
   const overrides={...loadSymbolOverrides()},isDefault=window.YarnchaSymbolDatabase.defaultSymbols.some(item=>item.id===entry.id);
   if(isDefault)overrides[entry.id]={id:entry.id,deleted:true};else delete overrides[entry.id];
+  state.symbolLearningLibrary=learningRecords().filter(record=>record.symbolId!==entry.id);
   state.userSymbolsOverride=overrides;state.symbolFavorites=(state.symbolFavorites||[]).filter(id=>id!==entry.id);currentSymbolId=null;saveState();closeModal(true);renderLibrary();toast("Symbol deleted");
 }
 function duplicateSymbolEntry(entry){
@@ -2110,12 +3410,16 @@ function openSymbolEditModal(entry=null){
   pictureInput.onchange=()=>{const file=pictureInput.files?.[0];if(!file)return;if(!file.type.startsWith("image/"))return toast("Choose an image file.");stagedPicture=file;removePicture=false;const url=URL.createObjectURL(file);pictureEditor.innerHTML=`<div class="symbol-edit-picture"><img class="symbol-uploaded-picture" src="${url}" alt="Selected symbol picture"></div><div><strong>New symbol picture selected</strong><p>${escapeHtml(file.name)}</p></div>`;choosePicture.textContent="Replace symbol picture";if(removeButton)removeButton.hidden=false;};
   removeButton?.addEventListener("click",()=>{stagedPicture=null;removePicture=true;pictureInput.value="";pictureEditor.innerHTML=`<div class="symbol-edit-picture">${symbolIconSvg(base)}</div><div><strong>Uploaded picture will be removed</strong><p>The default Yarncha symbol will be used after saving.</p></div>`;choosePicture.textContent="Upload symbol picture";removeButton.hidden=true;});
   document.getElementById("cancel-symbol-edit").onclick=()=>closeModal();
+<<<<<<< HEAD
   document.getElementById("symbol-edit-form").onsubmit=async event=>{event.preventDefault();const candidate=symbolEntryFromEditForm(base),result=validateSymbolEntry(candidate),errorHost=document.getElementById("symbol-edit-errors");if(!result.valid){errorHost.hidden=false;errorHost.innerHTML=`<strong>Please fix:</strong><ul>${result.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join("")}</ul>`;return;}const previousAsset=base.symbolImageAsset||"";if(stagedPicture){const assetId=`symbol-picture-${candidate.id}-${Date.now()}`;await putAsset(assetId,stagedPicture);result.entry.symbolImageAsset=assetId;result.entry.symbolImageName=stagedPicture.name;}else if(removePicture){result.entry.symbolImageAsset="";result.entry.symbolImageName="";}const saved=saveSymbolOverride(result.entry);if(confirm("Save this correction to my symbol learning library?"))saveLearningRecord({uploadedChartRef:"symbol-database",uploadedChartName:"Symbol Database",detectedSymbolImageAsset:saved.symbolImageAsset||"",detectedSymbolImageName:saved.symbolImageName||"",originalAiGuess:base.nameEn||base.abbreviation||base.symbol||"Manual symbol entry",correctedSymbolName:saved.nameEn,abbreviation:saved.abbreviation,craftType:saved.craft,notes:saved.explanation||saved.notes||"",confidence:saved.verificationStatus==="To Be Confirmed"?60:90,source:"symbol-database-edit"});if(previousAsset&&previousAsset!==saved.symbolImageAsset)await deleteAsset(previousAsset);currentSymbolId=saved.id;closeModal(true);renderLibrary();toast("Symbol saved");};
+=======
+  document.getElementById("symbol-edit-form").onsubmit=async event=>{event.preventDefault();const candidate=symbolEntryFromEditForm(base),result=validateSymbolEntry(candidate),errorHost=document.getElementById("symbol-edit-errors");if(!result.valid){errorHost.hidden=false;errorHost.innerHTML=`<strong>Please fix:</strong><ul>${result.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join("")}</ul>`;return;}const previousAsset=base.symbolImageAsset||"";if(stagedPicture){const assetId=`symbol-picture-${candidate.id}-${Date.now()}`;await putAsset(assetId,stagedPicture);result.entry.symbolImageAsset=assetId;result.entry.symbolImageName=stagedPicture.name;}else if(removePicture){result.entry.symbolImageAsset="";result.entry.symbolImageName="";}const learn=document.getElementById("symbol-learn-toggle")?.checked!==false;const saved=saveSymbolOverride(result.entry,{learn});if(previousAsset&&previousAsset!==saved.symbolImageAsset)await deleteAsset(previousAsset);currentSymbolId=saved.id;closeModal(true);renderLibrary();toast(learn?"Symbol saved and remembered for chart reading":"Symbol saved");};
+>>>>>>> feature/flowmode
   document.getElementById("reset-symbol-default")?.addEventListener("click",async()=>{if(!confirm(`Reset “${base.nameEn}” to the Yarncha default?`))return;if(base.symbolImageAsset)await deleteAsset(base.symbolImageAsset);resetSymbolOverride(base.id);closeModal(true);currentSymbolId=base.id;renderLibrary();toast("Symbol reset to default");});
   document.getElementById("duplicate-symbol")?.addEventListener("click",()=>duplicateSymbolEntry(base));
   document.getElementById("delete-symbol")?.addEventListener("click",()=>deleteSymbolEntry(base));
 }
-async function resetAllSymbolOverrides(){if(!confirm("Reset every Symbol Database edit, addition, deletion and verification status to Yarncha defaults?"))return;await Promise.allSettled(Object.values(loadSymbolOverrides()).map(entry=>entry?.symbolImageAsset?deleteAsset(entry.symbolImageAsset):null));state.userSymbolsOverride={};saveState();currentSymbolId=null;renderLibrary();toast("All symbols reset to defaults");}
+async function resetAllSymbolOverrides(){if(!confirm("Reset every Symbol Database edit, addition, deletion and verification status to Yarncha defaults?"))return;await Promise.allSettled(Object.values(loadSymbolOverrides()).map(entry=>entry?.symbolImageAsset?deleteAsset(entry.symbolImageAsset):null));state.userSymbolsOverride={};state.symbolLearningLibrary=learningRecords().filter(record=>record.source!=="symbol-database-edit");saveState();currentSymbolId=null;renderLibrary();toast("All symbols reset to defaults");}
 function symbolDatabaseHtml(){
   const database=window.YarnchaSymbolDatabase;
   if(!database)return `<div class="empty-state"><h3>Symbol Database could not load</h3><p>Refresh after confirming symbol-database.js is available.</p></div>`;
@@ -2261,6 +3565,11 @@ function bindSymbolDatabase(){
 }
 function renderLibrary() {
   const host=document.getElementById("library-content");
+  const cleanSections=sanitizeLibrarySections(state.librarySections||[]);
+  if(cleanSections.length!==(state.librarySections||[]).length){
+    state.librarySections=cleanSections;
+    saveState();
+  }
   if(!currentLibrarySection){
     host.innerHTML=`<div class="page-title split-title"><div><p class="eyebrow">YOUR MAKING WIKI</p><h1>Library</h1><p>A flexible home for your symbols, pattern files, notes and ideas.</p></div><button class="secondary-button" id="add-library-space">+ Custom space</button></div>
       <div class="library-home-grid">${state.librarySections.map(s=>`<button class="library-space card" data-library-space="${s.id}"><span class="library-space-count">${librarySectionCount(s)} items</span><div class="library-space-icon">${librarySectionIcon(s.id)}</div><h2>${escapeHtml(s.name)}</h2><p>${escapeHtml(s.description)}</p></button>`).join("")}</div>`;
@@ -2718,7 +4027,11 @@ function allAssetIdsForState(snapshot){
     ...(snapshot.projectIdeas||[]).map(i=>i.referenceImageAsset),
     ...Object.values(snapshot.userTechniqueReferences||{}).map(reference=>reference.assetId),
     ...Object.values(snapshot.userSymbolsOverride||{}).map(entry=>entry.symbolImageAsset),
+<<<<<<< HEAD
     ...(snapshot.symbolLearningLibrary||[]).map(record=>record.detectedSymbolImageAsset),
+=======
+    ...(snapshot.symbolLearningLibrary||[]).map(record=>record.symbolImageAsset||record.detectedSymbolImageAsset),
+>>>>>>> feature/flowmode
     ...(snapshot.librarySections||[]).flatMap(s=>(s.items||[]).flatMap(i=>(i.assets||[]).map(a=>a.id)))
   ].filter(Boolean);
 }
@@ -2752,6 +4065,7 @@ async function importBackup(event,mode="merge"){
     }
     if(mode==="replace"){
       state={...starterData,...parsed.state};
+      state.librarySections=sanitizeLibrarySections(state.librarySections||[]);
     }else{
       const imported=parsed.state,existingIds=new Set(state.projects.map(p=>p.id));
       const projects=(imported.projects||[]).map(p=>existingIds.has(p.id)?{...p,id:`${p.id}-imported-${Date.now()}`}:{...p});
@@ -2763,8 +4077,12 @@ async function importBackup(event,mode="merge"){
       state.techniqueKnowledge=[...(state.techniqueKnowledge||[]),...(imported.techniqueKnowledge||[])];
       state.userTechniqueReferences={...(state.userTechniqueReferences||{}),...(imported.userTechniqueReferences||{})};
       state.userSymbolsOverride={...(state.userSymbolsOverride||{}),...(imported.userSymbolsOverride||{})};
+<<<<<<< HEAD
       const learningMap=new Map([...(state.symbolLearningLibrary||[]),...(imported.symbolLearningLibrary||[])].map(record=>{const normalized=normalizeLearningRecord(record);return[normalized.id,normalized];}));
       state.symbolLearningLibrary=[...learningMap.values()];
+=======
+      (imported.symbolLearningLibrary||[]).forEach(record=>upsertLearningRecord(record,{save:false}));
+>>>>>>> feature/flowmode
       state.activeProjectId=projects[0]?.id||state.activeProjectId;
     }
     localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
@@ -2773,8 +4091,8 @@ async function importBackup(event,mode="merge"){
   }catch(error){toast("This backup file could not be read.");}
 }
 function mergeLibrarySections(current,incoming){
-  const map=new Map(current.map(s=>[s.id,{...s,items:[...(s.items||[])]}]));
-  for(const section of incoming){
+  const map=new Map(sanitizeLibrarySections(current).map(s=>[s.id,{...s,items:[...(s.items||[])]}]));
+  for(const section of sanitizeLibrarySections(incoming)){
     const existing=map.get(section.id);
     if(existing)existing.items=[...(existing.items||[]),...(section.items||[])];
     else map.set(section.id,section);
@@ -2812,7 +4130,7 @@ function openProjectModal() {
     const name = document.getElementById("new-name").value.trim();
     if (!name) return toast("Give your project a name.");
     const files=document.getElementById("new-chart").files;
-    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
+    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,patternSource:normalizePatternSource(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
     state.projects.push(p); saveState(); closeModal(); openProject(p.id); if(files.length)handleChartFiles(files);
   };
 }
@@ -3007,22 +4325,94 @@ function startVoice() {
   recognition.onerror = () => toast("I couldn't access the microphone.");
   recognition.start(); document.getElementById("voice-dock").classList.add("active");
 }
+const voiceIntentAliases={
+  nextRow:["next row","next","go next","go to next row","move next","move to next row","next line","row down","continue","continue row","advance row","下一行","下一列","下一個 row","下一針","繼續"],
+  previousRow:["previous row","previous","go back","go to previous row","row up","last row","move back","move to previous row","上一行","返回","退後"],
+  readRow:["read row","read this row","read current row","read aloud","speak row","讀出呢行","讀呢行","朗讀"],
+  pause:["pause","stop reading","hold on"],
+  resume:["resume","continue reading"],
+  startWork:["start work","start project","開始","開始工作"],
+  undo:["undo","復原","撤销","取消上一步"],
+  repeatPlus:["mark repeat","increase repeat","repeat plus","重複加一","重复加一"],
+  addNote:["add note","note","新增筆記","添加笔记"]
+};
+const voiceIntentLabels={nextRow:"Next Row",previousRow:"Previous Row",readRow:"Read Row",pause:"Pause",resume:"Resume",startWork:"Start Work",undo:"Undo",repeatPlus:"Repeat Plus",addNote:"Add Note",goToRow:"Go To Row",mark:"Mark"};
+function normalizeVoiceText(text=""){
+  return String(text).toLowerCase().replace(/[.,!?，。！？]/g," ").replace(/\brole\b/g,"row").replace(/\broad\b/g,"row").replace(/\bline\b/g,"row").replace(/\s+/g," ").trim();
+}
+function voiceDistance(a,b){
+  if(a===b)return 0;
+  const rows=Array.from({length:a.length+1},(_,i)=>[i]);
+  for(let j=1;j<=b.length;j++)rows[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)rows[i][j]=Math.min(rows[i-1][j]+1,rows[i][j-1]+1,rows[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return rows[a.length][b.length];
+}
+function voiceSimilarity(a,b){
+  const compactA=a.replace(/\s+/g,""),compactB=b.replace(/\s+/g,"");
+  const max=Math.max(compactA.length,compactB.length,1);
+  return 1-(voiceDistance(compactA,compactB)/max);
+}
+function matchVoiceIntent(action){
+  const normalized=normalizeVoiceText(action);
+  if(/^(?:go to row|row|前往第|去第)\s*\d+(?:\s*行)?$/.test(normalized))return{intent:"goToRow",confidence:1,matched:"row number"};
+  if(/^(?:mark|標記|标记)\s+.+/.test(normalized))return{intent:"mark",confidence:.95,matched:"marker"};
+  const candidates=[];
+  for(const [intent,aliases] of Object.entries(voiceIntentAliases)){
+    for(const alias of aliases){
+      const normalizedAlias=normalizeVoiceText(alias);
+      let score=voiceSimilarity(normalized,normalizedAlias);
+      if(normalized===normalizedAlias)score=1;
+      else if(normalized.includes(normalizedAlias)||normalizedAlias.includes(normalized))score=Math.max(score,.72);
+      candidates.push({intent,confidence:score,matched:alias});
+    }
+  }
+  candidates.sort((a,b)=>b.confidence-a.confidence);
+  const best=candidates[0]||{intent:null,confidence:0,matched:""};
+  if(best.intent==="resume"&&!("speechSynthesis" in window&&speechSynthesis.paused)&&normalizeVoiceText(action)==="continue")return{intent:"nextRow",confidence:.72,matched:"continue"};
+  if(best.intent==="nextRow"&&normalizeVoiceText(action)==="continue"&&"speechSynthesis" in window&&speechSynthesis.paused)return{intent:"resume",confidence:.95,matched:"continue reading"};
+  return best;
+}
+function updateVoiceDebug({text="",intent="",confidence=0}={}){
+  const dock=document.getElementById("voice-dock");if(!dock)return;
+  let el=document.getElementById("voice-debug");
+  if(!el){el=document.createElement("small");el.id="voice-debug";el.className="voice-debug";dock.querySelector("div")?.appendChild(el);}
+  el.textContent=`Recognised text: ${text || "—"} · Intent matched: ${intent || "—"} · Confidence: ${Math.round(confidence*100)}%`;
+}
+function confirmVoiceIntent(match,action){
+  pendingVoiceIntent={match,action};
+  const label=voiceIntentLabels[match.intent]||match.intent;
+  updateVoiceDebug({text:action,intent:`${label}?`,confidence:match.confidence});
+  openModal(`<p class="eyebrow">VOICE COMMAND</p><h2>Did you mean ${escapeHtml(label)}?</h2><p class="muted-copy">Recognised text: “${escapeHtml(action)}”</p><div class="modal-actions"><button class="secondary-button" id="voice-confirm-no">No</button><button class="primary-button" id="voice-confirm-yes">Yes</button></div>`);
+  document.getElementById("voice-confirm-no").onclick=()=>{pendingVoiceIntent=null;closeModal();};
+  document.getElementById("voice-confirm-yes").onclick=()=>{const pending=pendingVoiceIntent;pendingVoiceIntent=null;closeModal();executeVoiceIntent(pending.match,pending.action);};
+}
+function executeVoiceIntent(match,action){
+  const p=getProject();if(!p||!match.intent)return;
+  updateVoiceDebug({text:action,intent:voiceIntentLabels[match.intent]||match.intent,confidence:match.confidence});
+  if(match.intent==="nextRow"){changeMainCounter(1);speak(`Row ${getProject().row}`);}
+  else if(match.intent==="previousRow"){changeMainCounter(-1);speak(`Row ${getProject().row}`);}
+  else if(match.intent==="readRow"){if(p.chartMode==="flow")readHighlightedRowAloud(p);else speak(buildRowGuidance(p));}
+  else if(match.intent==="pause"){if("speechSynthesis" in window)speechSynthesis.pause();else toast("Speech is not supported in this browser.");}
+  else if(match.intent==="resume"){if("speechSynthesis" in window)speechSynthesis.resume();else toast("Speech is not supported in this browser.");}
+  else if(match.intent==="startWork")speak(`Starting ${p.name}, row ${p.row}.`);
+  else if(match.intent==="undo"){undoAnnotation();speak("Undone");}
+  else if(match.intent==="repeatPlus"){const s=p.subCounters[0];if(s){s.count++;saveProjectTouch(p);renderProjectDetail();speak(`${s.name} ${s.count}`);}else toast("Add a repeat counter first.");}
+  else if(match.intent==="addNote"){p.notes=`${p.notes}${p.notes?"\n":""}Voice note at row ${p.row}.`;saveProjectTouch(p);renderProjectDetail();speak("Note added");}
+  else if(match.intent==="goToRow"){const row=+action.match(/\d+/)[0];setMainRow(Math.max(0,p.totalRows?Math.min(p.totalRows,row):row),{render:false});renderProjectDetail();speak(`Going to row ${p.row}`);}
+  else if(match.intent==="mark"){const color=action.replace(/^(?:mark|標記|标记)\s+/,"").trim();p.markers.push({id:`marker${Date.now()}`,row:p.row,color:markerColor(color),label:color});saveState();renderProjectDetail();speak(`${color} marker placed at row ${p.row}`);}
+}
 function handleVoice(command) {
   const p = getProject();
   if (!p) return;
-  const normalized=command.toLowerCase().replace(/[.,!?，。！？]/g,"").replace(/\s+/g," ").trim();
+  const normalized=normalizeVoiceText(command);
   const english=normalized.match(/^(?:a bit of yarn|yarn assistant)\s+(.+)$/);
   const chinese=normalized.match(/^(?:一點毛線|毛線助手)\s*(.+)$/);
   const action=(english?.[1]||chinese?.[1]||normalized).trim();
-  if (/^(next|next row|下一行|下一段|下一圈)$/.test(action)) { changeMainCounter(1); speak(`Row ${getProject().row}`); }
-  else if (/^(start work|start project|開始|開始工作)$/.test(action)) speak(`Starting ${p.name}, row ${p.row}.`);
-  else if (/^(previous|previous row|go back one row|上一行|上一段|上一圈)$/.test(action)){changeMainCounter(-1);speak(`Row ${getProject().row}`);}
-  else if (/^(undo|復原|撤销|取消上一步)$/.test(action)){undoAnnotation();speak("Undone");}
-  else if (/^(mark repeat|increase repeat|repeat plus|重複加一|重复加一)$/.test(action)){const s=p.subCounters[0];if(s){s.count++;saveProjectTouch(p);renderProjectDetail();speak(`${s.name} ${s.count}`);}else toast("Add a repeat counter first.");}
-  else if (/^(add note|note|新增筆記|添加笔记)$/.test(action)){p.notes=`${p.notes}${p.notes?"\n":""}Voice note at row ${p.row}.`;saveProjectTouch(p);renderProjectDetail();speak("Note added");}
-  else if (/^(?:go to row|前往第)\s*\d+(?:\s*行)?$/.test(action)) { const row = +action.match(/\d+/)[0]; p.row = Math.max(0,p.totalRows?Math.min(p.totalRows,row):row); saveState(); renderProjectDetail(); speak(`Going to row ${p.row}`); }
-  else if (/^(?:mark|標記|标记)\s+.+/.test(action)) { const color = action.replace(/^(?:mark|標記|标记)\s+/,"").trim(); p.markers.push({id:`marker${Date.now()}`,row:p.row,color:markerColor(color),label:color}); saveState(); renderProjectDetail(); speak(`${color} marker placed at row ${p.row}`); }
-  else toast('Command not matched. Try “next row”, “previous row”, “mark repeat”, “undo”, or “add note”.');
+  const match=matchVoiceIntent(action);
+  if(match.confidence>=.82)return executeVoiceIntent(match,action);
+  if(match.confidence>=.62)return confirmVoiceIntent(match,action);
+  updateVoiceDebug({text:action,intent:"No match",confidence:match.confidence});
+  toast('Command not matched. Try “next row”, “previous row”, “read row”, “pause”, or “resume”.');
 }
 
 function maybeShowOnboarding(){

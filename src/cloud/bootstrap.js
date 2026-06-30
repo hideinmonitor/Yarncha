@@ -303,7 +303,7 @@ async function injectChartReader() {
     host.append(panel);
   }
   if (!cloud.configured) {
-    panel.innerHTML = `<p class="eyebrow">AI CHART READER</p><h3>Backend setup required</h3><p>The review-first chart reader is prepared, but this deployment is not connected to Supabase yet. OG Mode remains available offline.</p>`;
+    panel.remove();
     return;
   }
   if (!cloud.user) {
