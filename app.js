@@ -518,7 +518,7 @@ function saveStateSoon(delay=350){
 function updateSaveStatus(text){const el=document.getElementById("save-status");if(el)el.textContent=text;}
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
 function getProject(id = currentProjectId) { return state.projects.find(p => p.id === id) || state.projects[0]; }
-function escapeHtml(value = "") { return value.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
+function escapeHtml(value = "") { return String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
 const uiIconPaths={
   touch:'<path d="M8.5 11.5V6.8a1.7 1.7 0 0 1 3.4 0v4.7"></path><path d="M11.9 11.1V9a1.55 1.55 0 0 1 3.1 0v3"></path><path d="M15 12V9.8a1.5 1.5 0 0 1 3 0v4.4c0 4-2.7 6.8-6.4 6.8h-.7a5.6 5.6 0 0 1-4-1.8l-2.8-3a1.55 1.55 0 0 1 2.1-2.3l2.3 1.8V11.5"></path><path d="M5.5 5.5 3.8 3.8M18.5 5.5l1.7-1.7M12 3V1"></path>',
   voice:'<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path>',
@@ -652,7 +652,9 @@ function handleAppShellClick(e){
   const tab = e.target.closest("[data-tool-tab]"); if (tab) { renderTool(tab.dataset.toolTab); return; }
   const space=e.target.closest("[data-library-space]"); if(space){currentLibrarySection=space.dataset.librarySpace;renderLibrary();}
 }
-if(!window.__yarnchaShellClickBound){document.addEventListener("click",handleAppShellClick);window.__yarnchaShellClickBound=true;}
+if(window.__yarnchaShellClickHandler)document.removeEventListener("click",window.__yarnchaShellClickHandler);
+window.__yarnchaShellClickHandler=handleAppShellClick;
+document.addEventListener("click",handleAppShellClick);
 
 function renderSidebar() {
   document.getElementById("sidebar-project-list").innerHTML = state.projects.map(p =>
@@ -721,20 +723,27 @@ function renderTimeGreeting(){
 }
 
 function renderProjects() {
-  document.getElementById("project-grid").innerHTML = state.projects.map(p => `<article class="project-card card" data-project="${p.id}">
+  document.getElementById("project-grid").innerHTML = state.projects.map(p => `<button class="project-card card" type="button" data-project="${p.id}" aria-label="Open ${escapeHtml(p.name)}">
     ${visual(p, true)}<div class="project-card-info"><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.type)} · ${rowSummary(p)}</p>
     <div class="progress-track"><div class="progress-fill" style="width:${progress(p) ?? Math.min(95, p.row)}%"></div></div></div>
-  </article>`).join("") + `<button class="add-project-card card" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
+  </button>`).join("") + `<button class="add-project-card card" type="button" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
   hydrateProjectCovers();
 }
 
 function openProject(id) {
+  const project = state.projects.find(p=>p.id===id);
+  if(!project){
+    console.warn("[Yarncha project navigation] Project not found", { projectId:id });
+    toast("Project not found. Please choose another project.");
+    showView("projects");
+    return;
+  }
   currentProjectId = id;
   state.activeProjectId = id;
   saveState();
-  renderProjectDetail();
   showView("project-detail");
 }
+const showProject=openProject;
 
 function renderProjectDetail() {
   const p = getProject();

@@ -5,6 +5,8 @@ const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 const cloud = await readFile(new URL("../src/cloud/bootstrap.js", import.meta.url), "utf8");
 
+assert.match(source, /function escapeHtml\(value = ""\) \{ return String\(value \?\? ""\)\.replace/, "HTML escaping accepts numeric setup values without crashing project navigation");
+
 for (const service of [
   "chartImageService",
   "gridDetectionService",

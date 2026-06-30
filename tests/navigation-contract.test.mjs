@@ -35,5 +35,11 @@ assert.match(css, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/, "Mobile t
 const shellClickHandlers = app.match(/document\.addEventListener\("click",/g) || [];
 assert.equal(shellClickHandlers.length, 1, "Only one app-shell click handler is registered");
 assert.doesNotMatch(app, /document\.querySelectorAll\("\.nav-item"\)\.forEach\(button => \{\s*button\.onclick/s, "Nav buttons do not use stale direct onclick handlers");
+assert.match(app, /window\.__yarnchaShellClickHandler[\s\S]*removeEventListener\("click",window\.__yarnchaShellClickHandler\)/, "Shell click handler is replaced on reload instead of leaving stale handlers");
+assert.match(app, /<button class="project-card card" type="button" data-project="\$\{p\.id\}"/, "Project cards are real buttons with stable project IDs");
+assert.match(app, /function openProject\(id\)[\s\S]*state\.projects\.find\(p=>p\.id===id\)[\s\S]*showView\("project-detail"\)/, "Project card clicks validate the id and route to the project detail page");
+assert.match(app, /console\.warn\("\[Yarncha project navigation\] Project not found"/, "Invalid project ids warn instead of silently failing");
+assert.match(app, /const showProject=openProject/, "Legacy project navigation alias still opens the project detail page");
+assert.match(css, /\.project-card:focus-visible/, "Project cards keep keyboard focus visible");
 
 console.log("Navigation contract passed");

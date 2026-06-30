@@ -284,7 +284,8 @@ h3 { font-size: 20px; }
 blockquote { font: 600 24px/1.35 "Fraunces", serif; margin: 28px 0 16px; }.daily-note p { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .page-title { margin-bottom: 36px; }.split-title { display: flex; justify-content: space-between; align-items: end; }
 .project-grid, .library-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
-.project-card { overflow: hidden; cursor: pointer; }
+.project-card { overflow: hidden; cursor: pointer; appearance:none; border:0; padding:0; text-align:left; color:inherit; font:inherit; background:var(--surface); }
+.project-card:focus-visible { outline:3px solid var(--primary); outline-offset:3px; }
 .project-card .project-visual { min-height: 175px; padding: 18px; }
 .project-card .yarn-ball { width: 90px; height: 75px; }
 .project-card-info { padding: 20px; }.project-card-info h3 { margin: 0 0 5px; }.project-card-info p { color: var(--muted); font-size: 13px; margin: 0 0 17px; }
