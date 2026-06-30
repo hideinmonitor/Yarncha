@@ -1761,11 +1761,20 @@ button,
 .chart-action-bar .reading-title-wrap { min-width:0; }
 .chart-action-bar h2,
 .chart-action-bar p { overflow-wrap:anywhere; }
-.attachment-strip { gap:8px; padding:10px 14px calc(12px + env(safe-area-inset-bottom)); scroll-padding-inline:14px; }
-.chart-file-pill { display:flex; align-items:center; gap:6px; flex:0 0 auto; max-width:min(360px,82vw); padding:4px; border:1px solid var(--border); border-radius:999px; background:var(--bg-secondary); }
-.chart-file-pill.active { border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 18%,transparent); }
-.chart-file-open { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.chart-file-remove { flex:0 0 auto; min-height:38px; padding-inline:12px; }
+.attachment-strip { display:flex; flex-wrap:wrap; gap:8px; overflow:visible; padding:10px 14px calc(12px + env(safe-area-inset-bottom)); scroll-padding-inline:14px; }
+.chart-file-chip { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:center; flex:1 1 220px; min-width:0; max-width:min(420px,100%); min-height:40px; border:1px solid var(--border); border-radius:16px; background:var(--bg-secondary); color:var(--text-primary); overflow:hidden; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
+.chart-file-chip:hover { transform:translateY(-1px); border-color:color-mix(in srgb,var(--primary) 34%,var(--border)); box-shadow:var(--shadow-soft); }
+.chart-file-chip:active { transform:translateY(0); background:color-mix(in srgb,var(--bg-secondary) 82%,var(--primary) 18%); }
+.chart-file-chip.active { border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 18%,transparent); }
+.chart-file-open { min-width:0; min-height:40px; display:grid; grid-template-columns:24px minmax(0,1fr); align-items:center; gap:8px; padding:6px 8px 6px 12px; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.chart-file-open:focus-visible,.chart-file-remove:focus-visible { outline:2px solid var(--primary); outline-offset:-3px; }
+.chart-file-icon { width:24px; height:24px; display:grid; place-items:center; color:var(--text-secondary); }
+.chart-file-icon .ui-icon { width:19px; height:19px; }
+.chart-file-text { min-width:0; display:grid; gap:1px; }
+.chart-file-text strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; line-height:1.2; }
+.chart-file-text small { color:var(--text-secondary); font-size:11px; font-weight:800; line-height:1.15; }
+.chart-file-remove { width:44px; min-width:44px; min-height:44px; display:grid; place-items:center; border:0; border-left:1px solid var(--border); background:transparent; color:var(--text-secondary); font-size:22px; line-height:1; cursor:pointer; }
+.chart-file-remove:hover { color:#fff; background:var(--danger); border-left-color:var(--danger); }
 .flow-ai-cloud-slot { display:grid; gap:10px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
 .flow-ai-cloud-slot:empty { display:none; margin:0; padding:0; border:0; }
 .flow-ai-cloud-panel { display:grid; gap:10px; }
@@ -1832,7 +1841,7 @@ button,
   .annotation-layer,
   .row-mask { touch-action:none; }
   .attachment-strip { padding-bottom:calc(18px + env(safe-area-inset-bottom)); }
-  .chart-file-pill { max-width:calc(100vw - 30px); }
+  .chart-file-chip { flex-basis:100%; max-width:100%; }
   .repeat-counter-card { grid-template-columns:1fr; gap:12px; padding:14px; }
   .repeat-counter-card .sub-counter-main { text-align:left; }
   .repeat-counter-card .sub-counter-controls { justify-content:center; }
@@ -2040,11 +2049,19 @@ button,
 .project-workspace-page .chart-reader {
   overflow:hidden;
 }
+.project-workspace-page:not(.flow-workflow) .chart-reader {
+  min-height:clamp(520px,72vh,900px);
+}
 .project-workspace-page .og-chart-stage,
 .project-workspace-page .chart-stage {
   min-height:0;
   max-width:100%;
   overflow:auto;
+}
+.project-workspace-page:not(.flow-workflow) .og-chart-stage,
+.project-workspace-page:not(.flow-workflow) .chart-canvas img,
+.project-workspace-page:not(.flow-workflow) .chart-canvas iframe {
+  min-height:clamp(500px,70vh,880px);
 }
 .project-workspace-page .chart-canvas {
   max-width:100%;

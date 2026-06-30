@@ -835,11 +835,9 @@ function projectChartHtml(p){
     </div>
     ${chartHidden?`<div class="chart-reader card workspace-card collapsed-workspace-panel"><strong>Visual chart is hidden.</strong><p class="muted-copy">Your original upload is still saved for Manual Reading Mode.</p><button class="secondary-button" data-pattern-collapse="show-chart">Show visual chart</button></div>`:`<div class="chart-reader card workspace-card">
       <div class="chart-stage og-chart-stage" id="chart-stage">${chartViewerHtml(p)}</div>
-      <div class="attachment-strip">${p.attachments.map(a=>`<div class="chart-file-pill ${activeAssetId===a.id?"active":""}"><button class="mini-button chart-file-open" data-project-asset="${a.id}">${escapeHtml(a.name||"Chart file")}</button><button class="mini-button danger-button chart-file-remove" data-delete-chart-asset="${a.id}" aria-label="Remove ${escapeHtml(a.name||"chart file")}">Remove</button></div>`).join("")}</div>
+      <div class="attachment-strip">${p.attachments.map(a=>`<div class="chart-file-chip ${activeAssetId===a.id?"active":""}"><button class="chart-file-open" type="button" data-project-asset="${a.id}" aria-label="Open ${escapeHtml(a.name||"chart file")}"><span class="chart-file-icon" aria-hidden="true">${uiIcon("image","ui-icon")}</span><span class="chart-file-text"><strong>${escapeHtml(a.name||"Chart file")}</strong><small>Uploaded ✓</small></span></button><button class="chart-file-remove" type="button" data-delete-chart-asset="${a.id}" aria-label="Remove ${escapeHtml(a.name||"chart file")}">×</button></div>`).join("")}</div>
     </div>`}
-    <div class="manual-chart-tools">
-      ${chartMode==="flow"?friendlyChartBetaHtml(p):chartAnalysisHtml(p)}
-    </div>
+    ${chartMode==="flow"?`<div class="manual-chart-tools">${friendlyChartBetaHtml(p)}</div>`:""}
     <div class="bottom-nav-spacer" aria-hidden="true"></div>
     </div>
   </div>`;
@@ -900,13 +898,6 @@ function friendlyChartBetaHtml(p){
       <div class="form-grid compact-form">
         <div class="field"><label>Craft</label><select id="flow-setup-craft">${options(["Knitting","Crochet"],setup.craft)}</select></div>
         <div class="field"><label>Pattern gauge</label><input id="flow-pattern-gauge" value="${escapeHtml(setup.patternGauge)}" placeholder="22 sts × 30 rows / 10 cm"></div>
-        <div class="field"><label>Stitch count</label><input id="flow-setup-stitch-count" type="number" min="0" value="${escapeHtml(simpleSetup.stitchCount||plan.stitchCount||"")}" placeholder="Calculated or pattern count"></div>
-        <div class="field"><label>Row count</label><input id="flow-setup-row-count" type="number" min="0" value="${escapeHtml(simpleSetup.rowCount||p.chartRows||p.totalRows||plan.rowCount||"")}" placeholder="Planned rows"></div>
-        <div class="field"><label>Width cm</label><input id="flow-setup-width" type="number" min="0" step=".5" value="${escapeHtml(simpleSetup.width||plan.widthCm||"")}" placeholder="Finished width"></div>
-        <div class="field"><label>Length cm</label><input id="flow-setup-length" type="number" min="0" step=".5" value="${escapeHtml(simpleSetup.length||plan.lengthCm||"")}" placeholder="Finished length"></div>
-        <div class="field"><label>Sleeve length cm</label><input id="flow-setup-sleeve-length" type="number" min="0" step=".5" value="${escapeHtml(simpleSetup.sleeveLength||plan.sleeveLengthCm||"")}" placeholder="Optional"></div>
-        <div class="field"><label>Body length cm</label><input id="flow-setup-body-length" type="number" min="0" step=".5" value="${escapeHtml(simpleSetup.bodyLength||plan.bodyLengthCm||"")}" placeholder="Optional"></div>
-        <div class="field full"><label>Yarn estimate</label><input id="flow-setup-yarn-estimate" value="${escapeHtml(simpleSetup.yarnEstimate||plan.estimatedYarnUsage||"")}" placeholder="Estimated yarn needed"></div>
         <div class="field"><label>Pattern hook / needle size</label><input id="flow-pattern-tool" value="${escapeHtml(setup.patternToolSize)}" placeholder="4 mm"></div>
         <div class="field"><label>Pattern yarn weight</label><input id="flow-pattern-yarn-weight" value="${escapeHtml(setup.patternYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
         <div class="field"><label>Your hook / needle size</label><input id="flow-user-tool" value="${escapeHtml(setup.userToolSize)}" placeholder="4.5 mm"></div>
@@ -1190,21 +1181,6 @@ function rowHighlightStyle(p){
   return `left:${m.x}%;right:auto;width:${m.width}%;top:${Math.max(0,Math.min(100,m.top))}%;height:${Math.max(1.4,m.rowHeight)}%;`;
 }
 function rowHighlightTop(p) { return `${chartRowMetrics(p).top}%`; }
-function chartAnalysisHtml(p){
-  const readingSpace=patternReadingSpaceHtml(p);
-  if(!p.chartAnalysis)return `${readingSpace}<div class="chart-analysis">
-    <strong>Analysis report</strong>
-    <span>No chart analysed yet. Add rows manually or upload a chart to create an uncertain draft for review.</span>
-    <div class="analysis-actions"><button class="mini-button" id="edit-chart-legend">Review legend</button><button class="mini-button" id="add-analysis-row">+ Add row</button></div>
-  </div>`;
-  const a=p.chartAnalysis;
-  const rows=a.rows||[];
-  return `${readingSpace}<details class="chart-analysis" open><summary><strong>Analysis report</strong> · ${a.detectedRows?`${a.detectedRows} rows detected`:"row total needs confirmation"}</summary><p>${escapeHtml(a.summary)}</p>
-    <div class="verification-flow"><strong>AI reads</strong><span>→</span><strong>You check and edit</strong><span>→</span><strong>Final written pattern</strong></div>
-    <div class="analysis-actions"><button class="mini-button" id="edit-chart-legend">Review legend</button><button class="mini-button" id="add-analysis-row">+ Add row</button><button class="mini-button" id="generate-final-pattern">Generate checked pattern</button></div>
-    ${rows.length?`<div class="chart-row-table">${rows.map(r=>chartRowHtml(r)).join("")}</div>`:`<div class="empty-analysis">No trustworthy grid rows were detected. Add rows manually instead of relying on a guess.</div>`}
-    <small>Low resolution, watermarks, compression and unfamiliar symbols reduce confidence. Unclear cells remain marked “uncertain”.</small></details>`;
-}
 function patternReadingSpaceHtml(p){
   const source=normalizePatternSource(p.patternSource,p),text=(source.userCorrectedText||source.extractedText||"").trim();
   if(source.type==="none"&&!text)return "";
@@ -1540,13 +1516,6 @@ function bindFlowModeReader(p){
     const simpleSetup={
       craft:setup.craft,
       patternGauge:setup.patternGauge,
-      stitchCount:value("flow-setup-stitch-count"),
-      rowCount:value("flow-setup-row-count"),
-      width:value("flow-setup-width"),
-      length:value("flow-setup-length"),
-      sleeveLength:value("flow-setup-sleeve-length"),
-      bodyLength:value("flow-setup-body-length"),
-      yarnEstimate:value("flow-setup-yarn-estimate"),
       updatedAt:new Date().toISOString()
     };
     p.projectSetup=setup;
@@ -1556,10 +1525,10 @@ function bindFlowModeReader(p){
     p.gauge=setup.patternGauge;
     p.needles=setup.userToolSize||setup.patternToolSize;
     p.yarn=setup.userYarnWeight||setup.patternYarnWeight;
-    if(Number(simpleSetup.rowCount)){p.chartRows=Number(simpleSetup.rowCount);p.totalRows=Number(simpleSetup.rowCount);}
     p.size=isGarmentProject(setup.projectType)?(setup.desiredSize==="Custom"?(setup.customSize||"Custom"):setup.desiredSize):setup.projectType;
     p.sizingNotes=isGarmentProject(setup.projectType)?(setup.customSize||p.size||""):`${setup.projectType} setup saved`;
     p.projectCalculations=calculateFlowProjectPlan(p,setup);
+    if(p.projectCalculations?.rowCount){p.chartRows=p.chartRows||p.projectCalculations.rowCount;p.totalRows=p.totalRows||p.projectCalculations.rowCount;}
     saveProjectTouch(p);
     if(render)renderProjectDetail();
   };
@@ -1610,7 +1579,7 @@ function bindFlowModeReader(p){
   ["flow-setup-craft","flow-project-type","flow-recipient","flow-scarf-style","flow-sock-type","flow-sock-sizing-mode","flow-bag-type","flow-blanket-type","flow-amigurumi-type","flow-safety-recipient","flow-shawl-shape","flow-shawl-fit"].forEach(id=>{
     document.getElementById(id)?.addEventListener("change",()=>{saveFlowSetup();toast("Project setup updated.");});
   });
-  ["flow-pattern-gauge","flow-pattern-tool","flow-pattern-yarn-weight","flow-user-tool","flow-user-yarn-weight","flow-setup-stitch-count","flow-setup-row-count","flow-setup-width","flow-setup-length","flow-setup-sleeve-length","flow-setup-body-length","flow-setup-yarn-estimate","flow-custom-size","flow-body-chest","flow-body-waist","flow-body-hip","flow-body-sleeve","flow-body-body"].forEach(id=>{
+  ["flow-pattern-gauge","flow-pattern-tool","flow-pattern-yarn-weight","flow-user-tool","flow-user-yarn-weight","flow-custom-size","flow-body-chest","flow-body-waist","flow-body-hip","flow-body-sleeve","flow-body-body"].forEach(id=>{
     document.getElementById(id)?.addEventListener("input",markFlowSetupUnsaved);
   });
   document.getElementById("run-flow-recognition")?.addEventListener("click",()=>{

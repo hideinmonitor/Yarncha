@@ -69,11 +69,11 @@ for (const label of ["Cast-on","Starting chain","Stitch count","Row count","Widt
   assert.match(source, new RegExp(label), `Flow Mode shows ${label}`);
 }
 for (const field of ["flow-setup-stitch-count","flow-setup-row-count","flow-setup-width","flow-setup-length","flow-setup-sleeve-length","flow-setup-body-length","flow-setup-yarn-estimate"]) {
-  assert.match(source, new RegExp(field), `Project Setup has editable ${field}`);
+  assert.doesNotMatch(source, new RegExp(`id="${field}"`), `${field} is no longer an editable setup input`);
 }
 assert.match(source, /p\.setup=simpleSetup/, "Flow Mode saves the requested simple project.setup structure");
-assert.match(source, /stitchCount:value\("flow-setup-stitch-count"\)/, "project.setup stores stitch count");
-assert.match(source, /rowCount:value\("flow-setup-row-count"\)/, "project.setup stores row count");
+assert.doesNotMatch(source, /stitchCount:value\("flow-setup-stitch-count"\)/, "derived stitch count is not manually stored from an input");
+assert.doesNotMatch(source, /rowCount:value\("flow-setup-row-count"\)/, "derived row count is not manually stored from an input");
 assert.match(source, /Saved · Last saved on this device/, "Project Setup shows saved state");
 assert.match(source, /Unsaved changes/, "Project Setup shows unsaved state");
 assert.match(source, /markFlowSetupUnsaved/, "Project Setup marks edits before saving");
@@ -139,6 +139,9 @@ assert.match(source, /data-chart-mode="flow"/, "Flow Mode remains inside the pro
 assert.match(source, /project-workspace-page/, "Project chart uses the shared workspace page shell");
 assert.match(source, /project-workspace-inner/, "Project chart uses the shared workspace inner container");
 assert.match(source, /workspace-card/, "Project chart cards use the shared workspace card class");
+assert.match(source, /\$\{chartMode==="flow"\?\`<div class="manual-chart-tools">\$\{friendlyChartBetaHtml\(p\)\}<\/div>\`:""\}/, "OG Mode does not render Flow/analysis panels below the manual chart canvas");
+assert.doesNotMatch(source, /function chartAnalysisHtml/, "legacy OG analysis report renderer is removed");
+assert.doesNotMatch(source, /Analysis report/, "OG Mode analysis report copy is removed");
 assert.match(source, /row-counter-card/, "row counter uses a dedicated responsive card");
 assert.match(source, /row-stepper/, "row counter stepper keeps minus, row input, and plus together");
 assert.match(source, /annotation-toolbar-shell/, "annotation toolbar has an overflow-safe shell");
@@ -156,6 +159,11 @@ assert.match(source, /Annotation setting changed:/, "development debug logs sett
 assert.doesNotMatch(source, /data-annotation-tool\]"\)\.forEach\(b=>b\.onclick=\(\)=>\{activeAnnotationTool=b\.dataset\.annotationTool;renderProjectDetail\(\);\}\)/, "annotation tool selection does not force a project re-render");
 assert.doesNotMatch(source, /setActiveAnnotationTool[\s\S]{0,500}renderProjectDetail\(\)/, "setActiveAnnotationTool does not re-render the project");
 assert.match(source, /chart-upload-content/, "upload card has centered content wrapper");
+assert.match(source, /chart-file-chip/, "uploaded chart attachments render as compact chips");
+assert.match(source, /chart-file-icon/, "attachment chips include a file/image icon");
+assert.match(source, /Uploaded ✓/, "attachment chips show upload status");
+assert.match(source, /class="chart-file-remove" type="button" data-delete-chart-asset/, "attachment chip remove control is internal");
+assert.doesNotMatch(source, /chart-file-remove[\s\S]{0,160}>Remove<\/button>/, "attachment chips do not use a separate Remove text button");
 assert.match(source, /function scanPatternFile/, "uploads run through a reusable scan pipeline");
 assert.match(source, /function ocrFile/, "image and scanned PDF OCR is implemented locally");
 assert.match(source, /function prepareImageForOcr/, "image OCR supports crop, rotate, zoom, and improve options");
@@ -183,6 +191,8 @@ assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.chart-mode-actions \.ch
 assert.match(styles, /\.flow-current-row-card/, "large current row card is styled");
 assert.match(styles, /\.flow-setup-panel/, "project setup panel is styled");
 assert.match(styles, /\.project-workspace-page\.flow-workflow \.manual-chart-tools,[\s\S]*\.project-workspace-page\.flow-workflow \.flow-reader-grid/, "Flow Mode workflow stays aligned in one column");
+assert.match(styles, /\.project-workspace-page:not\(\.flow-workflow\) \.chart-reader[\s\S]*min-height:clamp\(520px,72vh,900px\)/, "OG Mode chart canvas expands into the removed panel space");
+assert.match(styles, /\.project-workspace-page:not\(\.flow-workflow\) \.og-chart-stage,[\s\S]*\.project-workspace-page:not\(\.flow-workflow\) \.chart-canvas iframe[\s\S]*min-height:clamp\(500px,70vh,880px\)/, "OG Mode chart media uses the freed vertical space");
 assert.match(styles, /\.flow-setup-save-row/, "Project Setup save row is styled");
 assert.match(styles, /\.setup-save-status\.unsaved/, "Project Setup unsaved state is styled");
 assert.match(styles, /\.flow-warning-card/, "setup warning card is styled");
@@ -198,6 +208,9 @@ assert.match(styles, /\.row-stepper/, "row stepper grid is styled");
 assert.match(styles, /\.annotation-toolbar-shell/, "toolbar overflow shell is styled");
 assert.match(styles, /\.annotation-toolbar-shell[\s\S]*overflow:hidden/, "toolbar shell prevents page-level horizontal overflow");
 assert.match(styles, /\.project-workspace-page \.annotation-toolbar[\s\S]*overflow-x:auto/, "annotation toolbar scrolls horizontally inside itself");
+assert.match(styles, /\.chart-file-chip[\s\S]*grid-template-columns:minmax\(0,1fr\) 44px/, "attachment chip keeps a 44px remove column");
+assert.match(styles, /\.chart-file-remove[\s\S]*min-height:44px/, "attachment chip remove button has a 44px touch target");
+assert.match(styles, /\.chart-file-text strong[\s\S]*text-overflow:ellipsis/, "attachment filenames truncate cleanly");
 assert.match(styles, /\.project-workspace-page \.annotation-toolbar button\[aria-pressed="true"\]/, "active toolbar button has non-colour focus/active outline");
 assert.match(styles, /\.project-workspace-page \.annotation-toolbar input,[\s\S]*\.project-workspace-page \.annotation-toolbar select/, "toolbar form controls remain flex items");
 assert.match(styles, /\.chart-upload-content/, "upload content wrapper is styled");
