@@ -10,3 +10,4 @@ vendor/
 .supabase/
 supabase/.temp/
 *.log
+_flowmode_recovery/

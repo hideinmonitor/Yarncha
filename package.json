@@ -18,6 +18,7 @@
     "test:symbol-editor": "node tests/symbol-editor-contract.test.mjs",
     "test:symbol-learning": "node tests/symbol-learning-contract.test.mjs",
     "test:flow-mode": "node tests/flow-mode-reader-contract.test.mjs",
+    "test:project-setup-calculations": "node tests/project-setup-calculation-contract.test.mjs",
     "test:voice": "node tests/voice-command-contract.test.mjs",
     "test:navigation": "node tests/navigation-contract.test.mjs",
     "test:settings": "node tests/settings-contract.test.mjs",

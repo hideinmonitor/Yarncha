@@ -213,14 +213,36 @@ function normalizeProjectSetup(setup={},project={}){
   const projectTypes=["Scarf","Socks","Hat / Beanie","Shawl","Bag","Blanket","Amigurumi","Top","Cardigan","Jumper / Sweater","Vest","Dress","Other"];
   const measurements=setup.bodyMeasurements||{};
   const details=setup.itemDetails||{};
+  const numberText=value=>String(value??"").trim();
   return {
     craft:["Knitting","Crochet"].includes(setup.craft)?setup.craft:(/crochet/i.test(project.type||"")?"Crochet":"Knitting"),
     projectType:projectTypes.includes(setup.projectType)?setup.projectType:projectTypes.includes(project.projectKind)?project.projectKind:"Other",
     patternGauge:setup.patternGauge||project.gauge||"",
-    patternToolSize:setup.patternToolSize||project.needles||"",
+    patternToolSize:setup.patternToolSize||setup.patternToolSizeMm||project.needles||"",
     patternYarnWeight:setup.patternYarnWeight||project.yarn||"",
-    userToolSize:setup.userToolSize||project.needles||"",
+    userToolSize:setup.userToolSize||setup.userToolSizeMm||project.needles||"",
     userYarnWeight:setup.userYarnWeight||project.yarn||"",
+    patternToolSizeMm:numberText(setup.patternToolSizeMm||setup.patternToolSize||project.needles),
+    userToolSizeMm:numberText(setup.userToolSizeMm||setup.userToolSize||project.needles),
+    patternGaugeStitches:numberText(setup.patternGaugeStitches),
+    patternGaugeRows:numberText(setup.patternGaugeRows),
+    userGaugeStitches:numberText(setup.userGaugeStitches),
+    userGaugeRows:numberText(setup.userGaugeRows),
+    gaugeWidthCm:numberText(setup.gaugeWidthCm||10),
+    gaugeHeightCm:numberText(setup.gaugeHeightCm||10),
+    stitchRepeatMultiple:numberText(setup.stitchRepeatMultiple),
+    edgeStitches:numberText(setup.edgeStitches),
+    easeCm:numberText(setup.easeCm),
+    easePercent:numberText(setup.easePercent),
+    swatchWidthCm:numberText(setup.swatchWidthCm),
+    swatchHeightCm:numberText(setup.swatchHeightCm),
+    swatchWeightGrams:numberText(setup.swatchWeightGrams),
+    patternYarnGrams:numberText(setup.patternYarnGrams),
+    patternAreaCm2:numberText(setup.patternAreaCm2),
+    originalPatternStitches:numberText(setup.originalPatternStitches),
+    originalPatternRows:numberText(setup.originalPatternRows),
+    patternWidthCm:numberText(setup.patternWidthCm),
+    patternLengthCm:numberText(setup.patternLengthCm),
     desiredSize:sizeOptions.includes(setup.desiredSize)?setup.desiredSize:(sizeOptions.includes(project.size)?project.size:"M"),
     customSize:setup.customSize||project.size||"",
     patternLanguage:["abbreviations","full"].includes(setup.patternLanguage)?setup.patternLanguage:"abbreviations",
@@ -245,18 +267,28 @@ function normalizeProjectSetup(setup={},project={}){
       ankleCircumference:details.ankleCircumference||"",
       calfCircumference:details.calfCircumference||"",
       fitPreference:details.fitPreference||"Regular",
+      easePreference:details.easePreference||"Regular",
       constructionMethod:details.constructionMethod||"Cuff-down",
+      garmentConstruction:details.garmentConstruction||details.constructionMethod||"Pattern decides",
       heelStyle:details.heelStyle||"Pattern decides",
+      toeLength:details.toeLength||"",
+      desiredLegHeight:details.desiredLegHeight||"",
+      cuffHeight:details.cuffHeight||"",
+      pickedUpGussetStitches:details.pickedUpGussetStitches||"",
       headCircumference:details.headCircumference||"",
       hatStyle:details.hatStyle||"Fitted beanie",
       hatDepth:details.hatDepth||"",
+      brimDepth:details.brimDepth||"",
       brimStyle:details.brimStyle||"Ribbed brim",
       crownStyle:details.crownStyle||"Pattern decides",
+      decreaseSections:details.decreaseSections||"8",
+      finalTopStitchesPerSection:details.finalTopStitchesPerSection||"1",
       bagType:details.bagType||"Tote",
       width:details.width||"",
       height:details.height||"",
       length:details.length||"",
       strapLength:details.strapLength||"",
+      strapWidth:details.strapWidth||"",
       depth:details.depth||"",
       handleDrop:details.handleDrop||"",
       closure:details.closure||"None",
@@ -267,6 +299,9 @@ function normalizeProjectSetup(setup={},project={}){
       warmth:details.warmth||"Medium",
       borderWidth:details.borderWidth||"",
       fringe:details.fringe||"None",
+      squareSize:details.squareSize||"",
+      blockWidth:details.blockWidth||"",
+      blockHeight:details.blockHeight||"",
       amigurumiType:details.amigurumiType||"Animal",
       finishedHeight:details.finishedHeight||"",
       finishedWidth:details.finishedWidth||"",
@@ -274,10 +309,20 @@ function normalizeProjectSetup(setup={},project={}){
       stuffingFirmness:details.stuffingFirmness||"Medium",
       safetyRecipient:details.safetyRecipient||"Adult",
       originalHeight:details.originalHeight||"",
+      originalWidth:details.originalWidth||"",
       targetHeight:details.targetHeight||"",
+      originalYarnGrams:details.originalYarnGrams||"",
+      originalStuffingGrams:details.originalStuffingGrams||"",
+      originalEyeSizeMm:details.originalEyeSizeMm||"",
       shawlShape:details.shawlShape||"Triangle",
       shawlFit:details.shawlFit||"Everyday Shawl",
-      wingspan:details.wingspan||""
+      wearStyle:details.wearStyle||details.shawlFit||"Shoulder shawl",
+      wingspan:details.wingspan||"",
+      skirtLength:details.skirtLength||"",
+      upperArmCircumference:details.upperArmCircumference||"",
+      wristCircumference:details.wristCircumference||"",
+      armholeDepth:details.armholeDepth||"",
+      buttonBandStitches:details.buttonBandStitches||""
     },
     updatedAt:setup.updatedAt||""
   };
@@ -291,9 +336,62 @@ function firstNumber(value,fallback=0){
   const match=String(value||"").match(/-?\d+(?:\.\d+)?/);
   return match?Number(match[0]):fallback;
 }
+function cleanNumber(value,fallback=0){
+  const number=Number(String(value??"").replace(/[^\d.-]/g,""));
+  return Number.isFinite(number)?number:fallback;
+}
+function hasPositive(value){return cleanNumber(value,0)>0;}
+function roundFlow(value,digits=1){
+  const factor=10**digits;
+  return Math.round((Number(value)||0)*factor)/factor;
+}
+function roundToNearestMultiple(value,multiple=1){
+  const step=Math.max(1,Math.round(Number(multiple)||1));
+  return Math.round((Number(value)||0)/step)*step;
+}
+function roundCircular(value,multiple=4){
+  return Math.max(multiple,roundToNearestMultiple(value,multiple));
+}
 function parseGaugePair(gauge=""){
   const nums=String(gauge||"").match(/\d+(?:\.\d+)?/g)?.map(Number)||[];
-  return {stitches:nums[0]||20,rows:nums[1]||28,span:nums[2]||10};
+  return {stitches:nums[0]||0,rows:nums[1]||0,span:nums[2]||10};
+}
+function flowGaugeValues(setup={}){
+  const parsed=parseGaugePair(setup.patternGauge);
+  const gaugeWidthCm=Math.max(1,cleanNumber(setup.gaugeWidthCm,10)||10);
+  const gaugeHeightCm=Math.max(1,cleanNumber(setup.gaugeHeightCm,gaugeWidthCm)||gaugeWidthCm);
+  const patternGaugeStitches=cleanNumber(setup.patternGaugeStitches,parsed.stitches||0);
+  const patternGaugeRows=cleanNumber(setup.patternGaugeRows,parsed.rows||0);
+  const hasUserGauge=hasPositive(setup.userGaugeStitches)&&hasPositive(setup.userGaugeRows);
+  const userGaugeStitches=cleanNumber(setup.userGaugeStitches,hasUserGauge?0:patternGaugeStitches);
+  const userGaugeRows=cleanNumber(setup.userGaugeRows,hasUserGauge?0:patternGaugeRows);
+  const stitchesPerCm=(userGaugeStitches||patternGaugeStitches||20)/gaugeWidthCm;
+  const rowsPerCm=(userGaugeRows||patternGaugeRows||28)/gaugeHeightCm;
+  const patternStitchesPerCm=(patternGaugeStitches||userGaugeStitches||20)/gaugeWidthCm;
+  const patternRowsPerCm=(patternGaugeRows||userGaugeRows||28)/gaugeHeightCm;
+  return {gaugeWidthCm,gaugeHeightCm,patternGaugeStitches,patternGaugeRows,userGaugeStitches,userGaugeRows,hasUserGauge,stitchesPerCm,rowsPerCm,patternStitchesPerCm,patternRowsPerCm};
+}
+function flowSafetyMargin(setup={}){
+  const type=setup.projectType;
+  if(type==="Amigurumi")return 1.20;
+  if(isGarmentProject(type))return 1.15;
+  if(["Scarf","Blanket"].includes(type))return 1.10;
+  return /cable|bobble|texture/i.test(setup.sizingNotes||setup.patternGauge||"")?1.20:1.15;
+}
+function gramsPerCm2(setup={}){
+  const swatchArea=cleanNumber(setup.swatchWidthCm)*cleanNumber(setup.swatchHeightCm);
+  if(swatchArea>0&&hasPositive(setup.swatchWeightGrams))return cleanNumber(setup.swatchWeightGrams)/swatchArea;
+  return 0.12;
+}
+function estimateYarnFromArea(areaCm2,setup={},safetyMargin=flowSafetyMargin(setup)){
+  const patternYarn=cleanNumber(setup.patternYarnGrams),patternArea=cleanNumber(setup.patternAreaCm2);
+  if(patternYarn>0&&patternArea>0)return patternYarn*(areaCm2/patternArea)*safetyMargin;
+  return areaCm2*gramsPerCm2(setup)*safetyMargin;
+}
+function applyRepeatRounding(raw,setup={},fallbackMultiple=1){
+  const edge=Math.max(0,Math.round(cleanNumber(setup.edgeStitches,0)));
+  const multiple=Math.max(1,Math.round(cleanNumber(setup.stitchRepeatMultiple,fallbackMultiple)||fallbackMultiple));
+  return roundToNearestMultiple(Math.max(0,raw-edge),multiple)+edge;
 }
 function normalizeYarnWeightName(value=""){
   const text=String(value||"").toLowerCase();
@@ -356,36 +454,116 @@ function flowProjectDimensions(setup={}){
 }
 function setupWarnings(setup={}){
   const warnings=[];
-  const patternTool=firstNumber(setup.patternToolSize,0),userTool=firstNumber(setup.userToolSize,0);
-  if(patternTool&&userTool&&Math.abs(patternTool-userTool)>=.5){
-    warnings.push(`Your ${setup.craft==="Crochet"?"hook":"needle"} is ${userTool>patternTool?"larger":"smaller"} than the pattern. Your stitches may come out ${userTool>patternTool?"bigger and looser":"smaller and firmer"}, so the finished size may change.`);
+  const gauge=flowGaugeValues(setup),patternTool=firstNumber(setup.patternToolSizeMm||setup.patternToolSize,0),userTool=firstNumber(setup.userToolSizeMm||setup.userToolSize,0);
+  const toolDiff=patternTool&&userTool&&Math.abs(patternTool-userTool)>=.25;
+  if(toolDiff&&userTool>patternTool){
+    warnings.push("Your tool is larger than the pattern. Your stitches may be bigger.");
+  }else if(toolDiff&&userTool<patternTool){
+    warnings.push("Your tool is smaller than the pattern. Your stitches may be tighter.");
   }
   const patternRank=yarnWeightRank(setup.patternYarnWeight),userRank=yarnWeightRank(setup.userYarnWeight);
-  if(patternRank>=0&&userRank>=0&&patternRank!==userRank){
-    warnings.push(`Your yarn is ${userRank>patternRank?"heavier":"lighter"} than the pattern yarn. The finished piece may be ${userRank>patternRank?"larger and use more yarn":"smaller and use less yarn"}.`);
+  const yarnDiff=patternRank>=0&&userRank>=0&&patternRank!==userRank;
+  if(yarnDiff&&userRank>patternRank){
+    warnings.push("Your yarn is thicker than the pattern yarn. The project may become larger or firmer.");
+  }else if(yarnDiff&&userRank<patternRank){
+    warnings.push("Your yarn is thinner than the pattern yarn. The project may become smaller or softer.");
+  }
+  if((toolDiff||yarnDiff)&&!gauge.hasUserGauge){
+    warnings.push("Your yarn or tool size is different from the pattern. The finished size may change. Please enter your gauge for a better estimate.");
+  }
+  if(!gauge.hasUserGauge){
+    warnings.push("Yarncha needs your gauge to give a more accurate size estimate.");
   }
   return warnings;
 }
 function calculateFlowProjectPlan(p={},setup=normalizeProjectSetup(p.projectSetup,p)){
-  const gauge=parseGaugePair(setup.patternGauge),measurements=setupMeasurements(setup),toolDelta=Math.abs(firstNumber(setup.userToolSize)-firstNumber(setup.patternToolSize)),weightDelta=Math.abs((yarnWeightRank(setup.userYarnWeight)+1||0)-(yarnWeightRank(setup.patternYarnWeight)+1||0));
-  const dims=flowProjectDimensions(setup),width=Math.max(1,dims.width),length=Math.max(1,dims.length),sleeve=Math.max(0,dims.sleeve||0);
-  const stitchCount=Math.max(1,Math.round(width*gauge.stitches/gauge.span)),rowCount=Math.max(1,Math.round(length*gauge.rows/gauge.span)),sleeveRows=Math.max(1,Math.round(sleeve*gauge.rows/gauge.span));
-  const startCount=setup.craft==="Crochet"?Math.max(1,Math.round(stitchCount*.48)):stitchCount;
-  const yarnBase=Math.max(1,Math.round((stitchCount*rowCount)/75)),yarnUsage=Math.round(yarnBase*(1+toolDelta*.06+weightDelta*.12));
-  const shaping=Math.max(0,stitchCount-startCount),increaseEvery=shaping?Math.max(1,Math.round(rowCount/Math.max(1,Math.ceil(shaping/2)))):0;
+  const g=flowGaugeValues(setup),d=setup.itemDetails||{},measurements=setupMeasurements(setup),warnings=setupWarnings(setup),safetyMargin=flowSafetyMargin(setup);
+  const result={};
+  const yarnText=grams=>grams?`About ${Math.max(1,Math.round(grams))} g before buying buffer checks`:"Add swatch yarn weight for a better yarn estimate";
+  const addCommon=(width,length,area=width*length)=>{
+    result.widthCm=roundFlow(width);
+    result.lengthCm=roundFlow(length);
+    result.targetAreaCm2=roundFlow(area);
+    result.stitchCount=Math.max(1,Math.round(width*g.stitchesPerCm));
+    result.rowCount=Math.max(1,Math.round(length*g.rowsPerCm));
+    result.estimatedYarnGrams=estimateYarnFromArea(area,setup,safetyMargin);
+  };
+  if(setup.projectType==="Scarf"){
+    const styleLengths={"Neck warmer":70,"Child scarf":95,"Teen scarf":125,"Adult fashion scarf":155,"Fashion scarf":155,"One wrap":160,"Two wraps":200,"Long winter scarf":240,"Oversized scarf":275,"Custom length":firstNumber(d.length,160)};
+    const width=firstNumber(d.width,22),length=styleLengths[d.scarfStyle]||160;
+    addCommon(width,length);
+    result.castOnOrChain=applyRepeatRounding(width*g.stitchesPerCm,setup);
+  }else if(setup.projectType==="Socks"){
+    const negative={Snug:.10,Regular:.07,Relaxed:.04}[d.fitPreference]??.07;
+    const footCirc=firstNumber(d.footCircumference,22),footLength=firstNumber(d.footLength,24),legHeight={"No-show":3,Ankle:7,"Quarter Crew":12,Crew:18,"Mid-Calf":28,"Knee High":40,"Over-the-Knee":55}[d.sockType]||18;
+    const targetFootCircumference=footCirc*(1-negative),sockStitches=roundCircular(targetFootCircumference*g.stitchesPerCm,4),toeLength=firstNumber(d.toeLength,4.5);
+    result.widthCm=roundFlow(targetFootCircumference);result.lengthCm=roundFlow(footLength+legHeight);result.stitchCount=sockStitches;result.rowCount=Math.max(1,Math.round((footLength+legHeight)*g.rowsPerCm));
+    result.castOnOrChain=sockStitches;result.heelStitches=Math.round(sockStitches/2);result.instepStitches=Math.round(sockStitches/2);result.footBeforeToeCm=roundFlow(footLength-toeLength);result.toeRows=Math.round(toeLength*g.rowsPerCm);result.legRows=Math.round(legHeight*g.rowsPerCm);result.cuffRows=Math.round(firstNumber(d.cuffHeight,5)*g.rowsPerCm);result.heelFlapRows=result.heelStitches;result.gussetDecreaseCount=Math.round(firstNumber(d.pickedUpGussetStitches,0));result.decreaseRoundsNeeded=Math.round(result.gussetDecreaseCount/2);result.estimatedYarnGrams=estimateYarnFromArea(targetFootCircumference*(footLength+legHeight),setup,safetyMargin);
+  }else if(setup.projectType==="Hat / Beanie"){
+    const easeMap={"Fitted beanie":.10,"Folded brim":.10,"Bucket hat":.06,Beret:-.08,"Slouchy beanie":.04,"Bonnet / baby hat":.08,Custom:.06};
+    const head=firstNumber(d.headCircumference,56),negativeEase=easeMap[d.hatStyle]??.08,targetHatCircumference=head*(1-negativeEase),depth=firstNumber(d.hatDepth,22);
+    result.widthCm=roundFlow(targetHatCircumference);result.lengthCm=roundFlow(depth);result.castOnOrChain=applyRepeatRounding(targetHatCircumference*g.stitchesPerCm,setup,2);result.stitchCount=result.castOnOrChain;result.rowCount=Math.round(depth*g.rowsPerCm);result.brimRows=Math.round(firstNumber(d.brimDepth,5)*g.rowsPerCm);result.decreaseSections=Math.max(6,Math.round(firstNumber(d.decreaseSections,8)));result.stitchesPerSection=roundFlow(result.castOnOrChain/result.decreaseSections);result.decreaseRoundsNeeded=Math.max(1,Math.round(result.stitchesPerSection-firstNumber(d.finalTopStitchesPerSection,1)));result.estimatedYarnGrams=estimateYarnFromArea(targetHatCircumference*depth,setup,safetyMargin);
+  }else if(setup.projectType==="Bag"){
+    const width=firstNumber(d.width,36),height=firstNumber(d.height,38),depth=firstNumber(d.depth,8),strapWidth=firstNumber(d.strapWidth,4),strapLength=firstNumber(d.strapLength,60);
+    addCommon(width,height,2*width*height+2*height*depth+width*depth);
+    result.frontPanelStitches=Math.round(width*g.stitchesPerCm);result.frontPanelRows=Math.round(height*g.rowsPerCm);result.gussetStitches=Math.round(depth*g.stitchesPerCm);result.gussetRows=Math.round((2*height+width)*g.rowsPerCm);result.strapStitches=Math.round(strapWidth*g.stitchesPerCm);result.strapRows=Math.round(strapLength*g.rowsPerCm);result.volumeCm3=Math.round(width*height*depth);result.castOnOrChain=result.frontPanelStitches;
+    if(/market/i.test(d.bagType)||/soft/i.test(d.structure))warnings.push("This bag may stretch when filled. Consider a firmer stitch, lining, or smaller hook.");
+  }else if(setup.projectType==="Blanket"){
+    const preset=blanketPresetSize(d.blanketType),width=firstNumber(d.width,preset[0]),length=firstNumber(d.length,preset[1]),border=firstNumber(d.borderWidth,0);
+    const targetArea=width*length,borderOuterWidth=width+2*border,borderOuterLength=length+2*border,borderArea=borderOuterWidth*borderOuterLength-targetArea,totalArea=targetArea+borderArea;
+    addCommon(width,length,totalArea);
+    result.blanketStitches=Math.round(width*g.stitchesPerCm);result.blanketRows=Math.round(length*g.rowsPerCm);result.borderAreaCm2=roundFlow(borderArea);result.totalAreaCm2=roundFlow(totalArea);result.castOnOrChain=result.blanketStitches;
+    const square=firstNumber(d.squareSize,15);result.squareSizeCm=square;result.squaresAcross=Math.ceil(width/square);result.squaresDown=Math.ceil(length/square);result.totalSquares=result.squaresAcross*result.squaresDown;result.actualWidthCm=result.squaresAcross*square;result.actualLengthCm=result.squaresDown*square;
+    const blockWidth=firstNumber(d.blockWidth,2.5),blockHeight=firstNumber(d.blockHeight,2.5);result.blocksAcross=Math.ceil(width/blockWidth);result.blocksDown=Math.ceil(length/blockHeight);result.increaseRows=Math.min(result.blocksAcross,result.blocksDown);result.middleRows=Math.abs(result.blocksAcross-result.blocksDown);result.decreaseRows=result.increaseRows;
+  }else if(setup.projectType==="Amigurumi"){
+    const desiredHeight=firstNumber(d.finishedHeight,firstNumber(d.targetHeight,20)),desiredWidth=firstNumber(d.finishedWidth,18),originalHeight=firstNumber(d.originalHeight,desiredHeight),originalWidth=firstNumber(d.originalWidth,desiredWidth),heightScale=desiredHeight/originalHeight,widthScale=desiredWidth/originalWidth,averageScale=(heightScale+widthScale)/2;
+    addCommon(desiredWidth,desiredHeight,desiredWidth*desiredHeight);
+    result.heightScale=roundFlow(heightScale,2);result.widthScale=roundFlow(widthScale,2);result.averageScale=roundFlow(averageScale,2);result.estimatedYarnGrams=firstNumber(d.originalYarnGrams,0)?firstNumber(d.originalYarnGrams)*averageScale**2:estimateYarnFromArea(desiredWidth*desiredHeight,setup,1.20);result.estimatedStuffingGrams=firstNumber(d.originalStuffingGrams,0)?firstNumber(d.originalStuffingGrams)*averageScale**3:0;result.newEyeSizeMm=firstNumber(d.originalEyeSizeMm,0)?firstNumber(d.originalEyeSizeMm)*averageScale:0;result.maxRoundStitches=Math.round((desiredWidth*3.1416)*g.stitchesPerCm);result.castOnOrChain=Math.max(6,roundCircular(result.maxRoundStitches/6,6));
+    if(d.safetyRecipient==="Baby")warnings.push("For babies, embroidered eyes are safer than plastic safety eyes.");
+  }else if(setup.projectType==="Shawl"){
+    const wingspan=firstNumber(d.wingspan,170),depth=firstNumber(d.height,70),width=firstNumber(d.width,wingspan),length=firstNumber(d.length,depth);
+    const shape=d.shawlShape;let area=shape==="Rectangle"||shape==="Wrap"?width*length:shape==="Half Circle"?.5*3.1416*depth**2:shape==="Crescent"?wingspan*depth*.55:shape==="Asymmetrical"?wingspan*depth*.5:wingspan*depth/2;
+    addCommon(width,depth,area);result.totalRows=Math.round(depth*g.rowsPerCm);result.rowCount=result.totalRows;result.triangleBorderLengthApprox=roundFlow(wingspan+2*Math.sqrt((wingspan/2)**2+depth**2));result.castOnOrChain=Math.max(3,Math.round(wingspan*g.stitchesPerCm));
+  }else if(isGarmentProject(setup.projectType)){
+    const ease={Fitted:3,Regular:8,Relaxed:15,Oversized:24}[d.easePreference||d.fitPreference]??8,m=measurements,chest=firstNumber(setup.bodyMeasurements.chest,m.chest),waist=firstNumber(setup.bodyMeasurements.waist,m.waist),hip=firstNumber(setup.bodyMeasurements.hip,m.hip),body=firstNumber(setup.bodyMeasurements.body,m.body),sleeve=firstNumber(setup.bodyMeasurements.sleeve,m.sleeve);
+    const targetChest=chest+ease,targetWaist=waist+ease,targetHip=hip+ease,bodyStitches=Math.round(targetChest*g.stitchesPerCm),buttonBand=setup.projectType==="Cardigan"?Math.round(firstNumber(d.buttonBandStitches,8)):0;
+    result.widthCm=roundFlow(targetChest);result.lengthCm=roundFlow(body);result.bodyLengthCm=roundFlow(body);result.sleeveLengthCm=roundFlow(sleeve);result.targetChestCm=roundFlow(targetChest);result.targetWaistCm=roundFlow(targetWaist);result.targetHipCm=roundFlow(targetHip);result.stitchCount=bodyStitches+buttonBand;result.bodyStitches=bodyStitches;result.cardiganBodyStitches=bodyStitches+buttonBand;result.backStitches=Math.round(bodyStitches/2);result.frontPanelStitches=Math.round(bodyStitches/4);result.rowCount=Math.round(body*g.rowsPerCm);result.bodyRows=result.rowCount;result.castOnOrChain=result.stitchCount;
+    const upper=firstNumber(d.upperArmCircumference,Math.max(28,chest*.32)),wrist=firstNumber(d.wristCircumference,18);result.upperSleeveStitches=Math.round(upper*g.stitchesPerCm);result.cuffStitches=Math.round(wrist*g.stitchesPerCm);result.sleeveRows=Math.round(sleeve*g.rowsPerCm);result.sleeveIncreaseStitches=Math.max(0,result.upperSleeveStitches-result.cuffStitches);result.increaseRowsNeeded=result.sleeveIncreaseStitches/2;result.increaseEveryRows=result.increaseRowsNeeded?Math.max(1,Math.round(result.sleeveRows/result.increaseRowsNeeded)):0;
+    const skirtRows=Math.round(firstNumber(d.skirtLength,body*.45)*g.rowsPerCm),targetWaistStitches=Math.round(targetWaist*g.stitchesPerCm),targetHipStitches=Math.round(targetHip*g.stitchesPerCm),skirtIncreaseStitches=Math.max(0,targetHipStitches-targetWaistStitches);result.skirtIncreaseStitches=skirtIncreaseStitches;result.skirtLengthRows=skirtRows;result.skirtIncreaseRowsNeeded=skirtIncreaseStitches/2;result.skirtIncreaseEveryRows=result.skirtIncreaseRowsNeeded?Math.max(1,Math.round(skirtRows/result.skirtIncreaseRowsNeeded)):0;result.estimatedYarnGrams=estimateYarnFromArea(targetChest*(body+sleeve),setup,safetyMargin);
+  }else{
+    const dims=flowProjectDimensions(setup);addCommon(Math.max(1,dims.width),Math.max(1,dims.length));result.castOnOrChain=applyRepeatRounding(result.widthCm*g.stitchesPerCm,setup);
+  }
+  const originalPatternStitches=cleanNumber(setup.originalPatternStitches),originalPatternRows=cleanNumber(setup.originalPatternRows),patternWidth=cleanNumber(setup.patternWidthCm),patternLength=cleanNumber(setup.patternLengthCm);
+  if(originalPatternStitches&&originalPatternRows){
+    result.adjustedStitches=applyRepeatRounding(originalPatternStitches*(g.stitchesPerCm/g.patternStitchesPerCm),setup);
+    result.adjustedRows=Math.round(originalPatternRows*(g.rowsPerCm/g.patternRowsPerCm));
+    result.expectedWidthCm=roundFlow(originalPatternStitches/g.stitchesPerCm);
+    result.expectedLengthCm=roundFlow(originalPatternRows/g.rowsPerCm);
+    if(patternWidth)result.widthDifferencePercent=roundFlow(((result.expectedWidthCm-patternWidth)/patternWidth)*100);
+    if(patternLength)result.lengthDifferencePercent=roundFlow(((result.expectedLengthCm-patternLength)/patternLength)*100);
+  }
+  const estimateOnly=!g.hasUserGauge;
+  const yarnGrams=result.estimatedYarnGrams||0;
+  const shaping=Math.max(0,(result.stitchCount||0)-(result.castOnOrChain||0)),increaseEvery=shaping?Math.max(1,Math.round((result.rowCount||1)/Math.max(1,Math.ceil(shaping/2)))):0;
   return {
     updatedAt:new Date().toISOString(),
-    castOnOrChain:startCount,
+    estimateOnly,
+    gauge:g,
+    safetyMargin,
+    summary:`You’re ${setup.craft==="Crochet"?"crocheting":"knitting"} a ${setup.projectType.toLowerCase()}${isGarmentProject(setup.projectType)?` in size ${setup.desiredSize}`:""}.`,
+    castOnOrChain:result.castOnOrChain||result.stitchCount||1,
     startingLabel:setup.craft==="Crochet"?"Starting chain":"Cast-on",
-    stitchCount,
-    rowCount,
-    widthCm:Math.round(width),
-    lengthCm:Math.round(length),
-    sleeveLengthCm:Math.round(sleeve),
-    bodyLengthCm:Math.round(dims.body||length),
+    stitchCount:result.stitchCount||result.blanketStitches||result.castOnOrChain||1,
+    rowCount:result.rowCount||result.blanketRows||1,
+    widthCm:result.widthCm||1,
+    lengthCm:result.lengthCm||1,
+    sleeveLengthCm:result.sleeveLengthCm||0,
+    bodyLengthCm:result.bodyLengthCm||result.lengthCm||0,
     shapingNotes:shaping?`Add about ${shaping} stitch${shaping===1?"":"es"} across the project, roughly every ${increaseEvery} row${increaseEvery===1?"":"s"} if your pattern does not already place them.`:"No extra shaping is suggested from these setup numbers.",
-    estimatedYarnUsage:`About ${yarnUsage} ball${yarnUsage===1?"":"s"} or skein${yarnUsage===1?"":"s"} as a planning estimate.`,
-    warnings:setupWarnings(setup)
+    estimatedYarnGrams:roundFlow(yarnGrams),
+    estimatedYarnUsage:yarnText(yarnGrams),
+    warnings,
+    details:result
   };
 }
 function isLegacySymbolLearningSection(section={}){
@@ -902,15 +1080,36 @@ function friendlyChartBetaHtml(p){
         <div class="field"><label>Pattern yarn weight</label><input id="flow-pattern-yarn-weight" value="${escapeHtml(setup.patternYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
         <div class="field"><label>Your hook / needle size</label><input id="flow-user-tool" value="${escapeHtml(setup.userToolSize)}" placeholder="4.5 mm"></div>
         <div class="field"><label>Your yarn weight</label><input id="flow-user-yarn-weight" value="${escapeHtml(setup.userYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
+        <div class="field"><label>Pattern gauge stitches</label><input id="flow-pattern-gauge-stitches" type="number" step=".1" value="${escapeHtml(setup.patternGaugeStitches)}" placeholder="22"></div>
+        <div class="field"><label>Pattern gauge rows</label><input id="flow-pattern-gauge-rows" type="number" step=".1" value="${escapeHtml(setup.patternGaugeRows)}" placeholder="30"></div>
+        <div class="field"><label>Your gauge stitches</label><input id="flow-user-gauge-stitches" type="number" step=".1" value="${escapeHtml(setup.userGaugeStitches)}" placeholder="Enter your swatch"></div>
+        <div class="field"><label>Your gauge rows</label><input id="flow-user-gauge-rows" type="number" step=".1" value="${escapeHtml(setup.userGaugeRows)}" placeholder="Enter your swatch"></div>
+        <div class="field"><label>Gauge width cm</label><input id="flow-gauge-width" type="number" step=".1" value="${escapeHtml(setup.gaugeWidthCm||10)}" placeholder="10"></div>
+        <div class="field"><label>Gauge height cm</label><input id="flow-gauge-height" type="number" step=".1" value="${escapeHtml(setup.gaugeHeightCm||10)}" placeholder="10"></div>
+        <details class="flow-inline-advanced full"><summary>Helpful extras for better estimates</summary>
+          ${flowField("flow-repeat-multiple","Stitch repeat multiple",setup.stitchRepeatMultiple,"Optional")}
+          ${flowField("flow-edge-stitches","Edge stitches",setup.edgeStitches,"Optional")}
+          ${flowField("flow-swatch-width","Swatch width cm",setup.swatchWidthCm,"Optional")}
+          ${flowField("flow-swatch-height","Swatch height cm",setup.swatchHeightCm,"Optional")}
+          ${flowField("flow-swatch-weight","Swatch weight grams",setup.swatchWeightGrams,"Optional")}
+          ${flowField("flow-pattern-yarn-grams","Pattern yarn grams",setup.patternYarnGrams,"Optional")}
+          ${flowField("flow-pattern-area","Pattern area cm²",setup.patternAreaCm2,"Optional")}
+          ${flowField("flow-original-stitches","Original pattern stitches",setup.originalPatternStitches,"Optional")}
+          ${flowField("flow-original-rows","Original pattern rows",setup.originalPatternRows,"Optional")}
+          ${flowField("flow-pattern-width","Pattern finished width cm",setup.patternWidthCm,"Optional")}
+          ${flowField("flow-pattern-length","Pattern finished length cm",setup.patternLengthCm,"Optional")}
+        </details>
         <div class="field full"><label>Project type</label><select id="flow-project-type">${options(projectTypes,setup.projectType)}</select></div>
         ${flowProjectTypeFields(setup,options,sizeOptions)}
       </div>
       <div class="flow-setup-save-row"><button class="primary-button" id="save-flow-project-setup" type="button">Save project setup</button><span id="flow-setup-save-status" class="setup-save-status saved">Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
       ${plan.warnings.length?`<div class="flow-warning-card"><strong>Before you begin</strong>${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<div class="flow-ready-card ready"><p>✓ Your hook or needle and yarn look close enough to the pattern to begin.</p></div>`}
+      <div class="flow-ready-card ${plan.estimateOnly?"almost":"ready"}"><p>${plan.estimateOnly?"Estimate only":"Ready"} · ${escapeHtml(plan.summary||"Project setup summary is ready.")}</p></div>
       ${resultSummaryHtml("Project Setup Summary",flowCalculationItems(plan),"flow-calculation-summary")}
+      <button class="primary-button flow-start-button" id="start-flow-mode" type="button">Start Flow Mode</button>
     </section>
     <section class="flow-reader-panel flow-reading-mode-panel"><h4>Reading Progress</h4>
-      <div class="flow-current-row-card"><label for="flow-current-row">I'm currently on</label><div class="flow-row-line"><span>Row</span><input id="flow-current-row" type="number" min="0" max="${p.chartRows||reader.grid.rows||999}" value="${p.row}"></div><p>${escapeHtml(rowInstruction)}</p></div>
+      <div class="flow-current-row-card"><label for="flow-current-row">I'm currently on</label><div class="flow-row-line"><span>Row</span><input id="flow-current-row" type="number" min="0" max="${p.chartRows||reader.grid.rows||999}" value="${p.row}"></div><p>${escapeHtml(rowInstruction)}</p><small>${escapeHtml(flowCurrentStitchStep(p,setup))}</small></div>
       <div class="flow-row-buttons"><button class="secondary-button" id="flow-prev-row" type="button">Previous Row</button><button class="primary-button" id="flow-next-row" type="button">Next Row</button></div>
       <div class="flow-next-card"><strong>What's next?</strong><p>${flowReadingSummary(p,reader)}</p></div>
       <label class="flow-direction-field">Pattern Language<select id="flow-pattern-language">${options(["abbreviations","full"],setup.patternLanguage,{abbreviations:"Abbreviations",full:"Full wording"})}</select><small>Choose whether Yarncha shows short pattern notation or spells each stitch out.</small></label>
@@ -951,15 +1150,17 @@ function friendlyChartBetaHtml(p){
 }
 function flowCalculationItems(plan={}){
   return [
+    {label:"Finished size",value:plan.widthCm&&plan.lengthCm?`${plan.widthCm} × ${plan.lengthCm} cm`:"Set size first"},
     {label:plan.startingLabel||"Start",value:String(plan.castOnOrChain||"Set gauge first")},
-    {label:"Stitch count",value:String(plan.stitchCount||"Set gauge first")},
-    {label:"Row count",value:String(plan.rowCount||"Set gauge first")},
-    {label:"Width",value:plan.widthCm?`${plan.widthCm} cm`:"Set size first"},
-    {label:"Length",value:plan.lengthCm?`${plan.lengthCm} cm`:"Set size first"},
+    {label:"Recommended stitch count",value:String(plan.stitchCount||"Set gauge first"),description:"Stitch count from your saved gauge."},
+    {label:"Recommended row count",value:String(plan.rowCount||"Set gauge first"),description:"Row count from your saved gauge."},
+    {label:"Estimated finished width",value:plan.widthCm?`${plan.widthCm} cm`:"Set size first"},
+    {label:"Estimated finished length",value:plan.lengthCm?`${plan.lengthCm} cm`:"Set size first"},
     {label:"Sleeve length",value:plan.sleeveLengthCm?`${plan.sleeveLengthCm} cm`:"If needed"},
     {label:"Body length",value:plan.bodyLengthCm?`${plan.bodyLengthCm} cm`:"If needed"},
     {label:"Shaping",value:plan.shapingNotes||"Pattern decides"},
-    {label:"Yarn",value:plan.estimatedYarnUsage||"Add yarn details"}
+    {label:"Yarn estimate",value:plan.estimatedYarnUsage||"Add yarn details"},
+    ...(plan.estimateOnly?[{label:"Estimate only",value:"Add your gauge when you can for a more accurate size estimate."}]:[])
   ];
 }
 function resultSummaryHtml(title,items=[],className=""){
@@ -975,18 +1176,18 @@ function flowProjectTypeFields(setup={},options=(values,current)=>"",sizeOptions
   const d=setup.itemDetails||{},type=setup.projectType;
   const recipient=["Baby","Child","Teen","Adult","Custom"];
   if(isGarmentProject(type)){
-    return `${flowSelect("flow-desired-size","Desired garment size",sizeOptions,setup.desiredSize,options)}${flowField("flow-custom-size","Custom size notes",setup.customSize)}${flowField("flow-body-chest","Chest / bust cm",setup.bodyMeasurements.chest)}${flowField("flow-body-waist","Waist cm",setup.bodyMeasurements.waist)}${flowField("flow-body-hip","Hip cm",setup.bodyMeasurements.hip)}${flowField("flow-body-sleeve","Sleeve length cm",setup.bodyMeasurements.sleeve)}${flowField("flow-body-body","Body length cm",setup.bodyMeasurements.body)}`;
+    return `${flowSelect("flow-desired-size","Desired garment size",sizeOptions,setup.desiredSize,options)}${flowField("flow-custom-size","Custom size notes",setup.customSize)}${flowSelect("flow-ease-preference","Fit preference",["Fitted","Regular","Relaxed","Oversized"],d.easePreference,options)}${flowSelect("flow-garment-construction","Construction",["Raglan","Drop shoulder","Set-in sleeve","Circular yoke","Panels","Pattern decides"],d.garmentConstruction,options)}${flowField("flow-body-chest","Chest / bust cm",setup.bodyMeasurements.chest)}${flowField("flow-body-waist","Waist cm",setup.bodyMeasurements.waist)}${flowField("flow-body-hip","Hip cm",setup.bodyMeasurements.hip)}${flowField("flow-body-sleeve","Sleeve length cm",setup.bodyMeasurements.sleeve)}${flowField("flow-body-body","Body length cm",setup.bodyMeasurements.body)}<details class="flow-inline-advanced"><summary>Sleeve and shaping details</summary>${flowField("flow-upper-arm","Upper arm circumference cm",d.upperArmCircumference)}${flowField("flow-wrist","Wrist circumference cm",d.wristCircumference)}${flowField("flow-armhole-depth","Armhole depth cm",d.armholeDepth)}${flowField("flow-button-band","Button band stitches",d.buttonBandStitches)}${type==="Dress"?flowField("flow-skirt-length","Skirt length cm",d.skirtLength):""}</details>`;
   }
   if(type==="Scarf")return `${flowSelect("flow-recipient","Who are you making this for?",recipient,d.recipient,options)}${d.recipient==="Adult"?flowSelect("flow-adult-height","Approximate height",["Under 150 cm","150–160 cm","160–170 cm","170–180 cm","180–190 cm","190+ cm"],d.adultHeight,options):""}${flowSelect("flow-scarf-style","How do you want the scarf to fit?",["Neck warmer","One wrap","Two wraps","Long winter scarf","Oversized scarf","Fashion scarf","Custom length"],d.scarfStyle,options)}${d.scarfStyle==="Custom length"?flowField("flow-item-length","Custom length cm",d.length):""}${flowField("flow-item-width","Scarf width cm",d.width)}`;
-  if(type==="Socks")return `${flowSelect("flow-sock-type","Sock type",["No-show","Ankle","Quarter Crew","Crew","Mid-Calf","Knee High","Over-the-Knee"],d.sockType,options,false,"This changes the pattern length and shaping.")}${flowSelect("flow-recipient","Who are you making these for?",recipient,d.recipient,options)}${flowSelect("flow-sock-sizing-mode","How would you like to size the socks?",["Shoe Size","Foot Measurements"],d.sockSizingMode,options)}${d.sockSizingMode==="Shoe Size"?`${flowSelect("flow-shoe-region","Region",["AU","US","UK","EU","JP"],d.shoeRegion,options)}${flowField("flow-shoe-size","Shoe size",d.shoeSize)}`:""}${flowField("flow-foot-length","Foot length cm",d.footLength)}${flowField("flow-foot-circumference","Foot circumference cm",d.footCircumference)}${flowField("flow-heel-to-ankle","Heel to ankle cm",d.heelToAnkle)}${flowField("flow-ankle-circumference","Ankle circumference cm",d.ankleCircumference)}${["Mid-Calf","Knee High","Over-the-Knee"].includes(d.sockType)?flowField("flow-calf-circumference","Calf circumference cm",d.calfCircumference):""}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-construction-method","Construction method",["Toe-up","Cuff-down"],d.constructionMethod,options)}${flowSelect("flow-heel-style","Heel style",["Heel Flap","Short Row","Afterthought","Fish Lips Kiss","Pattern decides"],d.heelStyle,options)}`;
-  if(type==="Hat / Beanie")return `${flowSelect("flow-recipient","Recipient",recipient,d.recipient,options)}${flowField("flow-head-circumference","Head circumference cm",d.headCircumference)}${flowSelect("flow-hat-style","Hat style",["Fitted beanie","Slouchy beanie","Folded brim","Bucket hat","Beret","Bonnet / baby hat","Custom"],d.hatStyle,options)}${flowField("flow-hat-depth","Desired hat depth cm",d.hatDepth)}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-brim-style","Brim style",["No brim","Ribbed brim","Folded brim","Rolled brim"],d.brimStyle,options)}${flowSelect("flow-crown-style","Crown style",["Rounded crown","Pointed crown","Flat top","Pattern decides"],d.crownStyle,options)}`;
-  if(type==="Bag")return `${flowSelect("flow-bag-type","Bag type",["Tote","Market bag","Crossbody","Shoulder bag","Drawstring pouch","Mini bag","Project bag","Custom"],d.bagType,options)}${flowField("flow-item-width","Desired width cm",d.width)}${flowField("flow-item-height","Desired height cm",d.height)}${flowField("flow-strap-length","Strap length cm",d.strapLength)}<details class="flow-inline-advanced"><summary>Advanced bag options</summary>${flowField("flow-item-depth","Bag depth / gusset cm",d.depth)}${flowField("flow-handle-drop","Handle drop cm",d.handleDrop)}${flowSelect("flow-closure","Closure",["None","Button","Zip","Drawstring","Flap"],d.closure,options)}${flowSelect("flow-lining","Lining",["No lining","Fabric lining"],d.lining,options)}${flowSelect("flow-structure","Fit / structure",["Soft","Medium","Firm"],d.structure,options)}</details>`;
+  if(type==="Socks")return `${flowSelect("flow-sock-type","Sock type",["No-show","Ankle","Quarter Crew","Crew","Mid-Calf","Knee High","Over-the-Knee"],d.sockType,options,false,"This changes the pattern length and shaping.")}${flowSelect("flow-recipient","Who are you making these for?",recipient,d.recipient,options)}${flowSelect("flow-sock-sizing-mode","How would you like to size the socks?",["Shoe Size","Foot Measurements"],d.sockSizingMode,options)}${d.sockSizingMode==="Shoe Size"?`${flowSelect("flow-shoe-region","Region",["AU","US","UK","EU","JP"],d.shoeRegion,options)}${flowField("flow-shoe-size","Shoe size",d.shoeSize)}`:""}${flowField("flow-foot-length","Foot length cm",d.footLength)}${flowField("flow-foot-circumference","Foot circumference cm",d.footCircumference)}${flowField("flow-heel-to-ankle","Heel to ankle cm",d.heelToAnkle)}${flowField("flow-ankle-circumference","Ankle circumference cm",d.ankleCircumference)}${["Mid-Calf","Knee High","Over-the-Knee"].includes(d.sockType)?flowField("flow-calf-circumference","Calf circumference cm",d.calfCircumference):""}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-construction-method","Construction method",["Toe-up","Cuff-down"],d.constructionMethod,options)}${flowSelect("flow-heel-style","Heel style",["Heel Flap","Short Row","Afterthought","Pattern decides"],d.heelStyle,options)}<details class="flow-inline-advanced"><summary>Heel, toe and leg details</summary>${flowField("flow-toe-length","Toe length cm",d.toeLength)}${flowField("flow-leg-height","Desired leg height cm",d.desiredLegHeight)}${flowField("flow-cuff-height","Cuff height cm",d.cuffHeight)}${flowField("flow-gusset-stitches","Picked up gusset stitches",d.pickedUpGussetStitches)}</details>`;
+  if(type==="Hat / Beanie")return `${flowSelect("flow-recipient","Recipient",recipient,d.recipient,options)}${flowField("flow-head-circumference","Head circumference cm",d.headCircumference)}${flowSelect("flow-hat-style","Hat style",["Fitted beanie","Slouchy beanie","Folded brim","Bucket hat","Beret","Bonnet / baby hat","Custom"],d.hatStyle,options)}${flowField("flow-hat-depth","Desired hat depth cm",d.hatDepth)}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-brim-style","Brim style",["No brim","Ribbed brim","Folded brim","Rolled brim"],d.brimStyle,options)}${flowSelect("flow-crown-style","Crown style",["Rounded crown","Pointed crown","Flat top","Pattern decides"],d.crownStyle,options)}<details class="flow-inline-advanced"><summary>Crown details</summary>${flowField("flow-brim-depth","Brim depth cm",d.brimDepth)}${flowField("flow-decrease-sections","Decrease sections",d.decreaseSections)}${flowField("flow-final-top-stitches","Final top stitches per section",d.finalTopStitchesPerSection)}</details>`;
+  if(type==="Bag")return `${flowSelect("flow-bag-type","Bag type",["Tote","Market bag","Crossbody","Shoulder bag","Drawstring pouch","Mini bag","Project bag","Custom"],d.bagType,options)}${flowField("flow-item-width","Desired width cm",d.width)}${flowField("flow-item-height","Desired height cm",d.height)}${flowField("flow-strap-length","Strap length cm",d.strapLength)}${flowField("flow-strap-width","Strap width cm",d.strapWidth)}<details class="flow-inline-advanced"><summary>Advanced bag options</summary>${flowField("flow-item-depth","Bag depth / gusset cm",d.depth)}${flowField("flow-handle-drop","Handle drop cm",d.handleDrop)}${flowSelect("flow-closure","Closure",["None","Button","Zip","Drawstring","Flap"],d.closure,options)}${flowSelect("flow-lining","Lining",["No lining","Fabric lining"],d.lining,options)}${flowSelect("flow-structure","Fit / structure",["Soft","Medium","Firm"],d.structure,options)}</details>`;
   if(type==="Blanket"){
     const preset=blanketPresetSize(d.blanketType);
-    return `${flowSelect("flow-blanket-type","Blanket type",["Lovey","Baby Blanket","Crib Blanket","Stroller Blanket","Lap Blanket","Throw Blanket","Twin","Full / Double","Queen","King","Custom"],d.blanketType,options)}<div class="flow-ready-card ready"><p>Recommended size: ${preset[0]} × ${preset[1]} cm. Use this size or edit below.</p></div>${flowField("flow-item-width","Finished width cm",d.width||preset[0])}${flowField("flow-item-length","Finished length cm",d.length||preset[1])}${flowSelect("flow-blanket-shape","Blanket shape",["Rectangle","Square","Circle","Hexagon","Custom"],d.blanketShape,options)}${flowSelect("flow-warmth","Warmth",["Lightweight","Medium","Thick & Cozy"],d.warmth,options)}${flowField("flow-border-width","Border width cm",d.borderWidth)}${flowSelect("flow-fringe","Fringe / tassels",["None","Short","Long"],d.fringe,options)}`;
+    return `${flowSelect("flow-blanket-type","Blanket type",["Lovey","Baby Blanket","Crib Blanket","Stroller Blanket","Lap Blanket","Throw Blanket","Twin","Full / Double","Queen","King","Custom"],d.blanketType,options)}<div class="flow-ready-card ready"><p>Recommended size: ${preset[0]} × ${preset[1]} cm. Use this size or edit below.</p></div>${flowField("flow-item-width","Finished width cm",d.width||preset[0])}${flowField("flow-item-length","Finished length cm",d.length||preset[1])}${flowSelect("flow-blanket-shape","Blanket shape",["Rectangle","Square","Circle","Hexagon","Custom"],d.blanketShape,options)}${flowSelect("flow-warmth","Warmth",["Lightweight","Medium","Thick & Cozy"],d.warmth,options)}${flowField("flow-border-width","Border width cm",d.borderWidth)}${flowSelect("flow-fringe","Fringe / tassels",["None","Short","Long"],d.fringe,options)}<details class="flow-inline-advanced"><summary>Squares or C2C details</summary>${flowField("flow-square-size","Granny square size cm",d.squareSize)}${flowField("flow-block-width","C2C block width cm",d.blockWidth)}${flowField("flow-block-height","C2C block height cm",d.blockHeight)}</details>`;
   }
-  if(type==="Amigurumi")return `${flowSelect("flow-amigurumi-type","What are you making?",["Animal","Doll","Character","Food","Plant","Keychain","Decoration","Plush","Custom"],d.amigurumiType,options)}${flowField("flow-finished-height","Desired finished height cm",d.finishedHeight)}${flowField("flow-finished-width","Desired finished width cm",d.finishedWidth)}${flowSelect("flow-shape","Overall shape",["Round","Oval","Long","Chubby","Standing","Sitting","Custom"],d.shape,options)}${flowSelect("flow-stuffing-firmness","Stuffing firmness",["Soft","Medium","Firm"],d.stuffingFirmness,options)}${flowSelect("flow-safety-recipient","Who is it for?",["Baby","Child","Adult","Display only"],d.safetyRecipient,options)}${d.safetyRecipient==="Baby"?`<div class="flow-warning-card"><p>For babies, embroidered eyes are safer than plastic safety eyes.</p></div>`:""}<details class="flow-inline-advanced" open><summary>Scale Existing Pattern</summary>${flowField("flow-original-height","Original pattern height cm",d.originalHeight)}${flowField("flow-target-height","I want cm",d.targetHeight)}</details>`;
-  if(type==="Shawl")return `${flowSelect("flow-shawl-shape","Shawl shape",["Triangle","Crescent","Half Circle","Rectangle","Wrap","Asymmetrical","Custom"],d.shawlShape,options)}${flowSelect("flow-shawl-fit","Size",["Small Shoulder Shawl","Everyday Shawl","Large Wrap","Oversized Wrap","Custom"],d.shawlFit,options)}${flowField("flow-wingspan","Desired wingspan cm",d.wingspan)}${flowField("flow-item-height","Desired depth cm",d.height)}${flowSelect("flow-recipient","Who is it for?",["Child","Teen","Adult","Custom"],d.recipient,options)}`;
+  if(type==="Amigurumi")return `${flowSelect("flow-amigurumi-type","What are you making?",["Animal","Doll","Character","Food","Plant","Keychain","Decoration","Plush","Custom"],d.amigurumiType,options)}${flowField("flow-finished-height","Desired finished height cm",d.finishedHeight)}${flowField("flow-finished-width","Desired finished width cm",d.finishedWidth)}${flowSelect("flow-shape","Overall shape",["Round","Oval","Long","Chubby","Standing","Sitting","Custom"],d.shape,options)}${flowSelect("flow-stuffing-firmness","Stuffing firmness",["Soft","Medium","Firm"],d.stuffingFirmness,options)}${flowSelect("flow-safety-recipient","Who is it for?",["Baby","Child","Adult","Display only"],d.safetyRecipient,options)}${d.safetyRecipient==="Baby"?`<div class="flow-warning-card"><p>For babies, embroidered eyes are safer than plastic safety eyes.</p></div>`:""}<details class="flow-inline-advanced" open><summary>Scale existing pattern</summary>${flowField("flow-original-height","Original pattern height cm",d.originalHeight)}${flowField("flow-original-width","Original pattern width cm",d.originalWidth)}${flowField("flow-target-height","I want cm",d.targetHeight)}${flowField("flow-original-yarn","Original yarn grams",d.originalYarnGrams)}${flowField("flow-original-stuffing","Original stuffing grams",d.originalStuffingGrams)}${flowField("flow-original-eye","Original eye size mm",d.originalEyeSizeMm)}</details>`;
+  if(type==="Shawl")return `${flowSelect("flow-shawl-shape","Shawl shape",["Triangle","Crescent","Half Circle","Rectangle","Wrap","Asymmetrical","Custom"],d.shawlShape,options)}${flowSelect("flow-shawl-fit","Wear style",["Neck scarf","Shoulder shawl","Large wrap","Oversized wrap"],d.wearStyle,options)}${flowField("flow-wingspan","Desired wingspan cm",d.wingspan)}${flowField("flow-item-height","Desired depth cm",d.height)}${flowField("flow-item-width","Finished width cm",d.width)}${flowField("flow-item-length","Finished length cm",d.length)}${flowSelect("flow-recipient","Who is it for?",["Child","Teen","Adult","Custom"],d.recipient,options)}`;
   return `${flowField("flow-item-width","Width cm",d.width)}${flowField("flow-item-length","Length cm",d.length)}${flowField("flow-item-height","Height cm",d.height)}`;
 }
 function readFlowSetupDetails(previous={}){
@@ -1006,18 +1207,28 @@ function readFlowSetupDetails(previous={}){
     ankleCircumference:pick("flow-ankle-circumference","ankleCircumference"),
     calfCircumference:pick("flow-calf-circumference","calfCircumference"),
     fitPreference:pick("flow-fit-preference","fitPreference"),
+    easePreference:pick("flow-ease-preference","easePreference"),
     constructionMethod:pick("flow-construction-method","constructionMethod"),
+    garmentConstruction:pick("flow-garment-construction","garmentConstruction"),
     heelStyle:pick("flow-heel-style","heelStyle"),
+    toeLength:pick("flow-toe-length","toeLength"),
+    desiredLegHeight:pick("flow-leg-height","desiredLegHeight"),
+    cuffHeight:pick("flow-cuff-height","cuffHeight"),
+    pickedUpGussetStitches:pick("flow-gusset-stitches","pickedUpGussetStitches"),
     headCircumference:pick("flow-head-circumference","headCircumference"),
     hatStyle:pick("flow-hat-style","hatStyle"),
     hatDepth:pick("flow-hat-depth","hatDepth"),
+    brimDepth:pick("flow-brim-depth","brimDepth"),
     brimStyle:pick("flow-brim-style","brimStyle"),
     crownStyle:pick("flow-crown-style","crownStyle"),
+    decreaseSections:pick("flow-decrease-sections","decreaseSections"),
+    finalTopStitchesPerSection:pick("flow-final-top-stitches","finalTopStitchesPerSection"),
     bagType:pick("flow-bag-type","bagType"),
     width:pick("flow-item-width","width"),
     height:pick("flow-item-height","height"),
     length:pick("flow-item-length","length"),
     strapLength:pick("flow-strap-length","strapLength"),
+    strapWidth:pick("flow-strap-width","strapWidth"),
     depth:pick("flow-item-depth","depth"),
     handleDrop:pick("flow-handle-drop","handleDrop"),
     closure:pick("flow-closure","closure"),
@@ -1028,6 +1239,9 @@ function readFlowSetupDetails(previous={}){
     warmth:pick("flow-warmth","warmth"),
     borderWidth:pick("flow-border-width","borderWidth"),
     fringe:pick("flow-fringe","fringe"),
+    squareSize:pick("flow-square-size","squareSize"),
+    blockWidth:pick("flow-block-width","blockWidth"),
+    blockHeight:pick("flow-block-height","blockHeight"),
     amigurumiType:pick("flow-amigurumi-type","amigurumiType"),
     finishedHeight:pick("flow-finished-height","finishedHeight"),
     finishedWidth:pick("flow-finished-width","finishedWidth"),
@@ -1035,10 +1249,20 @@ function readFlowSetupDetails(previous={}){
     stuffingFirmness:pick("flow-stuffing-firmness","stuffingFirmness"),
     safetyRecipient:pick("flow-safety-recipient","safetyRecipient"),
     originalHeight:pick("flow-original-height","originalHeight"),
+    originalWidth:pick("flow-original-width","originalWidth"),
     targetHeight:pick("flow-target-height","targetHeight"),
+    originalYarnGrams:pick("flow-original-yarn","originalYarnGrams"),
+    originalStuffingGrams:pick("flow-original-stuffing","originalStuffingGrams"),
+    originalEyeSizeMm:pick("flow-original-eye","originalEyeSizeMm"),
     shawlShape:pick("flow-shawl-shape","shawlShape"),
     shawlFit:pick("flow-shawl-fit","shawlFit"),
-    wingspan:pick("flow-wingspan","wingspan")
+    wearStyle:pick("flow-shawl-fit","wearStyle"),
+    wingspan:pick("flow-wingspan","wingspan"),
+    skirtLength:pick("flow-skirt-length","skirtLength"),
+    upperArmCircumference:pick("flow-upper-arm","upperArmCircumference"),
+    wristCircumference:pick("flow-wrist","wristCircumference"),
+    armholeDepth:pick("flow-armhole-depth","armholeDepth"),
+    buttonBandStitches:pick("flow-button-band","buttonBandStitches")
   };
 }
 function sharedProjectSetupSummaryHtml(p){
@@ -1105,13 +1329,55 @@ function projectFitCheckHtml(p){
     <div class="fit-check-actions"><button class="secondary-button" id="save-fit-check">Save Fit Check</button><button class="mini-button" id="open-fit-tools">Open sizing tools</button></div>
   </section>`;
 }
+const flowExampleRows={
+  crochet:"sc, 2(sc, inc, sc)",
+  crochetLegacy:"sc, 2(sc, inc), sc",
+  knitting:"K, K, K, SSK, P, P, YO"
+};
 function flowCurrentRowInstruction(p=getProject(),setup=normalizeProjectSetup(p.projectSetup,p)){
   const analysed=highlightedRowAnalysis(p);
   const raw=analysed?.sequence||highlightedRowRecognition(p).map(cell=>cell.candidates?.[0]?.abbreviation||cell.detectedSymbol||"").filter(Boolean).join(", ");
-  const fallback=setup.craft==="Crochet"?"sc, 2(sc, inc), sc":"K, K, K, SSK, P, P, YO";
+  const fallback=setup.craft==="Crochet"?flowExampleRows.crochet:flowExampleRows.knitting;
   const sequence=raw||fallback;
   if(setup.patternLanguage==="full")return sequenceToSpokenInstructions(sequence,{readAloud:{mode:"teaching",language:"en",voiceSpeed:1}},setup.craft);
   return sequence;
+}
+function flowCurrentStitchStep(p=getProject(),setup=normalizeProjectSetup(p.projectSetup,p)){
+  const sequence=flowCurrentRowInstruction(p,{...setup,patternLanguage:"abbreviations"});
+  const analysis=analyzeRowInstruction(sequence,{craft:setup.craft,startingStitches:previousRowStitchCount(p)});
+  const firstStep=analysis.steps[0]?.token||"start this row";
+  return `${analysis.steps.length?`First stitch: ${firstStep}. `:""}${analysis.warning||"Stitch count looks ready."}`;
+}
+function previousRowStitchCount(p=getProject()){
+  const previous=p.chartAnalysis?.rows?.find(r=>Number(r.number)===Number(p.row)-1);
+  return Number(previous?.stitchCount)||Number(p.projectCalculations?.stitchCount)||0;
+}
+function expandInstructionRepeats(sequence=""){
+  let text=String(sequence||"");
+  let guard=0;
+  while(/\d+\s*\([^()]+\)/.test(text)&&guard++<12){
+    text=text.replace(/(\d+)\s*\(([^()]+)\)/g,(_,count,body)=>Array.from({length:Math.max(1,Math.min(99,Number(count)||1))},()=>body).join(", "));
+  }
+  return text;
+}
+function instructionSteps(sequence=""){
+  return expandInstructionRepeats(sequence).split(/[,;]+|\s+(?=(?:K2tog|SSK|YO|M1|BO|K|P|sc|dc|hdc|inc|dec|ch|sl\s*st)\b)/i).map(token=>token.trim()).filter(Boolean);
+}
+function stitchActionForToken(token,craft="Knitting"){
+  const clean=String(token||"").trim(),lower=clean.toLowerCase().replace(/\s+/g," ");
+  const crochet={sc:[1,1],dc:[1,1],hdc:[1,1],inc:[1,2],dec:[2,1],ch:[0,1],"sl st":[1,1],slst:[1,1]};
+  const knitting={k:[1,1],p:[1,1],yo:[0,1],k2tog:[2,1],ssk:[2,1],m1:[0,1],bo:[1,0]};
+  const table=/crochet/i.test(craft)?crochet:knitting;
+  const match=Object.keys(table).find(key=>lower===key||lower.startsWith(key+" "));
+  const pair=table[match]||[1,1];
+  return {token:clean,consumes:pair[0],produces:pair[1]};
+}
+function analyzeRowInstruction(sequence="",{craft="Knitting",startingStitches=0}={}){
+  const steps=instructionSteps(sequence).map(token=>stitchActionForToken(token,craft));
+  const consumedStitches=steps.reduce((sum,step)=>sum+step.consumes,0);
+  const endingStitches=steps.reduce((sum,step)=>sum+step.produces,0);
+  const warning=startingStitches&&consumedStitches&&Math.abs(consumedStitches-startingStitches)>1?"This row may need a quick check. The stitch count does not fully match the previous row.":"";
+  return {steps,startingStitches,consumedStitches,endingStitches,warning};
 }
 function flowRecognitionResultsHtml(results=[]){
   if(!results.length)return `<div class="flow-recognition-empty">Nothing to look over yet. Use Check chart or add a written row when you want extra help.</div>`;
@@ -1495,9 +1761,28 @@ function bindFlowModeReader(p){
     projectType:value("flow-project-type")||p.projectSetup?.projectType||"Other",
     patternGauge:value("flow-pattern-gauge"),
     patternToolSize:value("flow-pattern-tool"),
+    patternToolSizeMm:value("flow-pattern-tool"),
     patternYarnWeight:value("flow-pattern-yarn-weight"),
     userToolSize:value("flow-user-tool"),
+    userToolSizeMm:value("flow-user-tool"),
     userYarnWeight:value("flow-user-yarn-weight"),
+    patternGaugeStitches:value("flow-pattern-gauge-stitches"),
+    patternGaugeRows:value("flow-pattern-gauge-rows"),
+    userGaugeStitches:value("flow-user-gauge-stitches"),
+    userGaugeRows:value("flow-user-gauge-rows"),
+    gaugeWidthCm:value("flow-gauge-width")||10,
+    gaugeHeightCm:value("flow-gauge-height")||10,
+    stitchRepeatMultiple:value("flow-repeat-multiple"),
+    edgeStitches:value("flow-edge-stitches"),
+    swatchWidthCm:value("flow-swatch-width"),
+    swatchHeightCm:value("flow-swatch-height"),
+    swatchWeightGrams:value("flow-swatch-weight"),
+    patternYarnGrams:value("flow-pattern-yarn-grams"),
+    patternAreaCm2:value("flow-pattern-area"),
+    originalPatternStitches:value("flow-original-stitches"),
+    originalPatternRows:value("flow-original-rows"),
+    patternWidthCm:value("flow-pattern-width"),
+    patternLengthCm:value("flow-pattern-length"),
     desiredSize:value("flow-desired-size")||p.projectSetup?.desiredSize||"M",
     customSize:value("flow-custom-size")||p.projectSetup?.customSize||"",
     patternLanguage:value("flow-pattern-language")||p.projectSetup?.patternLanguage||"abbreviations",
@@ -1513,13 +1798,7 @@ function bindFlowModeReader(p){
   },p);
   const saveFlowSetup=({render=true}={})=>{
     const setup=setupForm();
-    const simpleSetup={
-      craft:setup.craft,
-      patternGauge:setup.patternGauge,
-      updatedAt:new Date().toISOString()
-    };
     p.projectSetup=setup;
-    p.setup=simpleSetup;
     p.type=setup.craft;
     p.projectKind=setup.projectType;
     p.gauge=setup.patternGauge;
@@ -1528,6 +1807,19 @@ function bindFlowModeReader(p){
     p.size=isGarmentProject(setup.projectType)?(setup.desiredSize==="Custom"?(setup.customSize||"Custom"):setup.desiredSize):setup.projectType;
     p.sizingNotes=isGarmentProject(setup.projectType)?(setup.customSize||p.size||""):`${setup.projectType} setup saved`;
     p.projectCalculations=calculateFlowProjectPlan(p,setup);
+    const simpleSetup={
+      craft:setup.craft,
+      patternGauge:setup.patternGauge,
+      stitchCount:p.projectCalculations.stitchCount,
+      rowCount:p.projectCalculations.rowCount,
+      width:p.projectCalculations.widthCm,
+      length:p.projectCalculations.lengthCm,
+      sleeveLength:p.projectCalculations.sleeveLengthCm,
+      bodyLength:p.projectCalculations.bodyLengthCm,
+      yarnEstimate:p.projectCalculations.estimatedYarnGrams,
+      updatedAt:new Date().toISOString()
+    };
+    p.setup=simpleSetup;
     if(p.projectCalculations?.rowCount){p.chartRows=p.chartRows||p.projectCalculations.rowCount;p.totalRows=p.totalRows||p.projectCalculations.rowCount;}
     saveProjectTouch(p);
     if(render)renderProjectDetail();
@@ -1579,9 +1871,10 @@ function bindFlowModeReader(p){
   ["flow-setup-craft","flow-project-type","flow-recipient","flow-scarf-style","flow-sock-type","flow-sock-sizing-mode","flow-bag-type","flow-blanket-type","flow-amigurumi-type","flow-safety-recipient","flow-shawl-shape","flow-shawl-fit"].forEach(id=>{
     document.getElementById(id)?.addEventListener("change",()=>{saveFlowSetup();toast("Project setup updated.");});
   });
-  ["flow-pattern-gauge","flow-pattern-tool","flow-pattern-yarn-weight","flow-user-tool","flow-user-yarn-weight","flow-custom-size","flow-body-chest","flow-body-waist","flow-body-hip","flow-body-sleeve","flow-body-body"].forEach(id=>{
+  ["flow-pattern-gauge","flow-pattern-tool","flow-pattern-yarn-weight","flow-user-tool","flow-user-yarn-weight","flow-pattern-gauge-stitches","flow-pattern-gauge-rows","flow-user-gauge-stitches","flow-user-gauge-rows","flow-gauge-width","flow-gauge-height","flow-repeat-multiple","flow-edge-stitches","flow-swatch-width","flow-swatch-height","flow-swatch-weight","flow-pattern-yarn-grams","flow-pattern-area","flow-original-stitches","flow-original-rows","flow-pattern-width","flow-pattern-length","flow-custom-size","flow-body-chest","flow-body-waist","flow-body-hip","flow-body-sleeve","flow-body-body","flow-item-width","flow-item-height","flow-item-length","flow-item-depth","flow-strap-length","flow-strap-width","flow-border-width","flow-square-size","flow-block-width","flow-block-height","flow-finished-height","flow-finished-width","flow-original-height","flow-original-width","flow-target-height","flow-original-yarn","flow-original-stuffing","flow-original-eye","flow-wingspan","flow-upper-arm","flow-wrist","flow-armhole-depth","flow-button-band","flow-skirt-length"].forEach(id=>{
     document.getElementById(id)?.addEventListener("input",markFlowSetupUnsaved);
   });
+  document.getElementById("start-flow-mode")?.addEventListener("click",()=>{saveFlowSetup({render:false});document.getElementById("flow-current-row")?.scrollIntoView({behavior:"smooth",block:"center"});toast("Flow Mode is ready.");});
   document.getElementById("run-flow-recognition")?.addEventListener("click",()=>{
     chartImageService.prepare(p,chartSetup());
     gridDetectionService.saveManual(p,gridSetup());
@@ -1989,7 +2282,7 @@ function inferRowSide(p,reader){
 }
 function sequenceToSpokenInstructions(sequence="",reader=normalizeChartReaderConfig(getProject().chartReader,getProject()),craft="Knitting"){
   const mode=reader.readAloud.mode;
-  return String(sequence).split(/[\s,;]+/).filter(Boolean).map(token=>spokenSymbolPhrase(token,{mode,craft})).join(", ") || "No checked written instruction is saved for this row.";
+  return instructionSteps(sequence).map(token=>spokenSymbolPhrase(token,{mode,craft})).join(", ") || "No checked written instruction is saved for this row.";
 }
 function spokenSymbolPhrase(token,{mode="teaching",craft="Knitting"}={}){
   const clean=String(token||"").trim(),lower=clean.toLowerCase(),match=matchSymbolKnowledge({guess:clean,craft});
