@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.yarn={calculateYarnEstimate:C.calculateYarnEstimate,calculatePatternYarnEstimate:C.calculatePatternYarnEstimate,calculateYarnLeftover:C.calculateYarnLeftover,calculateYarnSubstitution:C.calculateYarnSubstitution,calculateYarnWeight:C.calculateYarnWeight};})(typeof window!=="undefined"?window:globalThis);

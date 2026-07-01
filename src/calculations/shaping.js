@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.shaping={calculateIncreaseDecrease:C.calculateIncreaseDecrease,calculateSleevePlan:C.calculateSleevePlan,calculateSleeveStitchShaping:C.calculateSleeveStitchShaping,calculateRaglanPlan:C.calculateRaglanPlan};})(typeof window!=="undefined"?window:globalThis);

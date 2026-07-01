@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.crochet={calculateCircle:C.calculateCircle,calculateGrannySquare:C.calculateGrannySquare,calculateC2CBlanket:C.calculateC2CBlanket,calculateAmigurumiPlan:C.calculateAmigurumiPlan};})(typeof window!=="undefined"?window:globalThis);

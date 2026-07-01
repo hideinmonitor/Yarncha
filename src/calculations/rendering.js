@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.rendering={calculateGridPlan:C.calculateGridPlan,calculateStripePlan:C.calculateStripePlan,calculateColourPooling:C.calculateColourPooling};})(typeof window!=="undefined"?window:globalThis);

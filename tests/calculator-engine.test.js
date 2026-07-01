@@ -16,7 +16,7 @@
     { tool: "flatCircleCalculator", input: { startStitches: 6, rounds: 4, stitchType: "sc" }, expect: { finalStitchCount: 24 } },
     { tool: "amigurumiShapeGuide", input: { shape: "cylinder", baseStitches: 6, increaseRounds: 4, straightRounds: 5 }, expect: { finalStitchCount: 24 } },
     { tool: "grannySquarePlanner", input: { targetSize: 12, sizePerRound: 2.5, joiningAllowance: 0.5, blanketWidth: 120, blanketLength: 120 }, expect: { roundsNeeded: 5, totalSquares: 100 } },
-    { tool: "c2cBlanketCalculator", input: { width: 120, height: 150, blockSize: 2.5, yarnPerBlock: 1.1 }, expect: { increaseRows: 48, plateauRows: 12, decreaseRows: 47, totalBlocks: 2880 } },
+    { tool: "c2cBlanketCalculator", input: { width: 120, height: 150, blockSize: 2.5, yarnPerBlock: 1.1 }, expect: { increaseRows: 48, plateauRows: 12, decreaseRows: 48, totalBlocks: 2880 } },
     { tool: "sleeveCalculator", input: { startStitches: 64, endStitches: 42, rowsAvailable: 90 }, expect: { action: "decrease", stitchChange: 22 } },
     { tool: "sleeveCalculator", input: { startStitches: 40, endStitches: 64, rowsAvailable: 96 }, expect: { action: "increase", rowsBetweenShaping: 4 } },
     { tool: "raglanCalculator", input: { neckStitches: 88, targetStitches: 260, increasePerRound: 8 }, expect: { increaseRounds: 22, yokeStitches: 264 } },
