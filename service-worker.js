@@ -1,11 +1,11 @@
-const CACHE_NAME = "yarncha-shell-v46";
+const CACHE_NAME = "yarncha-shell-v82-colour-under-add";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=46",
-  "/calculator-engine.js?v=46",
-  "/symbol-database.js?v=46",
-  "/app.js?v=46",
+  "/styles.css?v=82-colour-under-add",
+  "/calculator-engine.js?v=82-colour-under-add",
+  "/symbol-database.js?v=82-colour-under-add",
+  "/app.js?v=82-colour-under-add",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

@@ -1500,12 +1500,204 @@ function toolkitToolsForProject(p){
   const type=normalizeProjectType(p.type);
   return toolkitToolDefs.filter(t=>t.id!=="budget" && (t.crafts.includes("all")||t.crafts.includes(type)));
 }
+const studioProjectTypes=["Scarf","Blanket","Sweater","Cardigan","Top","Bag","Hat / Beanie","Socks","Granny Square","Grid / Chart","Custom rectangle"];
+const studioPatternModes=["Stripe Mode","Grid Mode","Granny Square Mode","Checkerboard Mode","Gradient Mode","Random Mix Mode","Colour Pooling Mode"];
+const studioColourNameMap={cream:"#f5ead8",ivory:"#fff8e8",white:"#ffffff",black:"#2a2622",grey:"#8c8983",gray:"#8c8983",sage:"#718c72",green:"#6f8872",terracotta:"#b56d52",rust:"#a9573f",rose:"#d9a0a8",pink:"#e8a6b3",lavender:"#b9a7d8",purple:"#8a7895",blue:"#637f91",navy:"#354c63",yellow:"#d9b75f",gold:"#c19b5b",brown:"#7b5c48",beige:"#d8c1a6",red:"#b85d5a",orange:"#d9875a",teal:"#6f9fa8"};
+function studioModeFromTool(tool){return tool==="stripe"?"Stripe Mode":tool==="pooling"?"Colour Pooling Mode":"Grid Mode";}
+function normalizeStudioHex(value,fallback="#718c72"){
+  const text=String(value||"").trim();
+  if(/^#[0-9a-f]{6}$/i.test(text))return text.toLowerCase();
+  if(/^[0-9a-f]{6}$/i.test(text))return `#${text.toLowerCase()}`;
+  return studioColourNameMap[text.toLowerCase()]||fallback;
+}
+function contrastRatio(a,b){
+  const lum=hex=>{const c=normalizeStudioHex(hex).slice(1).match(/../g).map(x=>parseInt(x,16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2];};
+  const l1=lum(a),l2=lum(b),hi=Math.max(l1,l2),lo=Math.min(l1,l2);return (hi+.05)/(lo+.05);
+}
+function studioDefaultColours(){
+  const stash=(state.inventory||[]).filter(i=>i.category==="Yarn"&&validHex(yarnItemColor(i))).slice(0,3).map((i,index)=>({id:`studio-stash-${i.id}`,name:yarnItemDisplayName(i),hex:yarnItemColor(i),brand:i.brand||"Saved stash",line:i.yarnName||i.details||"",weight:index?2:3,locked:false,stashItemId:i.id,colourNumber:i.colourNumber||""}));
+  return stash.length?stash:[
+    {id:"studio-sage",name:"Sage merino",hex:"#718c72",brand:"",line:"",weight:3,locked:false},
+    {id:"studio-cream",name:"Warm cream",hex:"#f5ead8",brand:"",line:"",weight:2,locked:false},
+    {id:"studio-rust",name:"Soft rust",hex:"#b56d52",brand:"",line:"",weight:1,locked:false}
+  ];
+}
+function studioDefaultState(tool=currentProjectTool){
+  return {projectType:"Scarf",mode:studioModeFromTool(tool),activeColor:0,paintTool:"brush",version:"A",versions:{},colors:studioDefaultColours(),settings:{rows:36,rowWidth:48,rowsPerStripe:3,repeatCount:1,stripeWidthMode:"Equal width",customSequence:"1,2,3,2",mirrorRepeat:false,alternateRepeat:false,borderColor:"#f5ead8",lockOrder:false,columns:18,gridRows:14,cellSize:18,mirrorH:false,mirrorV:false,rounds:5,repeatRounds:true,numberSquares:1,gramsPerSquare:0,centreColor:0,borderIndex:1,blockSize:1,gradientSteps:6,gradientDirection:"Top to bottom",reverseGradient:false,sortLightDark:false,totalBlocks:80,minRepeat:1,maxRepeat:4,randomSeed:"yarncha",colourRepeatLength:60,stitchesPerRepeat:24,stitchesPerSegment:6,targetShift:1,totalGrams:0,stitchGauge:0,rowGauge:0},gridCells:[]};
+}
+function normalizeStudioState(p,tool=currentProjectTool){
+  p.projectTools=p.projectTools||{};
+  const base=studioDefaultState(tool),saved=p.projectTools.renderingStudio||{};
+  const studio={...base,...saved,settings:{...base.settings,...(saved.settings||{})},versions:{...(saved.versions||{})}};
+  if(!Array.isArray(studio.colors)||!studio.colors.length)studio.colors=base.colors;
+  studio.colors=studio.colors.map((c,i)=>({id:c.id||`studio-colour-${i}-${Date.now()}`,name:c.name||`Colour ${i+1}`,hex:normalizeStudioHex(c.hex||c.name,colors[i%colors.length]),brand:c.brand||"",line:c.line||"",weight:Math.max(1,Math.min(10,Number(c.weight)||1)),locked:!!c.locked,stashItemId:c.stashItemId||"",colourNumber:c.colourNumber||""}));
+  studio.activeColor=Math.max(0,Math.min(studio.colors.length-1,Number(studio.activeColor)||0));
+  if(!studioPatternModes.includes(studio.mode))studio.mode=studioModeFromTool(tool);
+  if(!studioProjectTypes.includes(studio.projectType))studio.projectType="Custom rectangle";
+  return studio;
+}
+function studioSequence(studio){
+  const order=studio.colors.map((_,i)=>i);
+  if(studio.settings.lockOrder)return order;
+  if(studio.mode==="Checkerboard Mode")return order.slice(0,2);
+  if(studio.mode==="Gradient Mode")return order;
+  if(studio.mode==="Random Mix Mode")return studio.colors.flatMap((c,i)=>Array(Math.max(1,Number(c.weight)||1)).fill(i));
+  if(studio.settings.stripeWidthMode==="Custom sequence"){
+    const custom=String(studio.settings.customSequence||"").split(/[,\s]+/).map(x=>Math.max(0,Number(x)-1)).filter(i=>studio.colors[i]);
+    if(custom.length)return custom;
+  }
+  return order;
+}
+function studioPaletteText(studio){return studio.colors.map(c=>c.hex).join(", ");}
+function studioColourFeedback(studio){
+  const colors=studio.colors,ratios=[];
+  for(let i=0;i<colors.length;i++)for(let j=i+1;j<colors.length;j++)ratios.push(contrastRatio(colors[i].hex,colors[j].hex));
+  const min=ratios.length?Math.min(...ratios):1,contrast=min>=4.5?"High":min>=2.4?"Medium":"Low";
+  const light=colors.filter(c=>contrastRatio(c.hex,"#000000")>7).length,dark=colors.filter(c=>contrastRatio(c.hex,"#ffffff")>4.5).length,medium=Math.max(0,colors.length-light-dark);
+  const main=[...colors].sort((a,b)=>b.weight-a.weight)[0]||colors[0],contrastColour=[...colors].sort((a,b)=>contrastRatio(main.hex,b.hex)-contrastRatio(main.hex,a.hex))[0]||colors[1]||main,border=[...colors].sort((a,b)=>contrastRatio(a.hex,"#ffffff")-contrastRatio(b.hex,"#ffffff"))[0]||main;
+  const tooSimilar=min<1.55;
+  const muted=colors.every(c=>contrastRatio(c.hex,"#777777")<3.2),pastel=colors.filter(c=>contrastRatio(c.hex,"#ffffff")<2.2).length>=Math.ceil(colors.length/2),earthy=colors.some(c=>/sage|rust|terracotta|brown|cream|beige/i.test(c.name)),bold=contrast==="High"&&colors.length>2,neutral=colors.every(c=>/cream|ivory|white|black|grey|gray|beige|brown/i.test(c.name));
+  const tags=[pastel&&"pastel",earthy&&"earthy",muted&&"soft",bold&&"bold",neutral&&"neutral",!pastel&&earthy&&"vintage"].filter(Boolean);
+  return {contrast,balance:`${light} light · ${medium} medium · ${dark} dark`,tooSimilar,main,contrastColour,border,tags:tags.length?tags:["balanced"]};
+}
+function studioFinishedSize(stitches,rows,studio){
+  const st=Number(studio.settings.stitchGauge)||0,row=Number(studio.settings.rowGauge)||0;
+  return {width:st?stitches/st*10:null,height:row?rows/row*10:null};
+}
+function studioUsageRows(usage,total,studio){
+  const grams=Number(studio.settings.totalGrams)||0;
+  return studio.colors.map((c,i)=>{
+    const amount=Number(usage[i])||0,percent=total?amount/total*100:0;
+    return {index:i,color:c,amount,percent,grams:grams?grams*percent/100:null};
+  }).filter(r=>r.amount>0||studio.colors.length<=3);
+}
+function studioSeededRandom(seed){
+  let h=2166136261;
+  String(seed||"yarncha").split("").forEach(ch=>{h^=ch.charCodeAt(0);h=Math.imul(h,16777619);});
+  return ()=>{h+=0x6D2B79F5;let t=h;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};
+}
+function studioHexToRgb(hex){const clean=normalizeStudioHex(hex).slice(1);return [0,2,4].map(i=>parseInt(clean.slice(i,i+2),16));}
+function studioRgbToHex(rgb){return `#${rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("")}`;}
+function studioInterpolateHex(a,b,t){const x=studioHexToRgb(a),y=studioHexToRgb(b);return studioRgbToHex(x.map((v,i)=>v+(y[i]-v)*t));}
+function studioCalculatedPlan(studio){
+  const s=studio.settings,mode=studio.mode,usage={},details=[],sequence=[],set=(i,n=1)=>usage[i]=(usage[i]||0)+n;
+  let total=0,size={width:null,height:null},unit="units";
+  if(mode==="Grid Mode"){
+    const cols=Math.max(2,Number(s.columns)||18),rows=Math.max(2,Number(s.gridRows)||14),cells=studio.gridCells||[];
+    total=cols*rows;unit="cells";for(let i=0;i<total;i++)set(cells[i]??((Math.floor(i/cols)+i)%studio.colors.length));
+    size=studioFinishedSize(cols,rows,studio);details.push(["Total cells",total],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }else if(mode==="Granny Square Mode"){
+    const rounds=Math.max(1,Number(s.rounds)||5),squares=Math.max(1,Number(s.numberSquares)||1),seq=studioSequence(studio),perSquare=Number(s.gramsPerSquare)||0;
+    total=0;unit="weighted round units";
+    for(let r=1;r<=rounds;r++){const weight=2*r-1,totalWeight=weight*squares,idx=r===1?Number(s.centreColor)||0:r===rounds?Number(s.borderIndex)||0:seq[(r-1)%seq.length]||0;set(idx,totalWeight);total+=totalWeight;sequence.push(`Round ${r}: ${studio.colors[idx]?.name||"Colour"} (${weight} weight units)`);}
+    if(perSquare&&!Number(s.totalGrams))s.totalGrams=perSquare*squares;
+    details.push(["Squares",squares],["Total weight units",total],["Weighted formula","Round weight = 2 x round number - 1"],["Estimated total grams",Number(s.totalGrams)?`${Number(s.totalGrams).toFixed(1)} g`:"Add total grams or grams per square"]);
+  }else if(mode==="Checkerboard Mode"){
+    const cols=Math.max(1,Number(s.columns)||18),rows=Math.max(1,Number(s.gridRows)||14),blocks=cols*rows,seq=studioSequence(studio);
+    total=blocks;unit="blocks";for(let i=0;i<blocks;i++)set(seq[(Math.floor(i/cols)+i)%seq.length]||0);
+    size=studioFinishedSize(cols*(Number(s.blockSize)||1),rows*(Number(s.blockSize)||1),studio);details.push(["Total blocks",blocks],["Block size",Number(s.blockSize)||1],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }else if(mode==="Gradient Mode"){
+    let gradientColors=[...studio.colors];if(s.sortLightDark)gradientColors.sort((a,b)=>contrastRatio(a.hex,"#000000")-contrastRatio(b.hex,"#000000"));if(s.reverseGradient)gradientColors.reverse();
+    const steps=Math.max(2,Number(s.gradientSteps)||gradientColors.length||2),rows=Math.max(steps,Number(s.rows)||steps),rowsPerStep=Math.max(1,Number(s.rowsPerStripe)||Math.ceil(rows/steps));
+    total=rows;unit="rows";for(let step=0;step<steps;step++){const t=steps===1?0:step/(steps-1),slot=t*(gradientColors.length-1),lo=Math.floor(slot),hi=Math.min(gradientColors.length-1,Math.ceil(slot)),hex=studioInterpolateHex(gradientColors[lo]?.hex,gradientColors[hi]?.hex,slot-lo),count=Math.round((step+1)*rows/steps)-Math.round(step*rows/steps);sequence.push(`Step ${step+1}: ${hex}`);set(Math.min(step,studio.colors.length-1),count);}
+    size=studioFinishedSize(Number(s.rowWidth)||48,rows,studio);details.push(["Steps",steps],["Rows per step",rowsPerStep],["Direction",s.gradientDirection||"Top to bottom"],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"],["Note","Digital gradient colours are visual references; match with closest yarn colours."]);
+  }else if(mode==="Random Mix Mode"){
+    const totalBlocks=Math.max(1,Number(s.totalBlocks)||Number(s.rows)||80),min=Math.max(1,Number(s.minRepeat)||1),max=Math.max(min,Number(s.maxRepeat)||4),rand=studioSeededRandom(s.randomSeed),weighted=studio.colors.flatMap((c,i)=>Array(Math.max(1,Number(c.weight)||1)).fill(i));
+    total=0;unit="rows / blocks";while(total<totalBlocks){const idx=weighted[Math.floor(rand()*weighted.length)]||0,run=Math.min(totalBlocks-total,min+Math.floor(rand()*(max-min+1)));set(idx,run);sequence.push(`${studio.colors[idx]?.name}: ${run}`);total+=run;}
+    size=studioFinishedSize(Number(s.rowWidth)||48,totalBlocks,studio);details.push(["Random seed",s.randomSeed||"yarncha"],["Total weight",studio.colors.reduce((sum,c)=>sum+(Number(c.weight)||1),0)],["Repeat range",`${min}-${max}`],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }else if(mode==="Colour Pooling Mode"){
+    const repeat=Math.max(1,Number(s.stitchesPerRepeat)||Number(s.colourRepeatLength)||24),rowWidth=Math.max(1,Number(s.rowWidth)||96),rows=Math.max(1,Number(s.rows)||36),shift=rowWidth%repeat,target=Number(s.targetShift)||1,seq=studioSequence(studio);
+    total=rowWidth*rows;unit="stitches";for(let r=0;r<rows;r++)for(let c=0;c<rowWidth;c++)set(seq[Math.floor(((c+r*shift)%repeat)/Math.max(1,Number(s.stitchesPerSegment)||6))%seq.length]||0);
+    const abs=Math.abs(shift),label=abs===0?"Stacking":abs<=2?"Gentle diagonal":abs<=repeat*.25?"Strong diagonal":abs<=repeat*.45?"Argyle-like":"Unstable / may not pool clearly";
+    size=studioFinishedSize(rowWidth,rows,studio);details.push(["Current shift per row",shift],["Pooling behaviour",label],["Suggested stacking width",repeat*Math.max(1,Math.round(rowWidth/repeat))],["Suggested target-shift width",repeat*Math.max(1,Math.floor(rowWidth/repeat))+target],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"],["Warning",label.startsWith("Unstable")?"Row width is unlikely to pool clearly.":"Swatch before starting the full project."]);
+  }else{
+    const rows=studioStripeRows(studio),rowWidth=Math.max(1,Number(s.rowWidth)||48),repeat=Math.max(1,Number(s.repeatCount)||1),expanded=Array.from({length:repeat},()=>rows).flat();
+    total=expanded.length;unit="rows";expanded.forEach((idx,i)=>{set(idx);sequence.push(`Row ${i+1}: ${studio.colors[idx]?.name||"Colour"}`);});
+    size=studioFinishedSize(rowWidth,total,studio);details.push(["Total rows",total],["Row width",`${rowWidth} stitches`],["Repeat count",repeat],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }
+  return {mode,total,unit,usageRows:studioUsageRows(usage,total,studio),details,sequence:sequence.slice(0,80),estimateNote:"Yarn calculations are estimates only. Gauge, tension, fibre, stitch pattern and blocking can change real usage."};
+}
+function studioCalculatedResultsHtml(studio){
+  const plan=studioCalculatedPlan(studio);
+  return `<section class="studio-calculation-panel"><div class="section-heading compact-row"><div><p class="eyebrow">PLANNING CALCULATIONS</p><h3>${escapeHtml(plan.mode)} usage</h3><p>${escapeHtml(plan.estimateNote)}</p></div><strong>${plan.total} ${escapeHtml(plan.unit)}</strong></div><div class="studio-calc-grid">${plan.details.map(([k,v])=>`<article><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v)}</span></article>`).join("")}</div><div class="studio-usage-table"><table><thead><tr><th>Colour</th><th>Usage</th><th>Percent</th><th>Estimated grams</th></tr></thead><tbody>${plan.usageRows.map(r=>`<tr><td><span class="studio-table-swatch" style="background:${r.color.hex}"></span>${escapeHtml(r.color.name)}<small>${escapeHtml(r.color.hex)}</small></td><td>${Number(r.amount).toFixed(r.amount%1?1:0)}</td><td>${r.percent.toFixed(1)}%</td><td>${r.grams===null?"Add total grams":`${r.grams.toFixed(1)} g`}</td></tr>`).join("")}</tbody></table></div>${plan.sequence.length?`<details class="studio-sequence-list" open><summary>${studio.mode==="Stripe Mode"?"Row-by-row colour sequence":studio.mode==="Colour Pooling Mode"?"Colour segment placement preview":"Generated sequence"}</summary><ol>${plan.sequence.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></details>`:""}</section>`;
+}
+function studioSwatchOptions(studio){return studio.colors.map((c,i)=>`<option value="${i}" ${studio.activeColor===i?"selected":""}>${escapeHtml(c.name)}</option>`).join("");}
+function studioSharedPlanningHtml(studio){
+  const s=studio.settings;
+  return `<div class="studio-shared-inputs"><h4>Gauge and yarn estimate</h4><div class="form-grid"><div class="field"><label>Stitch gauge per 10 cm</label><input data-studio-setting="stitchGauge" type="number" min="0" step=".1" value="${s.stitchGauge||""}" placeholder="Optional"></div><div class="field"><label>Row gauge per 10 cm</label><input data-studio-setting="rowGauge" type="number" min="0" step=".1" value="${s.rowGauge||""}" placeholder="Optional"></div><div class="field"><label>Estimated total yarn grams</label><input data-studio-setting="totalGrams" type="number" min="0" step=".1" value="${s.totalGrams||""}" placeholder="Optional"></div></div></div>`;
+}
+function studioSettingsHtml(studio){
+  const s=studio.settings;
+  const shared=studioSharedPlanningHtml(studio);
+  if(studio.mode==="Grid Mode")return `<div class="studio-settings-panel"><div class="studio-form-grid"><div class="field"><label>Number of columns</label><input id="studio-columns" data-studio-setting="columns" type="number" min="2" value="${s.columns}"></div><div class="field"><label>Number of rows</label><input id="studio-grid-rows" data-studio-setting="gridRows" type="number" min="2" value="${s.gridRows}"></div><div class="field"><label>Cell size</label><input id="studio-cell-size" data-studio-setting="cellSize" type="number" min="10" max="34" value="${s.cellSize}"></div><div class="field"><label>Paint colour</label><select id="studio-active-colour">${studioSwatchOptions(studio)}</select></div></div><div class="studio-toolbar" aria-label="Grid Mode tools"><button class="mini-button ${studio.paintTool==="brush"?"active":""}" data-studio-paint-tool="brush">Click cell to change colour</button><button class="mini-button ${studio.paintTool==="bucket"?"active":""}" data-studio-paint-tool="bucket">Fill bucket</button><button class="mini-button ${studio.paintTool==="eraser"?"active":""}" data-studio-paint-tool="eraser">Eraser</button><button class="mini-button" data-studio-action="replace-colour">Replace colour</button><button class="mini-button" data-studio-action="export-grid">Export chart</button><button class="mini-button" data-studio-action="save-grid">Save grid to project</button><label><input type="checkbox" data-studio-check="mirrorH" ${s.mirrorH?"checked":""}> Mirror horizontally</label><label><input type="checkbox" data-studio-check="mirrorV" ${s.mirrorV?"checked":""}> Mirror vertically</label></div>${shared}</div>`;
+  if(studio.mode==="Granny Square Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Centre colour</label><select data-studio-setting="centreColor">${studio.colors.map((c,i)=>`<option value="${i}" ${Number(s.centreColor)===i?"selected":""}>${escapeHtml(c.name)}</option>`).join("")}</select></div><div class="field"><label>Border colour</label><select data-studio-setting="borderIndex">${studio.colors.map((c,i)=>`<option value="${i}" ${Number(s.borderIndex)===i?"selected":""}>${escapeHtml(c.name)}</option>`).join("")}</select></div><div class="field"><label>Number of rounds</label><input data-studio-setting="rounds" type="number" min="1" max="12" value="${s.rounds}"></div><div class="field"><label>Number of squares</label><input data-studio-setting="numberSquares" type="number" min="1" value="${s.numberSquares}"></div><div class="field"><label>Yarn grams per square</label><input data-studio-setting="gramsPerSquare" type="number" min="0" step=".1" value="${s.gramsPerSquare||""}" placeholder="Optional"></div><label class="check-row"><input type="checkbox" data-studio-check="repeatRounds" ${s.repeatRounds?"checked":""}><span>Repeat colour sequence</span></label></div><p class="muted-copy">Outer rounds use more yarn, so usage uses weighted round units.</p>${shared}</div>`;
+  if(studio.mode==="Checkerboard Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Number of columns</label><input data-studio-setting="columns" type="number" min="1" value="${s.columns}"></div><div class="field"><label>Number of rows</label><input data-studio-setting="gridRows" type="number" min="1" value="${s.gridRows}"></div><div class="field"><label>Block size</label><input data-studio-setting="blockSize" type="number" min="1" value="${s.blockSize}"></div></div><p class="muted-copy">Uses the first two colours as Colour A and Colour B; extra colours can join the alternating order.</p>${shared}</div>`;
+  if(studio.mode==="Gradient Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Number of steps</label><input data-studio-setting="gradientSteps" type="number" min="2" value="${s.gradientSteps}"></div><div class="field"><label>Total rows</label><input data-studio-setting="rows" type="number" min="2" value="${s.rows}"></div><div class="field"><label>Rows per step</label><input data-studio-setting="rowsPerStripe" type="number" min="1" value="${s.rowsPerStripe}"></div><div class="field"><label>Gradient direction</label><select data-studio-setting="gradientDirection">${["Top to bottom","Left to right","Centre out"].map(v=>`<option ${s.gradientDirection===v?"selected":""}>${v}</option>`).join("")}</select></div></div><div class="studio-toggle-row"><label><input type="checkbox" data-studio-check="sortLightDark" ${s.sortLightDark?"checked":""}> Sort yarn colours light to dark</label><label><input type="checkbox" data-studio-check="reverseGradient" ${s.reverseGradient?"checked":""}> Reverse gradient</label></div>${shared}</div>`;
+  if(studio.mode==="Random Mix Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Total rows or blocks</label><input data-studio-setting="totalBlocks" type="number" min="1" value="${s.totalBlocks}"></div><div class="field"><label>Minimum repeat</label><input data-studio-setting="minRepeat" type="number" min="1" value="${s.minRepeat}"></div><div class="field"><label>Maximum repeat</label><input data-studio-setting="maxRepeat" type="number" min="1" value="${s.maxRepeat}"></div><div class="field"><label>Random seed</label><input data-studio-setting="randomSeed" value="${escapeHtml(s.randomSeed)}"></div></div><p class="muted-copy">Colour card weights set the random chance. Locked colours keep their card details while the seed regenerates the same mix.</p>${shared}</div>`;
+  if(studio.mode==="Colour Pooling Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Colour repeat length</label><input data-studio-setting="colourRepeatLength" type="number" min="1" value="${s.colourRepeatLength}"></div><div class="field"><label>Stitches per colour repeat</label><input data-studio-setting="stitchesPerRepeat" type="number" min="1" value="${s.stitchesPerRepeat}"></div><div class="field"><label>Row width in stitches</label><input data-studio-setting="rowWidth" type="number" min="1" value="${s.rowWidth}"></div><div class="field"><label>Number of rows</label><input data-studio-setting="rows" type="number" min="1" value="${s.rows}"></div><div class="field"><label>Stitches per colour segment</label><input data-studio-setting="stitchesPerSegment" type="number" min="1" value="${s.stitchesPerSegment}"></div><div class="field"><label>Target shift per row</label><input data-studio-setting="targetShift" type="number" value="${s.targetShift}"></div></div><p class="muted-copy">Colour pooling is highly sensitive to tension and yarn repeat length. Swatch before starting the full project.</p>${shared}</div>`;
+  return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Number of rows</label><input data-studio-setting="rows" type="number" min="2" value="${s.rows}"></div><div class="field"><label>Row width / stitches</label><input data-studio-setting="rowWidth" type="number" min="4" value="${s.rowWidth}"></div><div class="field"><label>Rows per stripe</label><input data-studio-setting="rowsPerStripe" type="number" min="1" value="${s.rowsPerStripe}"></div><div class="field"><label>Repeat count</label><input data-studio-setting="repeatCount" type="number" min="1" value="${s.repeatCount}"></div><div class="field"><label>Stripe width</label><select data-studio-setting="stripeWidthMode">${["Equal width","Random weighted width","Custom sequence"].map(v=>`<option ${s.stripeWidthMode===v?"selected":""}>${v}</option>`).join("")}</select></div><div class="field"><label>Stripe sequence</label><input data-studio-setting="customSequence" value="${escapeHtml(s.customSequence)}" placeholder="1,2,3,2"></div><div class="field"><label>Border colour</label><input data-studio-setting="borderColor" value="${escapeHtml(s.borderColor)}" placeholder="#f5ead8 or cream"></div></div><div class="studio-toggle-row"><label><input type="checkbox" data-studio-check="mirrorRepeat" ${s.mirrorRepeat?"checked":""}> Mirror repeat</label><label><input type="checkbox" data-studio-check="alternateRepeat" ${s.alternateRepeat?"checked":""}> Alternate repeat</label><label><input type="checkbox" data-studio-check="lockOrder" ${s.lockOrder?"checked":""}> Lock colour order</label></div>${shared}</div>`;
+}
+function studioStripeRows(studio){
+  const s=studio.settings,total=Math.max(2,Number(s.rows)||36),seq=studioSequence(studio),rows=[];
+  for(let i=0;i<total;){
+    let idx=seq[rows.length%seq.length]||0,width=Math.max(1,Number(s.rowsPerStripe)||2);
+    if(s.stripeWidthMode==="Random weighted width")width=Math.max(1,Math.round((studio.colors[idx]?.weight||1)*1.5));
+    if(studio.mode==="Checkerboard Mode")width=1;
+    if(studio.mode==="Gradient Mode")idx=Math.min(studio.colors.length-1,Math.floor((i/total)*studio.colors.length));
+    rows.push({idx,rows:Math.min(width,total-i)});i+=width;
+  }
+  const expanded=rows.flatMap(r=>Array(r.rows).fill(r.idx));
+  return s.mirrorRepeat?[...expanded,...expanded.slice().reverse()]:expanded;
+}
+function studioPreviewHtml(studio,{mini=false}={}){
+  if(studio.mode==="Grid Mode")return studioGridPreviewHtml(studio,mini);
+  if(studio.mode==="Granny Square Mode")return studioGrannyPreviewHtml(studio,mini);
+  return studioStripePreviewHtml(studio,mini);
+}
+function studioStripePreviewHtml(studio,mini=false){
+  const s=studio.settings,shape=studio.projectType.toLowerCase().replace(/[^a-z]+/g,"-"),border=normalizeStudioHex(s.borderColor,studio.colors[0]?.hex);
+  let rows=studioStripeRows(studio).map(idx=>studio.colors[idx%studio.colors.length]?.hex||"#ccc");
+  if(studio.mode==="Gradient Mode"){
+    let gradientColors=[...studio.colors];if(s.sortLightDark)gradientColors.sort((a,b)=>contrastRatio(a.hex,"#000000")-contrastRatio(b.hex,"#000000"));if(s.reverseGradient)gradientColors.reverse();
+    const count=Math.max(2,Number(s.rows)||36);
+    rows=Array.from({length:count},(_,i)=>{const t=count===1?0:i/(count-1),slot=t*(gradientColors.length-1),lo=Math.floor(slot),hi=Math.min(gradientColors.length-1,Math.ceil(slot));return studioInterpolateHex(gradientColors[lo]?.hex,gradientColors[hi]?.hex,slot-lo);});
+  }
+  if(studio.mode==="Random Mix Mode"){
+    const rand=studioSeededRandom(s.randomSeed),weighted=studio.colors.flatMap((c,i)=>Array(Math.max(1,Number(c.weight)||1)).fill(i)),total=Math.max(1,Number(s.totalBlocks)||80),min=Math.max(1,Number(s.minRepeat)||1),max=Math.max(min,Number(s.maxRepeat)||4);
+    rows=[];while(rows.length<total){const idx=weighted[Math.floor(rand()*weighted.length)]||0,run=Math.min(total-rows.length,min+Math.floor(rand()*(max-min+1)));rows.push(...Array(run).fill(studio.colors[idx]?.hex||"#ccc"));}
+  }
+  return `<div class="studio-project-frame studio-shape-${shape} ${mini?"mini":""}" style="--studio-border:${border}">${rows.map((hex,i)=>`<span style="background:${hex}" title="Row ${i+1}"></span>`).join("")}</div>`;
+}
+function studioGridPreviewHtml(studio,mini=false){
+  const s=studio.settings,cols=Math.max(2,Number(s.columns)||18),rows=Math.max(2,Number(s.gridRows)||14),cells=studio.gridCells||[],size=mini?10:Math.max(10,Math.min(24,Number(s.cellSize)||18));
+  return `<div class="studio-grid-preview ${mini?"mini":""}" style="grid-template-columns:repeat(${cols},${size}px)">${Array.from({length:cols*rows},(_,i)=>{const color=studio.colors[cells[i]??((Math.floor(i/cols)+i)%studio.colors.length)]?.hex||"#eee";return `<button ${mini?"":`data-studio-cell="${i}"`} style="width:${size}px;height:${size}px;background:${color}" aria-label="Grid cell ${i+1}"></button>`;}).join("")}</div>`;
+}
+function studioGrannyPreviewHtml(studio,mini=false){
+  const s=studio.settings,rounds=Math.max(1,Number(s.rounds)||5),seq=studioSequence(studio),centre=studio.colors[Number(s.centreColor)||0]?.hex||studio.colors[0]?.hex,border=studio.colors[Number(s.borderIndex)||1]?.hex||studio.colors.at(-1)?.hex;
+  return `<div class="studio-granny-preview ${mini?"mini":""}" style="--centre:${centre};--border:${border}">${Array.from({length:rounds},(_,i)=>`<span style="--round:${i};background:${studio.colors[seq[i%seq.length]||0]?.hex||centre}"></span>`).join("")}<i></i></div>`;
+}
+function renderingStudioContent(p,tool=currentProjectTool){
+  const studio=normalizeStudioState(p,tool),feedback=studioColourFeedback(studio),stash=(state.inventory||[]).filter(i=>i.category==="Yarn");
+  return `<section class="rendering-studio" data-studio-version="${escapeHtml(studio.version)}">
+    <div class="studio-hero"><div><p class="eyebrow">VISUAL PLANNING STUDIO</p><h2>Preview the fabric before you make it</h2><p class="muted-copy">Build a palette from hex codes, colour names, yarn names, and stash colours. The full-width preview updates as you plan.</p></div><div class="studio-version-tabs">${["A","B","C"].map(v=>`<button class="pill-tab ${studio.version===v?"active":""}" data-studio-version="${v}">Version ${v}</button>`).join("")}</div></div>
+    <div class="studio-input-grid">
+      <div class="studio-panel studio-project-panel"><h3>Project and pattern</h3><div class="studio-form-grid"><div class="field"><label>Project type</label><select id="studio-project-type">${studioProjectTypes.map(t=>`<option ${studio.projectType===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="field"><label>Preview mode</label><select id="studio-pattern-mode">${studioPatternModes.map(m=>`<option ${studio.mode===m?"selected":""}>${m}</option>`).join("")}</select></div></div>${studioSettingsHtml(studio)}</div>
+      <div class="studio-panel studio-add-panel"><h3>Add colour</h3><div class="studio-add-grid"><div class="field"><label>Colour / yarn colour name</label><input id="studio-new-name" value="" placeholder="Sage, oat, dye colourway"></div><div class="field"><label>Hex code</label><input id="studio-new-hex" value="" placeholder="#718c72"></div><div class="field"><label>Source / stash note</label><input id="studio-new-brand" value="" placeholder="Brand or source"></div><div class="field"><label>Yarn weight / ball info</label><input id="studio-new-line" value="" placeholder="DK, 100 g, merino..."></div><div class="field"><label>Ball count / weight count</label><input id="studio-new-weight" type="number" min="1" max="10" value="1"></div><div class="field full"><label>Use colour from Yarn Stash</label><select id="studio-stash-colour" multiple size="4">${stash.length?stash.map(i=>`<option value="${i.id}">${escapeHtml(yarnItemDisplayName(i))}${i.colourNumber?` · ${escapeHtml(i.colourNumber)}`:""}${validHex(yarnItemColor(i))?"":" · needs colour"}</option>`).join(""):`<option disabled>No yarn saved yet</option>`}</select><small>Select one or more saved yarns. If a yarn has no colour yet, capture or choose its colour first.</small></div></div><div class="studio-button-row"><button class="secondary-button" id="studio-add-colour">Add colour</button><button class="mini-button" id="studio-open-scan-yarn">Scan Yarn</button></div></div>
+    </div>
+    <div class="studio-colour-board">${studio.colors.map((c,i)=>`<article class="studio-colour-card ${i===studio.activeColor?"active":""}" draggable="true" data-studio-colour="${i}"><span class="studio-card-swatch" style="background:${c.hex}"></span><div class="studio-card-fields"><input data-colour-field="name" value="${escapeHtml(c.name)}" aria-label="Colour name"><input data-colour-field="hex" value="${escapeHtml(c.hex)}" aria-label="Hex code"><input data-colour-field="brand" value="${escapeHtml(c.brand)}" placeholder="Brand" aria-label="Yarn brand"><input data-colour-field="line" value="${escapeHtml(c.line)}" placeholder="Line" aria-label="Yarn line"><label>Weight <input data-colour-field="weight" type="number" min="1" max="10" value="${c.weight}"></label>${c.colourNumber?`<small>Colour no. ${escapeHtml(c.colourNumber)}</small>`:""}</div><div class="studio-card-actions"><button class="mini-button" data-studio-lock="${i}">${c.locked?"Unlock":"Lock"}</button><button class="mini-button" data-studio-duplicate="${i}">Duplicate</button>${c.stashItemId?`<button class="mini-button" data-studio-update-stash="${i}">Update stash colour</button>`:""}<button class="mini-button danger-button" data-studio-delete="${i}">Delete</button></div></article>`).join("")}</div>
+    <section class="studio-preview-section"><div class="studio-preview-head"><div><p class="eyebrow">LIVE PREVIEW</p><h2>${escapeHtml(studio.projectType)} · ${escapeHtml(studio.mode)}</h2><p>${escapeHtml(studioPaletteText(studio))}</p></div><div class="studio-preview-actions"><button class="primary-button" data-studio-action="save-project">Save to Project</button><button class="secondary-button" data-studio-action="export-image">Export preview as image</button></div></div><div class="studio-preview-panel"><div class="studio-preview-stage">${studioPreviewHtml(studio)}</div></div>${studioCalculatedResultsHtml(studio)}</section>
+    <section class="studio-feedback-grid"><article><strong>Contrast level</strong><span>${feedback.contrast}</span>${feedback.tooSimilar?`<p class="calc-warning">Some colours are very similar. Add a lighter or darker contrast colour before committing.</p>`:""}</article><article><strong>Light / medium / dark balance</strong><span>${feedback.balance}</span></article><article><strong>Suggested main colour</strong><span>${escapeHtml(feedback.main.name)}</span></article><article><strong>Suggested contrast colour</strong><span>${escapeHtml(feedback.contrastColour.name)}</span></article><article><strong>Suggested border colour</strong><span>${escapeHtml(feedback.border.name)}</span></article><article><strong>Mood tags</strong><span>${feedback.tags.map(escapeHtml).join(" · ")}</span></article></section>
+    <div class="studio-action-bar"><button class="secondary-button" data-studio-action="save-notes">Save to Project Notes</button><button class="secondary-button" data-studio-action="save-idea">Save as Idea</button><button class="secondary-button" data-studio-action="buy-list">Add colours to Buy List</button><button class="secondary-button" data-studio-action="copy-sequence">Copy colour sequence</button><button class="secondary-button" data-studio-action="copy-hex">Copy hex palette</button></div>
+    <section class="studio-versions"><div class="section-heading compact-row"><div><p class="eyebrow">SAVED VERSIONS</p><h3>Compare before choosing</h3></div><button class="mini-button" data-studio-action="save-version">Save current version</button></div><div class="studio-version-grid">${["A","B","C"].map(v=>{const version=studio.versions?.[v]||null,preview=version?studioPreviewHtml({...studio,...version,settings:{...studio.settings,...version.settings},colors:version.colors||studio.colors},{mini:true}):`<div class="empty-state">Version ${v} is empty.</div>`;return `<article><h4>Version ${v}</h4>${preview}</article>`;}).join("")}</div></section>
+  </section>`;
+}
 function projectToolContent(p, tool) {
   const saved = p.projectTools[tool] || {};
   const def=toolkitToolDefs.find(t=>t.id===tool)||toolkitToolDefs[0];
   const result=saved.result||"Your result will appear here.";
   const resultHtml=saved.calculator?calculatorResultHtml(saved.calculator):`<p>${escapeHtml(result)}</p>`;
   const card=(fields,button="Calculate")=>`<div class="toolkit-tool"><p class="tool-description">${escapeHtml(def.desc)}</p><p class="unit-preference-note">Preferred units: ${escapeHtml(unitSystemLabel())}</p>${fields}<p class="muted-copy estimate-disclaimer">${escapeHtml(estimateDisclaimer())}</p><div class="toolkit-actions"><button class="secondary-button" id="project-calculate">${button}</button><button class="mini-button" id="reset-tool-form">Reset</button><button class="mini-button" id="copy-calc-result">Copy result</button><button class="mini-button" id="save-tool-result">Save to Project Notes</button></div><div class="result-box" id="project-tool-result">${resultHtml}</div></div>`;
+  if(["grid","stripe","pooling"].includes(tool))return renderingStudioContent(p,tool);
   if(tool==="basic")return `<div class="basic-calculator" data-display="${escapeHtml(saved.expression||"0")}"><div class="calc-display" id="calc-display">${escapeHtml(saved.expression||"0")}</div><div class="calc-grid">${["C","Back","%","/","7","8","9","x","4","5","6","-","1","2","3","+","Clear","0",".","="].map(k=>`<button class="${k==="="?"equals":""}" data-calc-key="${k}">${k}</button>`).join("")}</div><div class="toolkit-actions"><button class="mini-button" id="reset-tool-form">Reset</button><button class="mini-button" id="copy-calc-result">Copy result</button><button class="mini-button" id="save-tool-result">Save to Project Notes</button></div><div class="result-box" id="project-tool-result"><p>${escapeHtml(result)}</p></div></div>`;
   if(tool==="swatch")return card(`<div class="form-grid"><div class="field"><label>Pattern gauge stitches</label><input id="g-pattern-st" type="number" value="${saved.patternSt||20}" placeholder="e.g. 20"></div><div class="field"><label>Pattern gauge rows</label><input id="g-pattern-row" type="number" value="${saved.patternRows||28}" placeholder="e.g. 28"></div><div class="field"><label>What you got: stitches</label><input id="g-user-st" type="number" value="${saved.userSt||22}" placeholder="e.g. 22"></div><div class="field"><label>What you got: rows</label><input id="g-user-row" type="number" value="${saved.userRows||30}" placeholder="e.g. 30"></div><div class="field"><label>Original stitch count</label><input id="g-original-st" type="number" value="${saved.originalSt||100}" placeholder="e.g. 100"></div><div class="field"><label>Original row count</label><input id="g-original-row" type="number" value="${saved.originalRows||80}" placeholder="e.g. 80"></div></div>`);
   if(tool==="shaping")return card(`<div class="form-grid"><div class="field"><label>How many stitches now?</label><input id="shape-current" type="number" value="${saved.current||84}" placeholder="e.g. 84"></div><div class="field"><label>How many stitches do you need?</label><input id="shape-desired" type="number" value="${saved.desired||96}" placeholder="e.g. 96"></div><div class="field"><label>Where are you applying this?</label><input id="shape-row" type="number" value="${saved.row||p.row}" placeholder="Current row"></div></div>`, "Plan shaping");
@@ -1534,6 +1726,218 @@ function projectToolContent(p, tool) {
   if(tool==="yarn-leftover")return card(`<div class="form-grid"><div class="field"><label>Leftover weight (${preferredUnit("weight")})</label><input id="leftover-weight" type="number" value="${saved.leftoverWeight||(state.unitSystem==="imperial"?1.75:50)}"></div><div class="field"><label>Original skein weight (${preferredUnit("weight")})</label><input id="leftover-skein-weight" type="number" value="${saved.originalSkeinWeight||(state.unitSystem==="imperial"?3.5:100)}"></div><div class="field"><label>Original skein length (${preferredUnit("yarnLength")})</label><input id="leftover-skein-length" type="number" value="${saved.originalSkeinLength||(state.unitSystem==="imperial"?220:200)}"></div></div>`, "Estimate leftover");
   if(tool==="yarn-weight")return card(`<div class="form-grid"><div class="field"><label>Ball weight (${preferredUnit("weight")})</label><input id="tw-grams" type="number" value="${saved.grams||(state.unitSystem==="imperial"?3.5:100)}"></div><div class="field"><label>Length (${preferredUnit("yarnLength")})</label><input id="tw-yards" type="number" value="${saved.yards||(state.unitSystem==="imperial"?220:200)}"></div><div class="field"><label>Wraps per inch</label><input id="tw-wpi" type="number" value="${saved.wpi||""}" placeholder="optional"></div></div>`, "Find yarn category");
   return card(`<div class="form-grid"><div class="field"><label>Input value</label><input id="unit-amount" type="number" value="${saved.amount||100}"></div><div class="field"><label>From unit</label><select id="unit-from">${["cm","mm","m","in","yd","g","oz"].map(u=>`<option ${((saved.from||preferredUnit("length"))===u)?"selected":""}>${u}</option>`).join("")}</select></div><div class="field"><label>To unit</label><select id="unit-to">${["cm","mm","m","in","yd","g","oz"].map(u=>`<option ${((saved.to||(state.unitSystem==="imperial"?"yd":"m"))===u)?"selected":""}>${u}</option>`).join("")}</select></div></div>`, "Convert");
+}
+function activeStudioProject(){return getProject();}
+function readStudio(){
+  const p=activeStudioProject();
+  p.projectTools=p.projectTools||{};
+  return normalizeStudioState(p,currentProjectTool);
+}
+function saveStudio(studio,{render=true,toastMessage=""}={}){
+  const p=activeStudioProject();
+  p.projectTools=p.projectTools||{};
+  const plan=studioCalculatedPlan(studio);
+  p.projectTools.renderingStudio=studio;
+  p.projectTools[currentProjectTool]={result:studioSummaryText(studio),inputs:studio,outputs:{palette:studioPaletteText(studio),mode:studio.mode,projectType:studio.projectType,total:plan.total,unit:plan.unit,usage:plan.usageRows.map(r=>({name:r.color.name,hex:r.color.hex,amount:r.amount,percent:r.percent,grams:r.grams}))}};
+  p.projectTools.selectedTool=currentProjectTool;
+  saveProjectTouch(p);
+  if(toastMessage)toast(toastMessage);
+  if(render){
+    if(document.getElementById("tools-view")?.classList.contains("active"))renderTool("rendering-studio");
+    else renderProjectDetail();
+  }else refreshStudioLive(studio);
+}
+function studioSummaryText(studio){
+  const feedback=studioColourFeedback(studio);
+  return `${studio.projectType} ${studio.mode}: ${studio.colors.map(c=>`${c.name} ${c.hex}${c.brand?` (${c.brand}${c.line?` ${c.line}`:""})`:""}`).join(" / ")}. Contrast ${feedback.contrast}; mood ${feedback.tags.join(", ")}.`;
+}
+function refreshStudioLive(studio){
+  const root=document.querySelector(".rendering-studio");
+  if(!root)return;
+  const stage=root.querySelector(".studio-preview-stage"),calc=root.querySelector(".studio-calculation-panel"),heading=root.querySelector(".studio-preview-head h2"),palette=root.querySelector(".studio-preview-head p:not(.eyebrow)");
+  if(stage){stage.innerHTML=studioPreviewHtml(studio);bindStudioPreviewCells(root);}
+  if(calc)calc.outerHTML=studioCalculatedResultsHtml(studio);
+  if(heading)heading.textContent=`${studio.projectType} · ${studio.mode}`;
+  if(palette)palette.textContent=studioPaletteText(studio);
+}
+function bindStudioPreviewCells(root=document){
+  root.querySelectorAll("[data-studio-cell]").forEach(cell=>cell.onclick=()=>{const studio=readStudio();
+    const index=Number(cell.dataset.studioCell),cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14),paint=studio.paintTool||"brush";
+    studio.gridCells=Array.from({length:cols*rows},(_,i)=>studio.gridCells?.[i]??null);
+    const value=paint==="eraser"?null:studio.activeColor;
+    if(paint==="bucket")studio.gridCells=studio.gridCells.map(()=>value);
+    else {
+      studio.gridCells[index]=value;
+      const r=Math.floor(index/cols),c=index%cols;
+      if(studio.settings.mirrorH)studio.gridCells[r*cols+(cols-1-c)]=value;
+      if(studio.settings.mirrorV)studio.gridCells[(rows-1-r)*cols+c]=value;
+      if(studio.settings.mirrorH&&studio.settings.mirrorV)studio.gridCells[(rows-1-r)*cols+(cols-1-c)]=value;
+    }
+    saveStudio(studio,{render:false});
+  });
+}
+function bindRenderingStudio(){
+  const root=document.querySelector(".rendering-studio");
+  if(!root)return;
+  const update=(mutate,{render=true}={})=>{const studio=readStudio();mutate(studio);saveStudio(studio,{render});};
+  document.getElementById("studio-project-type")?.addEventListener("change",e=>update(s=>{s.projectType=e.target.value;}));
+  document.getElementById("studio-pattern-mode")?.addEventListener("change",e=>update(s=>{s.mode=e.target.value;}));
+  document.getElementById("studio-active-colour")?.addEventListener("change",e=>update(s=>{s.activeColor=Number(e.target.value)||0;}));
+  root.querySelectorAll("[data-studio-setting]").forEach(input=>input.addEventListener("input",e=>update(s=>{
+    const key=e.target.dataset.studioSetting,value=e.target.type==="number"?Number(e.target.value)||0:e.target.value;
+    s.settings[key]=key==="borderColor"?normalizeStudioHex(value,value):value;
+  },{render:e.target.tagName==="SELECT"})));
+  root.querySelectorAll("select[data-studio-setting]").forEach(input=>input.addEventListener("change",e=>update(s=>{s.settings[e.target.dataset.studioSetting]=Number.isFinite(Number(e.target.value))&&e.target.value!==""?Number(e.target.value):e.target.value;})));
+  root.querySelectorAll("[data-studio-check]").forEach(input=>input.addEventListener("change",e=>update(s=>{s.settings[e.target.dataset.studioCheck]=e.target.checked;})));
+  document.getElementById("studio-add-colour")?.addEventListener("click",()=>update(s=>{
+    const selected=Array.from(document.getElementById("studio-stash-colour")?.selectedOptions||[]).map(option=>option.value).filter(Boolean),stashItems=selected.map(id=>(state.inventory||[]).find(i=>i.id===id)).filter(Boolean);
+    if(stashItems.some(item=>!validHex(yarnItemColor(item))))return toast("One selected yarn needs a saved colour first. Scan or choose its colour in Yarn Stash.");
+    if(stashItems.length){
+      stashItems.forEach(stash=>s.colors.push({id:`studio-colour-${Date.now()}${Math.random().toString(16).slice(2)}`,name:yarnItemDisplayName(stash),hex:yarnItemColor(stash),brand:stash.brand||"Saved stash",line:stash.yarnName||stash.details||"",weight:1,locked:false,stashItemId:stash.id,colourNumber:stash.colourNumber||""}));
+      s.activeColor=s.colors.length-1;return;
+    }
+    const name=(document.getElementById("studio-new-name")?.value||"New colour").trim();
+    const hex=normalizeStudioHex(document.getElementById("studio-new-hex")?.value||name,"#718c72");
+    s.colors.push({id:`studio-colour-${Date.now()}`,name,hex,brand:document.getElementById("studio-new-brand")?.value.trim()||"",line:document.getElementById("studio-new-line")?.value.trim()||"",weight:Math.max(1,Math.min(10,Number(document.getElementById("studio-new-weight")?.value)||1)),locked:false,stashItemId:"",colourNumber:""});
+    s.activeColor=s.colors.length-1;
+  },{render:true}));
+  document.getElementById("studio-open-scan-yarn")?.addEventListener("click",()=>openYarnScanModal());
+  root.querySelectorAll("[data-colour-field]").forEach(input=>input.addEventListener("change",e=>update(s=>{
+    const card=e.target.closest("[data-studio-colour]"),i=Number(card?.dataset.studioColour),field=e.target.dataset.colourField;
+    if(!s.colors[i]||s.colors[i].locked)return toast("Unlock this colour before editing.");
+    s.colors[i][field]=field==="hex"?normalizeStudioHex(e.target.value,s.colors[i].hex):field==="weight"?Math.max(1,Math.min(10,Number(e.target.value)||1)):e.target.value;
+  })));
+  root.querySelectorAll("[data-studio-lock]").forEach(button=>button.onclick=()=>update(s=>{const c=s.colors[Number(button.dataset.studioLock)];if(c)c.locked=!c.locked;}));
+  root.querySelectorAll("[data-studio-duplicate]").forEach(button=>button.onclick=()=>update(s=>{const c=s.colors[Number(button.dataset.studioDuplicate)];if(c)s.colors.splice(Number(button.dataset.studioDuplicate)+1,0,{...c,id:`studio-colour-${Date.now()}`,name:`${c.name} copy`,locked:false});}));
+  root.querySelectorAll("[data-studio-update-stash]").forEach(button=>button.onclick=()=>{const studio=readStudio(),c=studio.colors[Number(button.dataset.studioUpdateStash)],item=(state.inventory||[]).find(i=>i.id===c?.stashItemId);if(!item)return toast("Original stash yarn was not found.");item.colourHex=c.hex;item.color=c.hex;item.colourSource="manual";item.colourConfidence=100;saveState();toast("Stash colour updated.");});
+  root.querySelectorAll("[data-studio-delete]").forEach(button=>button.onclick=()=>update(s=>{if(s.colors.length<=1)return toast("Keep at least one colour.");s.colors.splice(Number(button.dataset.studioDelete),1);s.activeColor=Math.min(s.activeColor,s.colors.length-1);}));
+  let dragIndex=null;
+  root.querySelectorAll("[data-studio-colour]").forEach(card=>{
+    card.addEventListener("dragstart",e=>{dragIndex=Number(card.dataset.studioColour);e.dataTransfer.effectAllowed="move";});
+    card.addEventListener("dragover",e=>e.preventDefault());
+    card.addEventListener("drop",e=>{e.preventDefault();const target=Number(card.dataset.studioColour);if(dragIndex===null||dragIndex===target)return;update(s=>{const [item]=s.colors.splice(dragIndex,1);s.colors.splice(target,0,item);s.activeColor=target;});dragIndex=null;});
+  });
+  root.querySelectorAll("[data-studio-paint-tool]").forEach(button=>button.onclick=()=>update(s=>{s.paintTool=button.dataset.studioPaintTool;}));
+  bindStudioPreviewCells(root);
+  root.querySelectorAll("[data-studio-version]").forEach(button=>button.onclick=()=>update(s=>{s.version=button.dataset.studioVersion;}));
+  root.querySelectorAll("[data-studio-action]").forEach(button=>button.onclick=()=>handleStudioAction(button.dataset.studioAction));
+}
+function handleStudioAction(action){
+  const studio=readStudio(),p=activeStudioProject(),text=studioSummaryText(studio);
+  if(action==="save-project"){saveStudio(studio,{render:false,toastMessage:"Design saved to project."});return;}
+  if(action==="replace-colour"){const from=studio.activeColor,to=(from+1)%studio.colors.length,cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14);studio.gridCells=Array.from({length:cols*rows},(_,i)=>studio.gridCells?.[i]??null).map(value=>value===from?to:value);studio.activeColor=to;saveStudio(studio,{toastMessage:`Replaced ${studio.colors[from]?.name||"colour"} with ${studio.colors[to]?.name||"next colour"}.`});return;}
+  if(action==="save-notes"){p.notes=`${p.notes||""}${p.notes?"\n\n":""}[Project Rendering Studio]\n${text}`;saveStudio(studio,{render:false,toastMessage:"Saved to project notes."});return;}
+  if(action==="save-grid"||action==="export-grid"){saveStudio(studio,{render:false,toastMessage:action==="save-grid"?"Grid saved to project.":"Grid preview ready to export."});if(action==="export-grid")exportStudioImage(studio);return;}
+  if(action==="save-version"){studio.versions=studio.versions||{};studio.versions[studio.version]={projectType:studio.projectType,mode:studio.mode,colors:structuredClone(studio.colors),settings:structuredClone(studio.settings),gridCells:structuredClone(studio.gridCells||[])};saveStudio(studio,{toastMessage:`Version ${studio.version} saved.`});return;}
+  if(action==="save-idea"){const idea=normalizeProjectIdea({id:`idea${Date.now()}`,title:`${studio.projectType} colour idea`,craftType:p.type||"Mixed / Other",projectKind:studio.projectType,inspirationNotes:text,description:text,sourcePlatform:"Project Rendering Studio",sourceTool:"Project Rendering Studio",calculatorValues:{outputs:{result:text},inputs:studio},savedCalculatorResults:[{toolName:"Project Rendering Studio",outputs:{result:text},inputs:studio}],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),archived:false});state.projectIdeas=[idea,...(state.projectIdeas||[])];saveStudio(studio,{render:false,toastMessage:"Saved as idea."});return;}
+  if(action==="buy-list"){p.buyList=[...(p.buyList||[]),...studio.colors.map(c=>({id:`buy${Date.now()}${Math.random().toString(16).slice(2)}`,name:c.brand?`${c.brand} ${c.line||c.name}`:c.name,category:"Yarn",quantity:Math.max(1,Number(c.weight)||1),price:0,notes:`Colour ${c.name} ${c.hex} from Project Rendering Studio`}))];saveStudio(studio,{render:false,toastMessage:"Colours added to Buy List."});return;}
+  if(action==="copy-sequence")return copyStudioText(studio.colors.map(c=>c.name).join(" -> "),"Colour sequence copied.");
+  if(action==="copy-hex")return copyStudioText(studioPaletteText(studio),"Hex palette copied.");
+  if(action==="export-image")return exportStudioImage(studio);
+}
+function copyStudioText(text,message){navigator.clipboard?.writeText(text).then(()=>toast(message)).catch(()=>toast("Copy is blocked in this browser."));}
+function exportStudioImage(studio){
+  const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d"),w=1200,h=760;
+  canvas.width=w;canvas.height=h;ctx.fillStyle="#fff9f0";ctx.fillRect(0,0,w,h);ctx.fillStyle="#5a4632";ctx.font="700 34px system-ui";ctx.fillText(`${studio.projectType} - ${studio.mode}`,48,70);ctx.font="18px system-ui";ctx.fillText(studioPaletteText(studio),48,108);
+  const x=80,y=150,pw=1040,ph=520;
+  if(studio.mode==="Grid Mode"){
+    const cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14),cell=Math.min(pw/cols,ph/rows);
+    for(let i=0;i<cols*rows;i++){ctx.fillStyle=studio.colors[studio.gridCells?.[i]??((Math.floor(i/cols)+i)%studio.colors.length)]?.hex||"#eee";ctx.fillRect(x+(i%cols)*cell,y+Math.floor(i/cols)*cell,cell,cell);}
+  }else if(studio.mode==="Granny Square Mode"){
+    const rounds=Math.max(1,Number(studio.settings.rounds)||5),seq=studioSequence(studio),cx=w/2,cy=y+ph/2,max=480;
+    for(let i=rounds-1;i>=0;i--){ctx.fillStyle=studio.colors[seq[i%seq.length]||0]?.hex||"#ccc";const size=max*((i+1)/rounds);ctx.fillRect(cx-size/2,cy-size/2,size,size);}
+  }else{
+    const rows=studioStripeRows(studio),rh=ph/rows.length;
+    rows.forEach((idx,i)=>{ctx.fillStyle=studio.colors[idx%studio.colors.length]?.hex||"#ccc";ctx.fillRect(x,y+i*rh,pw,rh+1);});
+  }
+  const link=document.createElement("a");link.download=`yarncha-${studio.projectType.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-preview.png`;link.href=canvas.toDataURL("image/png");link.click();toast("Preview exported as image.");
+}
+function yarnItemColor(item={}){return validHex(item.colourHex)?item.colourHex:validHex(item.color)?item.color:"";}
+function yarnItemDisplayName(item={}){return [item.brand,item.yarnName||item.name,item.colourName].filter(Boolean).join(" · ")||item.name||"Saved yarn";}
+function yarnItemDetails(item={}){
+  return [item.colourNumber&&`Colour ${item.colourNumber}`,item.dyeLot&&`Lot ${item.dyeLot}`,item.weight,item.fibreContent,item.grams&&`${item.grams} g`,item.metres&&`${item.metres} m`,item.yards&&`${item.yards} yd`,item.hookSize&&`Hook ${item.hookSize}`,item.needleSize&&`Needle ${item.needleSize}`].filter(Boolean).join(" · ")||item.details||"Saved yarn";
+}
+function normalizeYarnStashItem(values={}){
+  const name=values.name||[values.brand,values.yarnName,values.colourName].filter(Boolean).join(" ")||"Scanned yarn";
+  const colourHex=normalizeStudioHex(values.colourHex||values.color||"",validHex(values.colourHex||values.color)?values.colourHex||values.color:"#718c72");
+  return {id:values.id||`inv${Date.now()}${Math.random().toString(16).slice(2)}`,name,category:"Yarn",quantity:Math.max(0,Number(values.quantity)||1),unit:values.unit||"balls",color:colourHex,details:values.details||"",brand:values.brand||"",yarnName:values.yarnName||name,barcode:values.barcode||"",colourName:values.colourName||"",colourNumber:values.colourNumber||"",dyeLot:values.dyeLot||"",colourHex,colourSource:values.colourSource||"manual",colourConfidence:Number(values.colourConfidence)||0,weight:values.weight||"",fibreContent:values.fibreContent||"",grams:Number(values.grams)||0,metres:Number(values.metres)||0,yards:Number(values.yards)||0,hookSize:values.hookSize||"",needleSize:values.needleSize||"",notes:values.notes||"",photoBlobId:values.photoBlobId||"",labelPhotoBlobId:values.labelPhotoBlobId||""};
+}
+function extractYarnLabelFields(text=""){
+  const clean=String(text||""),pick=regex=>clean.match(regex)?.[1]?.trim()||"";
+  return {
+    colourNumber:pick(/(?:colou?r|shade)\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i),
+    colourName:pick(/(?:colou?r|shade)\s*(?:name)?\s*[:\-]\s*([A-Za-z][A-Za-z\s\-]{2,30})/i),
+    dyeLot:pick(/(?:dye\s*)?lot\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i),
+    weight:pick(/(?:weight|category)\s*[:\-]?\s*([A-Za-z0-9\s#\/-]{2,24})/i),
+    fibreContent:pick(/((?:\d{1,3}%\s*)?(?:wool|cotton|acrylic|alpaca|merino|nylon|polyester|cashmere|silk|linen|bamboo)[A-Za-z0-9%,\s]*)/i),
+    grams:pick(/(\d{2,4})\s*g(?:rams?)?/i),
+    metres:pick(/(\d{2,5})\s*m(?:etres?|eters?)?/i),
+    yards:pick(/(\d{2,5})\s*y(?:ards?|ds?)?/i),
+    hookSize:pick(/(?:hook|crochet)\s*(?:size)?\s*[:\-]?\s*([0-9.]+\s*mm|[A-Z]\-?[0-9]?)/i),
+    needleSize:pick(/(?:needle|knitting)\s*(?:size)?\s*[:\-]?\s*([0-9.]+\s*mm|US\s*[0-9]+)/i)
+  };
+}
+function imageFileToElement(file){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=URL.createObjectURL(file);});}
+async function estimateImageColour(file){
+  const img=await imageFileToElement(file),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d"),size=80;
+  canvas.width=size;canvas.height=size;ctx.drawImage(img,0,0,size,size);
+  const data=ctx.getImageData(20,20,40,40).data,total=[0,0,0];let count=0;
+  for(let i=0;i<data.length;i+=4){if(data[i+3]<128)continue;total[0]+=data[i];total[1]+=data[i+1];total[2]+=data[i+2];count++;}
+  const rgb=total.map(v=>Math.round(v/Math.max(1,count))),hex=studioRgbToHex(rgb);
+  return {hex,confidence:72,swatches:[hex,studioInterpolateHex(hex,"#ffffff",.18),studioInterpolateHex(hex,"#000000",.12)]};
+}
+async function scanBarcodeFromFile(file){
+  if(!("BarcodeDetector" in window))return {barcode:"",message:"Barcode scanning is not supported in this browser yet. You can type the barcode or scan the label."};
+  try{
+    const detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","qr_code"]}),bitmap=await createImageBitmap(file),codes=await detector.detect(bitmap),barcode=codes[0]?.rawValue||"";
+    return barcode?{barcode,message:"We found the barcode, but cannot identify this yarn yet. You can scan the label or add details manually."}:{barcode:"",message:"No barcode was found. Try a clearer photo or add the number manually."};
+  }catch{return {barcode:"",message:"Barcode scanning did not work in this browser. You can continue manually."};}
+}
+function openYarnScanModal(initial={}){
+  openModal(`<p class="eyebrow">YARN STASH</p><h2>Scan Yarn</h2><p class="muted-copy">Use your camera where supported, or upload a photo. Barcode and OCR results are only starting points; review everything before saving.</p>
+    <div class="scan-yarn-actions"><button class="secondary-button" id="scan-barcode">Scan barcode</button><button class="secondary-button" id="scan-label">Scan yarn label text</button><button class="secondary-button" id="scan-colour">Take yarn colour photo</button><button class="secondary-button" id="scan-manual">Add manually</button></div>
+    <div class="privacy-note">Estimated colour from your photo. You can adjust it to match your yarn. Lighting, camera, monitor screen, and dye lot affect colour.</div>
+    <input id="scan-barcode-file" type="file" accept="image/*" capture="environment" hidden>
+    <input id="scan-label-file" type="file" accept="image/*" capture="environment" hidden>
+    <input id="scan-colour-file" type="file" accept="image/*" capture="environment" hidden>`);
+  const draft={...initial};
+  document.getElementById("scan-barcode").onclick=()=>document.getElementById("scan-barcode-file").click();
+  document.getElementById("scan-label").onclick=()=>document.getElementById("scan-label-file").click();
+  document.getElementById("scan-colour").onclick=()=>document.getElementById("scan-colour-file").click();
+  document.getElementById("scan-manual").onclick=()=>openYarnScanReviewModal(draft);
+  document.getElementById("scan-barcode-file").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;const scan=await scanBarcodeFromFile(file);draft.barcode=scan.barcode;draft.colourSource=draft.colourSource||"barcode";toast(scan.message);openYarnScanReviewModal(draft);};
+  document.getElementById("scan-label-file").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;const assetId=`yarn-label-${Date.now()}`;await putAsset(assetId,file);toast("Reading label text...");const scan=await ocrFile(file);Object.assign(draft,extractYarnLabelFields(scan.text),{labelPhotoBlobId:assetId,colourSource:draft.colourSource||"label-ocr",notes:[draft.notes,scan.text&&`Scanned label text:\n${scan.text.slice(0,1200)}`].filter(Boolean).join("\n\n")});openYarnScanReviewModal(draft);};
+  document.getElementById("scan-colour-file").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;const assetId=`yarn-photo-${Date.now()}`;await putAsset(assetId,file);const colour=await estimateImageColour(file);Object.assign(draft,{photoBlobId:assetId,colourHex:colour.hex,colourConfidence:colour.confidence,colourSource:"photo-scan",swatches:colour.swatches});openYarnScanReviewModal(draft);};
+}
+function openYarnScanReviewModal(draft={}){
+  const swatches=(draft.swatches||[draft.colourHex]).filter(validHex);
+  openModal(`<p class="eyebrow">REVIEW SCANNED YARN</p><h2>Save to Yarn Stash</h2><p class="muted-copy">Correct anything that looks off before saving. Barcode does not guarantee exact shade or dye lot.</p>
+    <div class="form-grid">
+      <div class="field"><label>Brand</label><input id="scan-brand" value="${escapeHtml(draft.brand||"")}"></div><div class="field"><label>Yarn name</label><input id="scan-yarn-name" value="${escapeHtml(draft.yarnName||draft.name||"")}"></div>
+      <div class="field"><label>Barcode</label><input id="scan-barcode-value" value="${escapeHtml(draft.barcode||"")}"></div><div class="field"><label>Colour name</label><input id="scan-colour-name" value="${escapeHtml(draft.colourName||"")}"></div>
+      <div class="field"><label>Colour number</label><input id="scan-colour-number" value="${escapeHtml(draft.colourNumber||"")}"></div><div class="field"><label>Dye lot</label><input id="scan-dye-lot" value="${escapeHtml(draft.dyeLot||"")}"></div>
+      <div class="field"><label>Colour HEX</label><input id="scan-colour-hex" type="color" value="${validHex(draft.colourHex)?draft.colourHex:"#718c72"}"></div><div class="field"><label>Colour source</label><select id="scan-colour-source">${["barcode","label-ocr","photo-scan","manual"].map(v=>`<option value="${v}" ${(draft.colourSource||"manual")===v?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="field"><label>Weight</label><input id="scan-weight" value="${escapeHtml(draft.weight||"")}"></div><div class="field"><label>Fibre content</label><input id="scan-fibre" value="${escapeHtml(draft.fibreContent||"")}"></div>
+      <div class="field"><label>Grams</label><input id="scan-grams" type="number" value="${draft.grams||""}"></div><div class="field"><label>Metres</label><input id="scan-metres" type="number" value="${draft.metres||""}"></div>
+      <div class="field"><label>Yards</label><input id="scan-yards" type="number" value="${draft.yards||""}"></div><div class="field"><label>Quantity</label><input id="scan-quantity" type="number" min="0" value="${draft.quantity||1}"></div>
+      <div class="field"><label>Hook suggestion</label><input id="scan-hook" value="${escapeHtml(draft.hookSize||"")}"></div><div class="field"><label>Needle suggestion</label><input id="scan-needle" value="${escapeHtml(draft.needleSize||"")}"></div>
+      <div class="field full"><label>Notes</label><textarea id="scan-notes" rows="4">${escapeHtml(draft.notes||"")}</textarea></div>
+    </div>${swatches.length?`<div class="scan-swatch-row">${swatches.map(hex=>`<button style="background:${hex}" data-scan-swatch="${hex}" aria-label="Use ${hex}"></button>`).join("")}</div>`:""}
+    <p class="privacy-note">Estimated colour from your photo. You can adjust it to match your yarn.</p>
+    <div class="modal-actions"><button class="secondary-button" id="scan-more">Scan another part</button><button class="primary-button" id="save-scanned-yarn">Save yarn</button></div>`);
+  document.querySelectorAll("[data-scan-swatch]").forEach(b=>b.onclick=()=>{document.getElementById("scan-colour-hex").value=b.dataset.scanSwatch;});
+  document.getElementById("scan-more").onclick=()=>openYarnScanModal(readYarnScanReview(draft));
+  document.getElementById("save-scanned-yarn").onclick=()=>saveScannedYarn(readYarnScanReview(draft));
+}
+function readYarnScanReview(draft={}){
+  return {...draft,brand:valueOf("scan-brand"),yarnName:valueOf("scan-yarn-name"),barcode:valueOf("scan-barcode-value"),colourName:valueOf("scan-colour-name"),colourNumber:valueOf("scan-colour-number"),dyeLot:valueOf("scan-dye-lot"),colourHex:valueOf("scan-colour-hex"),colourSource:valueOf("scan-colour-source")||"manual",weight:valueOf("scan-weight"),fibreContent:valueOf("scan-fibre"),grams:Number(valueOf("scan-grams"))||0,metres:Number(valueOf("scan-metres"))||0,yards:Number(valueOf("scan-yards"))||0,quantity:Number(valueOf("scan-quantity"))||1,hookSize:valueOf("scan-hook"),needleSize:valueOf("scan-needle"),notes:valueOf("scan-notes"),colourConfidence:draft.colourConfidence||((valueOf("scan-colour-source")==="manual")?100:60)};
+}
+function saveScannedYarn(values){
+  const item=normalizeYarnStashItem(values);
+  const existing=state.inventory.find(i=>i.id===item.id)||(item.barcode?state.inventory.find(i=>i.barcode&&i.barcode===item.barcode&&i.colourNumber===item.colourNumber):null);
+  if(existing)Object.assign(existing,item,{id:existing.id,quantity:item.id===existing.id?item.quantity:(Number(existing.quantity)||0)+(Number(item.quantity)||1)});
+  else state.inventory.push(item);
+  saveState();closeModal();renderMarket();toast("Yarn saved to Yarn Stash.");
 }
 function bindProjectDetail() {
   const p = getProject();
@@ -1602,6 +2006,7 @@ function bindProjectDetail() {
   document.querySelectorAll("[data-rendering-tab]").forEach(b=>b.onclick=()=>{p.projectTools.view="category";p.projectTools.category="rendering";p.projectTools.selectedTool=b.dataset.renderingTab;currentProjectTool=b.dataset.renderingTab;saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-toolkit-back]").forEach(b=>b.onclick=()=>{const target=b.dataset.toolkitBack;if(target==="home"){p.projectTools.view="home";}else{p.projectTools.view="category";p.projectTools.category=target;}saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-pattern-mode]").forEach(b=>b.onclick=()=>{p.patternPlan.mode=b.dataset.patternMode;saveState();renderProjectDetail();});
+  bindRenderingStudio();
   document.getElementById("link-project-tools")?.addEventListener("change", e => { p.projectTools.linked=e.target.checked; saveProjectTouch(p); });
   document.getElementById("project-calculate")?.addEventListener("click", calculateProjectTool);
   document.getElementById("reset-tool-form")?.addEventListener("click",resetCurrentToolForm);
@@ -3764,16 +4169,18 @@ function renderMarket(){
     <div class="market-summary"><div class="summary-card card"><small>Yarn in stash</small><strong>${yarnCount}</strong></div><div class="summary-card card"><small>Cart items</small><strong>${state.cart.length}</strong></div><div class="summary-card card"><small>Likely needs</small><strong>${needs}</strong></div><div class="summary-card card"><small>Cart / budget</small><strong id="cart-budget-summary">AUD $${cartTotal.toFixed(2)} / $${budget.toFixed(0)}</strong></div></div>
     <div class="budget-alert ${remaining<0?"over":"ok"}" id="cart-budget-alert">${remaining<0?`Over budget by AUD $${Math.abs(remaining).toFixed(2)}. Remove or postpone items before adding more.`:`AUD $${remaining.toFixed(2)} remains in this ${state.budgetSettings.period} budget.`}</div>
     <div class="market-layout"><div class="market-panel card"><div class="market-panel-head"><div><p class="eyebrow">CURRENT STASH</p><h2>Inventory</h2></div></div>
-      <button class="secondary-button section-add" id="add-inventory">+ Add inventory</button><div class="inventory-grid">${state.inventory.length?state.inventory.map(i=>`<div class="inventory-item"><span class="inventory-swatch" style="background:${validHex(i.color)?i.color:"#a8afa8"}"></span><div><h3>${escapeHtml(i.name)}</h3><p>${escapeHtml(i.category)} · ${i.quantity} ${escapeHtml(i.unit)}${i.details?` · ${escapeHtml(i.details)}`:""}</p></div><div class="row-actions"><button class="mini-button" data-edit-inventory="${i.id}">Edit</button><button class="mini-button danger-button" data-delete-inventory="${i.id}">Delete</button></div></div>`).join(""):`<div class="empty-state">Add yarn and tools you already own.</div>`}</div></div>
+      <div class="button-row"><button class="primary-button section-add" id="scan-yarn">Scan Yarn</button><button class="secondary-button section-add" id="add-inventory">+ Add inventory</button></div><div class="inventory-grid">${state.inventory.length?state.inventory.map(i=>`<div class="inventory-item"><span class="inventory-swatch" style="background:${validHex(yarnItemColor(i))?yarnItemColor(i):"#a8afa8"}"></span><div><h3>${escapeHtml(yarnItemDisplayName(i))}</h3><p>${escapeHtml(i.category)} · ${i.quantity} ${escapeHtml(i.unit)}${i.category==="Yarn"?` · ${escapeHtml(yarnItemDetails(i))}`:i.details?` · ${escapeHtml(i.details)}`:""}</p>${i.category==="Yarn"&&i.colourSource?`<small class="stash-source-note">Colour source: ${escapeHtml(i.colourSource)}${i.colourConfidence?` · confidence ${Math.round(i.colourConfidence)}%`:""}${i.barcode?` · barcode ${escapeHtml(i.barcode)}`:""}</small>`:""}</div><div class="row-actions"><button class="mini-button" data-edit-inventory="${i.id}">Edit</button>${i.category==="Yarn"?`<button class="mini-button" data-rescan-yarn="${i.id}">Scan colour/details</button>`:""}<button class="mini-button danger-button" data-delete-inventory="${i.id}">Delete</button></div></div>`).join(""):`<div class="empty-state">Add yarn and tools you already own.</div>`}</div></div>
       <div class="market-panel card"><div class="market-panel-head"><div><p class="eyebrow">DECISION CART</p><h2>Shopping cart</h2></div></div>
       <div class="cart-budget-line"><div><button class="mini-button" id="edit-budget">Budget ${state.budgetSettings.currency} ${state.budgetSettings.amount}</button><button class="mini-button" id="refresh-rates">Refresh rates</button><small>Daily reference rates: ${escapeHtml(fxDate)}</small></div><strong id="cart-total-line">Cart ≈ AUD $${cartTotal.toFixed(2)}</strong></div>
       <button class="primary-button section-add" id="add-cart-item">+ Add shopping item</button><div class="cart-list">${state.cart.length?state.cart.map(i=>cartItemHtml(i)).join(""):`<div class="empty-state">Your cart is clear. Add an item when something catches your eye.</div>`}</div></div></div>`;
   document.getElementById("add-inventory").onclick=()=>openInventoryModal();
+  document.getElementById("scan-yarn").onclick=()=>openYarnScanModal();
   document.getElementById("add-cart-item").onclick=()=>openCartItemModal();
   document.getElementById("edit-budget").onclick=openBudgetModal;
   document.getElementById("refresh-rates").onclick=()=>refreshFxRates(true);
   document.querySelectorAll("[data-edit-inventory]").forEach(b=>b.onclick=()=>openInventoryModal(b.dataset.editInventory));
-  document.querySelectorAll("[data-delete-inventory]").forEach(b=>b.onclick=()=>{state.inventory=state.inventory.filter(i=>i.id!==b.dataset.deleteInventory);saveState();renderMarket();});
+  document.querySelectorAll("[data-rescan-yarn]").forEach(b=>b.onclick=()=>openYarnScanModal(state.inventory.find(i=>i.id===b.dataset.rescanYarn)||{}));
+  document.querySelectorAll("[data-delete-inventory]").forEach(b=>b.onclick=async()=>{const item=state.inventory.find(i=>i.id===b.dataset.deleteInventory);await Promise.allSettled([item?.photoBlobId,item?.labelPhotoBlobId].filter(Boolean).map(deleteAsset));state.inventory=state.inventory.filter(i=>i.id!==b.dataset.deleteInventory);saveState();renderMarket();});
   document.querySelectorAll("[data-edit-cart]").forEach(b=>b.onclick=()=>openCartItemModal(b.dataset.editCart));
   document.querySelectorAll("[data-delete-cart]").forEach(b=>b.onclick=()=>{state.cart=state.cart.filter(i=>i.id!==b.dataset.deleteCart);saveState();renderMarket();});
   document.querySelectorAll("[data-buy-cart]").forEach(b=>b.onclick=()=>purchaseCartItem(b.dataset.buyCart));
@@ -3916,6 +4323,7 @@ function renderTool(tool=currentProjectTool) {
   document.getElementById("project-calculate")?.addEventListener("click",calculateProjectTool);
   document.getElementById("reset-tool-form")?.addEventListener("click",resetCurrentToolForm);
   document.querySelectorAll("[data-calc-key]").forEach(b=>b.onclick=()=>pressBasicCalculator(b.dataset.calcKey));
+  bindRenderingStudio();
   bindToolResultActions();
   queueMicrotask(applyLanguage);
 }

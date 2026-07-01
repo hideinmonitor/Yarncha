@@ -30,7 +30,7 @@ for (const file of rootAssets) {
 }
 
 const indexFile = resolve(distDir, "index.html");
-const assetVersion = "75-shared-calculations";
+const assetVersion = "82-colour-under-add";
 const classicScripts = [
   `<script src="src/data/sizeReference.js?v=${assetVersion}"></script>`,
   `<script src="src/calculations/core.js?v=${assetVersion}"></script>`,
