@@ -356,20 +356,18 @@ function parseGaugePair(gauge=""){
   const nums=String(gauge||"").match(/\d+(?:\.\d+)?/g)?.map(Number)||[];
   return {stitches:nums[0]||0,rows:nums[1]||0,span:nums[2]||10};
 }
+function sharedCalculationEngine(){
+  return globalThis.YarnchaCalculations;
+}
 function flowGaugeValues(setup={}){
+  const engine=sharedCalculationEngine();
+  if(engine?.gaugeFromSetup)return engine.gaugeFromSetup(setup);
   const parsed=parseGaugePair(setup.patternGauge);
   const gaugeWidthCm=Math.max(1,cleanNumber(setup.gaugeWidthCm,10)||10);
   const gaugeHeightCm=Math.max(1,cleanNumber(setup.gaugeHeightCm,gaugeWidthCm)||gaugeWidthCm);
-  const patternGaugeStitches=cleanNumber(setup.patternGaugeStitches,parsed.stitches||0);
-  const patternGaugeRows=cleanNumber(setup.patternGaugeRows,parsed.rows||0);
-  const hasUserGauge=hasPositive(setup.userGaugeStitches)&&hasPositive(setup.userGaugeRows);
-  const userGaugeStitches=cleanNumber(setup.userGaugeStitches,hasUserGauge?0:patternGaugeStitches);
-  const userGaugeRows=cleanNumber(setup.userGaugeRows,hasUserGauge?0:patternGaugeRows);
-  const stitchesPerCm=(userGaugeStitches||patternGaugeStitches||20)/gaugeWidthCm;
-  const rowsPerCm=(userGaugeRows||patternGaugeRows||28)/gaugeHeightCm;
-  const patternStitchesPerCm=(patternGaugeStitches||userGaugeStitches||20)/gaugeWidthCm;
-  const patternRowsPerCm=(patternGaugeRows||userGaugeRows||28)/gaugeHeightCm;
-  return {gaugeWidthCm,gaugeHeightCm,patternGaugeStitches,patternGaugeRows,userGaugeStitches,userGaugeRows,hasUserGauge,stitchesPerCm,rowsPerCm,patternStitchesPerCm,patternRowsPerCm};
+  const patternGaugeStitches=cleanNumber(setup.patternGaugeStitches,parsed.stitches||20);
+  const patternGaugeRows=cleanNumber(setup.patternGaugeRows,parsed.rows||28);
+  return {gaugeWidthCm,gaugeHeightCm,patternGaugeStitches,patternGaugeRows,userGaugeStitches:patternGaugeStitches,userGaugeRows:patternGaugeRows,hasUserGauge:false,stitchesPerCm:patternGaugeStitches/gaugeWidthCm,rowsPerCm:patternGaugeRows/gaugeHeightCm,patternStitchesPerCm:patternGaugeStitches/gaugeWidthCm,patternRowsPerCm:patternGaugeRows/gaugeHeightCm};
 }
 function flowSafetyMargin(setup={}){
   const type=setup.projectType;
@@ -379,19 +377,19 @@ function flowSafetyMargin(setup={}){
   return /cable|bobble|texture/i.test(setup.sizingNotes||setup.patternGauge||"")?1.20:1.15;
 }
 function gramsPerCm2(setup={}){
-  const swatchArea=cleanNumber(setup.swatchWidthCm)*cleanNumber(setup.swatchHeightCm);
-  if(swatchArea>0&&hasPositive(setup.swatchWeightGrams))return cleanNumber(setup.swatchWeightGrams)/swatchArea;
-  return 0.12;
+  const engine=sharedCalculationEngine();
+  const density=engine?.calculateSwatchYarnDensity?.({swatchWidthCm:setup.swatchWidthCm,swatchHeightCm:setup.swatchHeightCm,swatchWeightGrams:setup.swatchWeightGrams});
+  return density?.gramsPerCm2||0.12;
 }
 function estimateYarnFromArea(areaCm2,setup={},safetyMargin=flowSafetyMargin(setup)){
   const patternYarn=cleanNumber(setup.patternYarnGrams),patternArea=cleanNumber(setup.patternAreaCm2);
   if(patternYarn>0&&patternArea>0)return patternYarn*(areaCm2/patternArea)*safetyMargin;
-  return areaCm2*gramsPerCm2(setup)*safetyMargin;
+  const engine=sharedCalculationEngine();
+  return engine?.calculateAreaYarnEstimate?.({targetAreaCm2:areaCm2,gramsPerCm2:gramsPerCm2(setup),safetyMargin})?.estimatedGrams||areaCm2*gramsPerCm2(setup)*safetyMargin;
 }
 function applyRepeatRounding(raw,setup={},fallbackMultiple=1){
-  const edge=Math.max(0,Math.round(cleanNumber(setup.edgeStitches,0)));
-  const multiple=Math.max(1,Math.round(cleanNumber(setup.stitchRepeatMultiple,fallbackMultiple)||fallbackMultiple));
-  return roundToNearestMultiple(Math.max(0,raw-edge),multiple)+edge;
+  const engine=sharedCalculationEngine();
+  return engine?.roundToRepeat?.(raw,cleanNumber(setup.stitchRepeatMultiple,fallbackMultiple)||fallbackMultiple,cleanNumber(setup.edgeStitches,0))||roundToNearestMultiple(raw,fallbackMultiple);
 }
 function normalizeYarnWeightName(value=""){
   const text=String(value||"").toLowerCase();
@@ -477,94 +475,16 @@ function setupWarnings(setup={}){
   return warnings;
 }
 function calculateFlowProjectPlan(p={},setup=normalizeProjectSetup(p.projectSetup,p)){
-  const g=flowGaugeValues(setup),d=setup.itemDetails||{},measurements=setupMeasurements(setup),warnings=setupWarnings(setup),safetyMargin=flowSafetyMargin(setup);
-  const result={};
-  const yarnText=grams=>grams?`About ${Math.max(1,Math.round(grams))} g before buying buffer checks`:"Add swatch yarn weight for a better yarn estimate";
-  const addCommon=(width,length,area=width*length)=>{
-    result.widthCm=roundFlow(width);
-    result.lengthCm=roundFlow(length);
-    result.targetAreaCm2=roundFlow(area);
-    result.stitchCount=Math.max(1,Math.round(width*g.stitchesPerCm));
-    result.rowCount=Math.max(1,Math.round(length*g.rowsPerCm));
-    result.estimatedYarnGrams=estimateYarnFromArea(area,setup,safetyMargin);
-  };
-  if(setup.projectType==="Scarf"){
-    const styleLengths={"Neck warmer":70,"Child scarf":95,"Teen scarf":125,"Adult fashion scarf":155,"Fashion scarf":155,"One wrap":160,"Two wraps":200,"Long winter scarf":240,"Oversized scarf":275,"Custom length":firstNumber(d.length,160)};
-    const width=firstNumber(d.width,22),length=styleLengths[d.scarfStyle]||160;
-    addCommon(width,length);
-    result.castOnOrChain=applyRepeatRounding(width*g.stitchesPerCm,setup);
-  }else if(setup.projectType==="Socks"){
-    const negative={Snug:.10,Regular:.07,Relaxed:.04}[d.fitPreference]??.07;
-    const footCirc=firstNumber(d.footCircumference,22),footLength=firstNumber(d.footLength,24),legHeight={"No-show":3,Ankle:7,"Quarter Crew":12,Crew:18,"Mid-Calf":28,"Knee High":40,"Over-the-Knee":55}[d.sockType]||18;
-    const targetFootCircumference=footCirc*(1-negative),sockStitches=roundCircular(targetFootCircumference*g.stitchesPerCm,4),toeLength=firstNumber(d.toeLength,4.5);
-    result.widthCm=roundFlow(targetFootCircumference);result.lengthCm=roundFlow(footLength+legHeight);result.stitchCount=sockStitches;result.rowCount=Math.max(1,Math.round((footLength+legHeight)*g.rowsPerCm));
-    result.castOnOrChain=sockStitches;result.heelStitches=Math.round(sockStitches/2);result.instepStitches=Math.round(sockStitches/2);result.footBeforeToeCm=roundFlow(footLength-toeLength);result.toeRows=Math.round(toeLength*g.rowsPerCm);result.legRows=Math.round(legHeight*g.rowsPerCm);result.cuffRows=Math.round(firstNumber(d.cuffHeight,5)*g.rowsPerCm);result.heelFlapRows=result.heelStitches;result.gussetDecreaseCount=Math.round(firstNumber(d.pickedUpGussetStitches,0));result.decreaseRoundsNeeded=Math.round(result.gussetDecreaseCount/2);result.estimatedYarnGrams=estimateYarnFromArea(targetFootCircumference*(footLength+legHeight),setup,safetyMargin);
-  }else if(setup.projectType==="Hat / Beanie"){
-    const easeMap={"Fitted beanie":.10,"Folded brim":.10,"Bucket hat":.06,Beret:-.08,"Slouchy beanie":.04,"Bonnet / baby hat":.08,Custom:.06};
-    const head=firstNumber(d.headCircumference,56),negativeEase=easeMap[d.hatStyle]??.08,targetHatCircumference=head*(1-negativeEase),depth=firstNumber(d.hatDepth,22);
-    result.widthCm=roundFlow(targetHatCircumference);result.lengthCm=roundFlow(depth);result.castOnOrChain=applyRepeatRounding(targetHatCircumference*g.stitchesPerCm,setup,2);result.stitchCount=result.castOnOrChain;result.rowCount=Math.round(depth*g.rowsPerCm);result.brimRows=Math.round(firstNumber(d.brimDepth,5)*g.rowsPerCm);result.decreaseSections=Math.max(6,Math.round(firstNumber(d.decreaseSections,8)));result.stitchesPerSection=roundFlow(result.castOnOrChain/result.decreaseSections);result.decreaseRoundsNeeded=Math.max(1,Math.round(result.stitchesPerSection-firstNumber(d.finalTopStitchesPerSection,1)));result.estimatedYarnGrams=estimateYarnFromArea(targetHatCircumference*depth,setup,safetyMargin);
-  }else if(setup.projectType==="Bag"){
-    const width=firstNumber(d.width,36),height=firstNumber(d.height,38),depth=firstNumber(d.depth,8),strapWidth=firstNumber(d.strapWidth,4),strapLength=firstNumber(d.strapLength,60);
-    addCommon(width,height,2*width*height+2*height*depth+width*depth);
-    result.frontPanelStitches=Math.round(width*g.stitchesPerCm);result.frontPanelRows=Math.round(height*g.rowsPerCm);result.gussetStitches=Math.round(depth*g.stitchesPerCm);result.gussetRows=Math.round((2*height+width)*g.rowsPerCm);result.strapStitches=Math.round(strapWidth*g.stitchesPerCm);result.strapRows=Math.round(strapLength*g.rowsPerCm);result.volumeCm3=Math.round(width*height*depth);result.castOnOrChain=result.frontPanelStitches;
-    if(/market/i.test(d.bagType)||/soft/i.test(d.structure))warnings.push("This bag may stretch when filled. Consider a firmer stitch, lining, or smaller hook.");
-  }else if(setup.projectType==="Blanket"){
-    const preset=blanketPresetSize(d.blanketType),width=firstNumber(d.width,preset[0]),length=firstNumber(d.length,preset[1]),border=firstNumber(d.borderWidth,0);
-    const targetArea=width*length,borderOuterWidth=width+2*border,borderOuterLength=length+2*border,borderArea=borderOuterWidth*borderOuterLength-targetArea,totalArea=targetArea+borderArea;
-    addCommon(width,length,totalArea);
-    result.blanketStitches=Math.round(width*g.stitchesPerCm);result.blanketRows=Math.round(length*g.rowsPerCm);result.borderAreaCm2=roundFlow(borderArea);result.totalAreaCm2=roundFlow(totalArea);result.castOnOrChain=result.blanketStitches;
-    const square=firstNumber(d.squareSize,15);result.squareSizeCm=square;result.squaresAcross=Math.ceil(width/square);result.squaresDown=Math.ceil(length/square);result.totalSquares=result.squaresAcross*result.squaresDown;result.actualWidthCm=result.squaresAcross*square;result.actualLengthCm=result.squaresDown*square;
-    const blockWidth=firstNumber(d.blockWidth,2.5),blockHeight=firstNumber(d.blockHeight,2.5);result.blocksAcross=Math.ceil(width/blockWidth);result.blocksDown=Math.ceil(length/blockHeight);result.increaseRows=Math.min(result.blocksAcross,result.blocksDown);result.middleRows=Math.abs(result.blocksAcross-result.blocksDown);result.decreaseRows=result.increaseRows;
-  }else if(setup.projectType==="Amigurumi"){
-    const desiredHeight=firstNumber(d.finishedHeight,firstNumber(d.targetHeight,20)),desiredWidth=firstNumber(d.finishedWidth,18),originalHeight=firstNumber(d.originalHeight,desiredHeight),originalWidth=firstNumber(d.originalWidth,desiredWidth),heightScale=desiredHeight/originalHeight,widthScale=desiredWidth/originalWidth,averageScale=(heightScale+widthScale)/2;
-    addCommon(desiredWidth,desiredHeight,desiredWidth*desiredHeight);
-    result.heightScale=roundFlow(heightScale,2);result.widthScale=roundFlow(widthScale,2);result.averageScale=roundFlow(averageScale,2);result.estimatedYarnGrams=firstNumber(d.originalYarnGrams,0)?firstNumber(d.originalYarnGrams)*averageScale**2:estimateYarnFromArea(desiredWidth*desiredHeight,setup,1.20);result.estimatedStuffingGrams=firstNumber(d.originalStuffingGrams,0)?firstNumber(d.originalStuffingGrams)*averageScale**3:0;result.newEyeSizeMm=firstNumber(d.originalEyeSizeMm,0)?firstNumber(d.originalEyeSizeMm)*averageScale:0;result.maxRoundStitches=Math.round((desiredWidth*3.1416)*g.stitchesPerCm);result.castOnOrChain=Math.max(6,roundCircular(result.maxRoundStitches/6,6));
-    if(d.safetyRecipient==="Baby")warnings.push("For babies, embroidered eyes are safer than plastic safety eyes.");
-  }else if(setup.projectType==="Shawl"){
-    const wingspan=firstNumber(d.wingspan,170),depth=firstNumber(d.height,70),width=firstNumber(d.width,wingspan),length=firstNumber(d.length,depth);
-    const shape=d.shawlShape;let area=shape==="Rectangle"||shape==="Wrap"?width*length:shape==="Half Circle"?.5*3.1416*depth**2:shape==="Crescent"?wingspan*depth*.55:shape==="Asymmetrical"?wingspan*depth*.5:wingspan*depth/2;
-    addCommon(width,depth,area);result.totalRows=Math.round(depth*g.rowsPerCm);result.rowCount=result.totalRows;result.triangleBorderLengthApprox=roundFlow(wingspan+2*Math.sqrt((wingspan/2)**2+depth**2));result.castOnOrChain=Math.max(3,Math.round(wingspan*g.stitchesPerCm));
-  }else if(isGarmentProject(setup.projectType)){
-    const ease={Fitted:3,Regular:8,Relaxed:15,Oversized:24}[d.easePreference||d.fitPreference]??8,m=measurements,chest=firstNumber(setup.bodyMeasurements.chest,m.chest),waist=firstNumber(setup.bodyMeasurements.waist,m.waist),hip=firstNumber(setup.bodyMeasurements.hip,m.hip),body=firstNumber(setup.bodyMeasurements.body,m.body),sleeve=firstNumber(setup.bodyMeasurements.sleeve,m.sleeve);
-    const targetChest=chest+ease,targetWaist=waist+ease,targetHip=hip+ease,bodyStitches=Math.round(targetChest*g.stitchesPerCm),buttonBand=setup.projectType==="Cardigan"?Math.round(firstNumber(d.buttonBandStitches,8)):0;
-    result.widthCm=roundFlow(targetChest);result.lengthCm=roundFlow(body);result.bodyLengthCm=roundFlow(body);result.sleeveLengthCm=roundFlow(sleeve);result.targetChestCm=roundFlow(targetChest);result.targetWaistCm=roundFlow(targetWaist);result.targetHipCm=roundFlow(targetHip);result.stitchCount=bodyStitches+buttonBand;result.bodyStitches=bodyStitches;result.cardiganBodyStitches=bodyStitches+buttonBand;result.backStitches=Math.round(bodyStitches/2);result.frontPanelStitches=Math.round(bodyStitches/4);result.rowCount=Math.round(body*g.rowsPerCm);result.bodyRows=result.rowCount;result.castOnOrChain=result.stitchCount;
-    const upper=firstNumber(d.upperArmCircumference,Math.max(28,chest*.32)),wrist=firstNumber(d.wristCircumference,18);result.upperSleeveStitches=Math.round(upper*g.stitchesPerCm);result.cuffStitches=Math.round(wrist*g.stitchesPerCm);result.sleeveRows=Math.round(sleeve*g.rowsPerCm);result.sleeveIncreaseStitches=Math.max(0,result.upperSleeveStitches-result.cuffStitches);result.increaseRowsNeeded=result.sleeveIncreaseStitches/2;result.increaseEveryRows=result.increaseRowsNeeded?Math.max(1,Math.round(result.sleeveRows/result.increaseRowsNeeded)):0;
-    const skirtRows=Math.round(firstNumber(d.skirtLength,body*.45)*g.rowsPerCm),targetWaistStitches=Math.round(targetWaist*g.stitchesPerCm),targetHipStitches=Math.round(targetHip*g.stitchesPerCm),skirtIncreaseStitches=Math.max(0,targetHipStitches-targetWaistStitches);result.skirtIncreaseStitches=skirtIncreaseStitches;result.skirtLengthRows=skirtRows;result.skirtIncreaseRowsNeeded=skirtIncreaseStitches/2;result.skirtIncreaseEveryRows=result.skirtIncreaseRowsNeeded?Math.max(1,Math.round(skirtRows/result.skirtIncreaseRowsNeeded)):0;result.estimatedYarnGrams=estimateYarnFromArea(targetChest*(body+sleeve),setup,safetyMargin);
-  }else{
-    const dims=flowProjectDimensions(setup);addCommon(Math.max(1,dims.width),Math.max(1,dims.length));result.castOnOrChain=applyRepeatRounding(result.widthCm*g.stitchesPerCm,setup);
+  const engine=sharedCalculationEngine();
+  if(!engine?.calculateProjectPlan){
+    const g=flowGaugeValues(setup);
+    const dims=flowProjectDimensions(setup);
+    return {updatedAt:new Date().toISOString(),estimateOnly:!g.hasUserGauge,gauge:g,safetyMargin:flowSafetyMargin(setup),summary:`You’re ${setup.craft==="Crochet"?"crocheting":"knitting"} a ${String(setup.projectType||"project").toLowerCase()}.`,castOnOrChain:applyRepeatRounding(dims.width*g.stitchesPerCm,setup),startingLabel:setup.craft==="Crochet"?"Starting chain":"Cast-on",stitchCount:Math.max(1,Math.round(dims.width*g.stitchesPerCm)),rowCount:Math.max(1,Math.round(dims.length*g.rowsPerCm)),widthCm:roundFlow(dims.width),lengthCm:roundFlow(dims.length),sleeveLengthCm:roundFlow(dims.sleeve||0),bodyLengthCm:roundFlow(dims.body||dims.length||0),shapingNotes:"No extra shaping is suggested from these setup numbers.",estimatedYarnGrams:roundFlow(estimateYarnFromArea(dims.width*dims.length,setup)),estimatedYarnUsage:"Add swatch yarn weight for a better yarn estimate",warnings:setupWarnings(setup),details:{}};
   }
-  const originalPatternStitches=cleanNumber(setup.originalPatternStitches),originalPatternRows=cleanNumber(setup.originalPatternRows),patternWidth=cleanNumber(setup.patternWidthCm),patternLength=cleanNumber(setup.patternLengthCm);
-  if(originalPatternStitches&&originalPatternRows){
-    result.adjustedStitches=applyRepeatRounding(originalPatternStitches*(g.stitchesPerCm/g.patternStitchesPerCm),setup);
-    result.adjustedRows=Math.round(originalPatternRows*(g.rowsPerCm/g.patternRowsPerCm));
-    result.expectedWidthCm=roundFlow(originalPatternStitches/g.stitchesPerCm);
-    result.expectedLengthCm=roundFlow(originalPatternRows/g.rowsPerCm);
-    if(patternWidth)result.widthDifferencePercent=roundFlow(((result.expectedWidthCm-patternWidth)/patternWidth)*100);
-    if(patternLength)result.lengthDifferencePercent=roundFlow(((result.expectedLengthCm-patternLength)/patternLength)*100);
-  }
-  const estimateOnly=!g.hasUserGauge;
-  const yarnGrams=result.estimatedYarnGrams||0;
-  const shaping=Math.max(0,(result.stitchCount||0)-(result.castOnOrChain||0)),increaseEvery=shaping?Math.max(1,Math.round((result.rowCount||1)/Math.max(1,Math.ceil(shaping/2)))):0;
-  return {
-    updatedAt:new Date().toISOString(),
-    estimateOnly,
-    gauge:g,
-    safetyMargin,
-    summary:`You’re ${setup.craft==="Crochet"?"crocheting":"knitting"} a ${setup.projectType.toLowerCase()}${isGarmentProject(setup.projectType)?` in size ${setup.desiredSize}`:""}.`,
-    castOnOrChain:result.castOnOrChain||result.stitchCount||1,
-    startingLabel:setup.craft==="Crochet"?"Starting chain":"Cast-on",
-    stitchCount:result.stitchCount||result.blanketStitches||result.castOnOrChain||1,
-    rowCount:result.rowCount||result.blanketRows||1,
-    widthCm:result.widthCm||1,
-    lengthCm:result.lengthCm||1,
-    sleeveLengthCm:result.sleeveLengthCm||0,
-    bodyLengthCm:result.bodyLengthCm||result.lengthCm||0,
-    shapingNotes:shaping?`Add about ${shaping} stitch${shaping===1?"":"es"} across the project, roughly every ${increaseEvery} row${increaseEvery===1?"":"s"} if your pattern does not already place them.`:"No extra shaping is suggested from these setup numbers.",
-    estimatedYarnGrams:roundFlow(yarnGrams),
-    estimatedYarnUsage:yarnText(yarnGrams),
-    warnings,
-    details:result
-  };
+  const plan=engine.calculateProjectPlan(p,setup);
+  const warnings=[...(plan.warnings||[]),...setupWarnings(setup)];
+  const uniqueWarnings=[...new Set(warnings.filter(Boolean))];
+  return {...plan,warnings:uniqueWarnings};
 }
 function isLegacySymbolLearningSection(section={}){
   const id=String(section.id||"").toLowerCase();
