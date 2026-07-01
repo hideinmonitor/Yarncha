@@ -1,11 +1,11 @@
-const CACHE_NAME = "yarncha-shell-v84-simple-colour-cards";
+const CACHE_NAME = "yarncha-shell-v87-assistant-answer-quality";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=84-simple-colour-cards",
-  "/calculator-engine.js?v=84-simple-colour-cards",
-  "/symbol-database.js?v=84-simple-colour-cards",
-  "/app.js?v=84-simple-colour-cards",
+  "/styles.css?v=87-assistant-answer-quality",
+  "/calculator-engine.js?v=87-assistant-answer-quality",
+  "/symbol-database.js?v=87-assistant-answer-quality",
+  "/app.js?v=87-assistant-answer-quality",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

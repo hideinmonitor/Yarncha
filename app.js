@@ -559,6 +559,7 @@ function loadState() {
       activeTab:p.activeTab || "track",
       readingMode:!!p.readingMode,
       chartMode:p.chartMode || "og",
+      yarnchaAssistant:p.yarnchaAssistant || {},
       chartZoom:Number(p.chartZoom)||1,
       annotations:p.annotations || [],
       annotationHistory:p.annotationHistory || [],
@@ -901,7 +902,7 @@ function projectChartHtml(p){
       <div class="chart-mode-actions"><div class="chart-mode-switch" role="radiogroup" aria-label="Chart mode">
         <button class="${chartMode==="og"?"active":""}" data-chart-mode="og" aria-checked="${chartMode==="og"}"><strong>OG Mode</strong><small>Manual Reading</small></button>
         <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}"><strong>Flow Mode</strong><small>Smart Reading</small></button>
-        <span>Recommended for accurate row-by-row tracking.</span>
+        <span>Recommended for accurate row-by-row tracking. Yarncha Assistant lives in the Assistant section.</span>
       </div></div>
       <input type="file" id="chart-upload" accept=".pdf,image/*" multiple hidden>
     </div>
@@ -1310,6 +1311,187 @@ function flowReadingSummary(p,reader=normalizeChartReaderConfig(p.chartReader,p)
   return `You are on row ${p.row}${rows?` of ${rows}`:""}. Keep following the chart ${direction}, then tap Next Row when you finish this row.`;
 }
 
+const YARNCHA_LEARNING_MEMORY_KEY="yarncha-learning-memory-v1";
+function normalizeAssistantCraft(value=""){
+  const text=String(value||"").toLowerCase();
+  if(/tunisian/.test(text))return "tunisian";
+  if(/crochet/.test(text))return "crochet";
+  return "knitting";
+}
+function assistantCraftLabel(craftType="knitting"){return {knitting:"Knitting",crochet:"Crochet",tunisian:"Tunisian Crochet"}[craftType]||"Knitting";}
+function normalizeAssistantSkill(value="beginner"){return ["beginner","intermediate","advanced"].includes(value)?value:"beginner";}
+function defaultLearningMemory(){return {verifiedSymbols:[],userCorrections:[],frequentQuestions:{},preferredTerminology:{},projectMemories:{}};}
+const learningMemoryService={
+  getAll(){
+    try{return {...defaultLearningMemory(),...(JSON.parse(localStorage.getItem(YARNCHA_LEARNING_MEMORY_KEY)||"null")||{})};}
+    catch{return defaultLearningMemory();}
+  },
+  saveAll(memory){localStorage.setItem(YARNCHA_LEARNING_MEMORY_KEY,JSON.stringify({...defaultLearningMemory(),...(memory||{})}));},
+  getLearningMemory(projectId=""){
+    const memory=this.getAll();
+    return {...memory,projectMemory:memory.projectMemories?.[projectId]||{}};
+  },
+  saveVerifiedSymbol(projectId,symbolData={}){
+    const memory=this.getAll(),item={projectId,symbol:symbolData.symbol||symbolData.currentSymbol||"",meaning:symbolData.meaning||symbolData.question||"Verified in Yarncha Assistant",savedAt:new Date().toISOString()};
+    memory.verifiedSymbols=[item,...(memory.verifiedSymbols||[])].slice(0,80);
+    memory.projectMemories[projectId]={...(memory.projectMemories[projectId]||{}),lastVerifiedSymbol:item};
+    this.saveAll(memory);return item;
+  },
+  saveUserCorrection(correctionData={}){
+    const memory=this.getAll(),item={...correctionData,savedAt:new Date().toISOString()};
+    memory.userCorrections=[item,...(memory.userCorrections||[])].slice(0,80);
+    if(item.projectId)memory.projectMemories[item.projectId]={...(memory.projectMemories[item.projectId]||{}),lastCorrection:item};
+    this.saveAll(memory);return item;
+  },
+  saveFrequentQuestion(question=""){
+    const key=String(question||"").trim().toLowerCase().slice(0,120);
+    if(!key)return;
+    const memory=this.getAll();
+    memory.frequentQuestions[key]=(memory.frequentQuestions[key]||0)+1;
+    this.saveAll(memory);
+  },
+  savePreferredTerminology(term,preference){
+    const memory=this.getAll();
+    memory.preferredTerminology[term]=preference;
+    this.saveAll(memory);
+  },
+  saveProjectNote(projectId,note){
+    const memory=this.getAll();
+    const projectMemory=memory.projectMemories[projectId]||{};
+    projectMemory.notes=[{text:note,savedAt:new Date().toISOString()},...(projectMemory.notes||[])].slice(0,30);
+    memory.projectMemories[projectId]=projectMemory;
+    this.saveAll(memory);
+  }
+};
+const projectContextService={
+  getCurrentProject(){return getProject();},
+  getCurrentChartContext(project=this.getCurrentProject()){
+    const reader=normalizeChartReaderConfig(project?.chartReader,project||{});
+    return {chartType:reader.chartType,currentChart:project?.activeChartAssetId||project?.chart?.name||project?.attachments?.[0]?.name||"",grid:reader.grid,verifiedSymbols:learningMemoryService.getLearningMemory(project?.id||"").verifiedSymbols||[]};
+  },
+  getCurrentRowContext(project=this.getCurrentProject()){
+    const rowNumber=Number(project?.row)||0,row=(project?.chartAnalysis?.rows||[]).find(item=>Number(item.number)===rowNumber);
+    return {currentRow:rowNumber,rowInstruction:row?.sequence||flowCurrentRowInstruction(project||{},ensureProjectSetup(project||{})),expectedStitchCount:row?.stitchCount||project?.projectCalculations?.stitchCount||null,savedProgress:{row:rowNumber,totalRows:project?.chartRows||project?.totalRows||null}};
+  },
+  getCurrentSymbolContext(project=this.getCurrentProject()){
+    const recognition=highlightedRowRecognition(project||{})[0]||project?.chartReader?.recognitionResults?.[0]||null;
+    return {currentSymbol:recognition?.candidates?.[0]?.abbreviation||recognition?.detectedSymbol||"",symbolMeaning:recognition?.candidates?.[0]?.nameEn||""};
+  },
+  getCurrentProjectContext(){
+    const project=this.getCurrentProject(),setup=ensureProjectSetup(project||{}),chart=this.getCurrentChartContext(project),row=this.getCurrentRowContext(project),symbol=this.getCurrentSymbolContext(project),memory=learningMemoryService.getLearningMemory(project?.id||"");
+    return {projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",savedProgress:row.savedProgress,verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,projectMemory:memory.projectMemory||{}};
+  }
+};
+const teachingService={
+  style(skillLevel){
+    if(skillLevel==="advanced")return "technical";
+    if(skillLevel==="intermediate")return "direct";
+    return "gentle";
+  },
+  explainSymbol(symbol="",craftType="knitting",skillLevel="beginner",context={}){
+    const craft=assistantCraftLabel(craftType),mark=symbol||context.currentSymbol||"this symbol";
+    const likely=craftType==="crochet"?"a circle often means chain, a tall T-shaped mark often means a taller stitch, and a slash may mean a post or decrease mark":craftType==="tunisian"?"a vertical mark often points to a vertical bar stitch, while return-pass marks may be shown separately":"a circle often means yarn over, a slash often means a decrease, and a blank square often means knit on right-side rows";
+    return {questionType:"symbolMeaning",quickAnswer:`${mark} needs the pattern legend first because chart symbols are not universal. In ${craft}, ${likely}.`,whatToDoNow:`Open the chart legend and compare ${mark} with the designer's key. If Yarncha has selected the wrong mark, tap or zoom the exact symbol before you continue.`,steps:[`Check the legend printed with this pattern before using a general symbol meaning.`,`Confirm whether the current row is worked as ${craftType==="tunisian"?"a forward pass or return pass":craftType==="crochet"?"a row, round, or motif round":"a right-side or wrong-side row"}.`,context.currentRow?`Because you are on Row ${context.currentRow}, check this symbol only in that row before moving ahead.`:"If no row is selected, choose the row or zoom the chart so the symbol can be read clearly.",`If the legend is missing, compare nearby repeats and look for the same symbol used in a familiar stitch pattern.`],commonMistakes:["Assuming a symbol means the same thing in every pattern.","Reading a right-side chart symbol the same way on wrong-side rows when the legend says otherwise.","Ignoring designer notes that override standard chart symbols."],relatedTechniques:["chart legends","symbol reading","row direction"],libraryLinks:[{title:"Chart Symbol Guide",target:"library:symbol-guide"},{title:"Pattern Legend Guide",target:"library:pattern-legend-guide"}]};
+  },
+  explainAbbreviation(abbreviation="",craftType="knitting",skillLevel="beginner",context={}){
+    const clean=String(abbreviation||"").trim().toLowerCase();
+    const terms={
+      knitting:{k2tog:["knit two together","right-leaning decrease","turns 2 stitches into 1, so the stitch count decreases by 1","insert the right needle through the next two stitches together, knit them as one stitch"],ssk:["slip, slip, knit","left-leaning decrease","turns 2 stitches into 1, so the stitch count decreases by 1","slip two stitches knitwise one at a time, return them to the left needle, then knit them together through the back loops"],yo:["yarn over","increase and eyelet","adds 1 stitch","bring the yarn over the needle before working the next stitch"],pm:["place marker","marker instruction","does not change stitch count","put a stitch marker on the needle at this point"]},
+      crochet:{sc:["single crochet","basic crochet stitch","usually keeps stitch count the same unless worked as an increase or decrease","insert hook, yarn over, pull up a loop, yarn over and pull through both loops"],dc:["double crochet","tall crochet stitch","usually keeps stitch count the same","yarn over, insert hook, pull up a loop, yarn over through two loops twice"],ch:["chain","foundation or spacer stitch","adds a chain; it may or may not count as a stitch depending on the pattern","yarn over and pull through the loop on your hook"],"sl st":["slip stitch","joining or moving stitch","usually keeps stitch count the same","insert hook, yarn over, pull through the stitch and the loop on your hook"],slst:["slip stitch","joining or moving stitch","usually keeps stitch count the same","insert hook, yarn over, pull through the stitch and the loop on your hook"]},
+      tunisian:{tss:["Tunisian simple stitch","basic Tunisian stitch","keeps one loop per stitch on the forward pass","insert hook under the front vertical bar, yarn over, pull up a loop"],tks:["Tunisian knit stitch","Tunisian stitch that looks knitted","keeps one loop per stitch on the forward pass","insert hook between the front and back vertical bars, yarn over, pull up a loop"],"return pass":["return pass","the pass that works loops off the hook","reduces loops on hook back to one working loop","yarn over and pull through one loop first, then yarn over and pull through two loops repeatedly"]}
+    };
+    const key=clean.replace(/\s+/g," ");
+    const hit=terms[craftType]?.[key]||terms[craftType]?.[key.replace(/\s/g,"")];
+    const label=abbreviation||"the abbreviation";
+    return {questionType:"abbreviation",quickAnswer:hit?`${label} means ${hit[0]}. It is a ${hit[1]} in ${assistantCraftLabel(craftType)}.`:`${label} is a ${assistantCraftLabel(craftType)} abbreviation, but this pattern's abbreviation list should confirm the exact meaning.`,whatToDoNow:hit?`Before you work it, note the stitch-count effect: it ${hit[2]}. Then work it once slowly and count the result.`:`Find the abbreviation list in the pattern, then check whether the term increases, decreases, or keeps the stitch count the same.`,steps:hit?[`Full name: ${hit[0]}.`,`Craft type: ${assistantCraftLabel(craftType)}.`,`Stitch-count effect: ${hit[2]}.`,`How to do it: ${hit[3]}.`,context.currentRow?`On Row ${context.currentRow}, count again after this abbreviation if the row also has repeats.`:"If it appears inside brackets, count it as part of each repeat."]:["Look for the pattern abbreviation list or designer notes.","Check whether the pattern uses US or UK crochet terms if this is crochet.","Read the whole row before making the stitch.","Count before and after the row if the abbreviation changes stitch count."],commonMistakes:["Mixing US and UK crochet terms.","Missing whether an abbreviation sits inside a repeated bracket.","Forgetting that decreases reduce stitch count and yarn overs or increases add stitches."],relatedTechniques:["abbreviations","stitch count changes","pattern reading"],libraryLinks:[{title:"Abbreviation Guide",target:"library:abbreviation-guide"},{title:"Reading Patterns",target:"library:reading-patterns"}]};
+  },
+  explainTechnique(technique="",craftType="knitting",skillLevel="beginner",context={}){
+    const craftBits={knitting:["Keep the stitches on the needle shaft while forming the stitch so the loop size stays even.","Check whether the stitch leans left, leans right, or sits upright; that tells you if it matches the instruction."],crochet:["Check whether the turning chain counts as the first stitch before you place your hook.","Insert the hook exactly where the pattern says: stitch top, chain space, back loop, front loop, or post."],tunisian:["Separate the forward pass from the return pass before you judge the stitch.","Watch the vertical bars and the edge stitch; missing the edge can change the shape."]}[craftType]||[];
+    return {questionType:"stitchTechnique",quickAnswer:`For this ${assistantCraftLabel(craftType)} technique, the important part is placement first, then tension, then stitch count.`,whatToDoNow:context.rowInstruction?`Read the current row instruction once, then practise only the technique section before continuing the full row.`:`Tell Yarncha the exact stitch name or paste the pattern line if you want exact hand placement. For now, practise it on a small swatch first.`,steps:[...craftBits,"Make one sample stitch or repeat and look at where the yarn enters and exits the fabric.","Count how many stitches or loops it consumes and produces.","If it looks wrong, undo only the sample repeat and try again with slower tension."],commonMistakes:["Starting in the wrong loop or space.","Pulling the working yarn tighter on the unfamiliar stitch.","Forgetting to count after increases, decreases, or yarn overs."],relatedTechniques:[technique||"technique basics","practice swatch","stitch anatomy"],libraryLinks:[{title:"Stitch Library",target:"library:stitch-library"},{title:"Technique Basics",target:"library:technique-basics"}]};
+  },
+  explainPatternLine(patternLine="",craftType="knitting",skillLevel="beginner",context={}){
+    const line=patternLine||context.rowInstruction||"";
+    return {questionType:context.currentRow?"rowInstruction":"patternReading",quickAnswer:line?`Read this row in pieces: first the stitches before any bracket, then the repeated section, then the stitches after the repeat.`:"I can help, but I need the exact row or pattern line to be precise.",whatToDoNow:line?`Mark the repeat section now. If you are on Row ${context.currentRow||"this row"}, work one repeat, count it, then repeat only the stated number of times.`:"Paste the row instruction or select the current row. For now, look for brackets, commas, repeat counts, and the final stitch count.",steps:[context.currentRow?`Read only Row ${context.currentRow} first; ignore the next row until this one is complete.`:"Read one instruction line at a time.","Circle or identify everything before the first bracket or asterisk.","Mark the repeated section and count how many stitches one repeat uses.","Work the bracketed section the required number of times.","Work any stitches after the repeat, then check the stitch count before continuing."],commonMistakes:["Repeating stitches that sit outside the brackets.","Missing an “at the same time” instruction.","Working a wrong-side row in the right-side direction.","Skipping the final stitches after a repeat."],relatedTechniques:["reading repeats","row tracking","stitch counts"],libraryLinks:[{title:"Reading Repeats",target:"library:reading-repeats"},{title:"Reading Patterns",target:"library:reading-patterns"}]};
+  }
+};
+const troubleshootingService={
+  troubleshootStitchCount(context={},skillLevel="beginner",craftType="knitting"){
+    const expected=context.expectedStitchCount?` Yarncha sees an expected count around ${context.expectedStitchCount}.`:" I need the pattern's expected stitch count to be exact.";
+    const terms={knitting:["needle","row","k2tog","ssk","yo","increase","decrease","stitch marker","tink back"],crochet:["hook","round","turning chain","skipped stitch","accidental increase","stitch marker","frog back"],tunisian:["hook","forward pass","return pass","vertical bars","edge stitch","loops on hook","frog back"]}[craftType]||[];
+    return {questionType:"stitchCountProblem",quickAnswer:`Your stitch count is usually off because a repeat was missed or doubled, or an increase/decrease was counted incorrectly.${expected}`,whatToDoNow:context.currentRow?`Stop at the end of Row ${context.currentRow} if possible. Count the stitches now, compare with the expected count, then check each repeat before moving to Row ${Number(context.currentRow)+1}.`:"Stop at the end of the current row or round if possible. Count your stitches now, then compare with the pattern's expected count.",steps:[`Keep the work on your ${terms[0]||"tool"} and count every stitch or loop without stretching the fabric.`,`Write down your current count and the expected count from the pattern.`,`Place ${terms.includes("stitch marker")?"stitch markers":"markers"} between repeats or every 10 stitches.`,`Check the row for ${craftType==="knitting"?"k2tog, ssk, yo, increases, and decreases":craftType==="crochet"?"turning chains, skipped stitches, accidental increases, and decreases":"forward-pass loops, return-pass decreases, vertical bars, and the edge stitch"}.`,`If one repeat is wrong, undo only that repeat or section if you can see it clearly.`,`If the whole row is wrong or the mistake is hidden, ${craftType==="knitting"?"tink back":"frog back"} slowly to the last correct count.`],commonMistakes:craftType==="knitting"?["Forgetting that k2tog and ssk each decrease by 1 stitch.","Forgetting that yo adds 1 stitch.","Missing the last stitch after a repeat.","Repeating a bracket section too many or too few times."]:craftType==="crochet"?["Counting the turning chain when the pattern says it does not count.","Skipping the first or last stitch of the row.","Adding two stitches into one space by accident.","Missing a decrease that should turn two stitches into one."]:["Missing the last edge stitch on the forward pass.","Dropping a loop before the return pass.","Counting return-pass chain loops as extra stitches.","Skipping a vertical bar inside a repeat."],relatedTechniques:["stitch count troubleshooting","increases and decreases","reading repeats"],libraryLinks:[{title:"Stitch Count Troubleshooting",target:"library:stitch-count-troubleshooting"},{title:"Increases and Decreases",target:"library:increases-decreases"},{title:"Reading Repeats",target:"library:reading-repeats"}]};
+  },
+  troubleshootDroppedStitch(context={},skillLevel="beginner",craftType="knitting"){
+    if(craftType==="crochet")return {questionType:"droppedStitch",quickAnswer:"Crochet usually does not drop stitches like knitting. The problem is more often a missed stitch, loose loop, undone stitch, or skipped stitch.",whatToDoNow:"Put a stitch marker in the loose loop, count the current row, and compare the stitch placement with the previous row before pulling anything out.",steps:["Find the loose loop or gap and secure it with a marker.","Count the stitches before and after the gap.","Check whether the turning chain counts as a stitch in this pattern.","If one stitch was missed, undo back to that point and rework it into the correct stitch or space.","If only the loop is loose, gently redistribute the extra yarn into nearby stitches."],commonMistakes:["Mistaking a skipped stitch for a dropped stitch.","Pulling the loose loop until nearby stitches tighten.","Forgetting whether the turning chain counts."],relatedTechniques:["crochet mistakes","missed stitches","turning chains"],libraryLinks:[{title:"Crochet Mistakes",target:"library:crochet-mistakes"},{title:"Fixing Mistakes",target:"library:fixing-mistakes"}]};
+    if(craftType==="tunisian")return {questionType:"droppedStitch",quickAnswer:"In Tunisian crochet, this is usually a missed loop on the forward pass or a loose vertical bar rather than a knitting-style dropped stitch.",whatToDoNow:"Secure the loose loop, check the vertical bars in that column, and decide whether the row can be repaired or needs to be frogged back.",steps:["Do not pull the fabric.","Catch the loose loop or vertical bar with a hook or marker.","Trace the column upward and check whether one forward-pass loop was missed.","If the loop can be lifted, pull the correct strand through and keep the edge stitch intact.","If the return pass locked the mistake in place, frog back to the missed loop and rework the forward pass."],commonMistakes:["Missing the edge stitch.","Confusing return-pass chains with forward-pass loops.","Pulling a vertical bar too tight after repair."],relatedTechniques:["Tunisian mistakes","vertical bars","forward pass"],libraryLinks:[{title:"Tunisian Mistakes",target:"library:tunisian-mistakes"},{title:"Fixing Mistakes",target:"library:fixing-mistakes"}]};
+    return {questionType:"droppedStitch",quickAnswer:"Do not pull the fabric. Secure the dropped stitch first, then ladder it back up one row at a time with a crochet hook.",whatToDoNow:"Put a locking stitch marker or crochet hook through the dropped loop right now so it cannot fall farther.",steps:["Do not stretch or tug the fabric.","Secure the dropped stitch with a stitch marker, safety pin, or crochet hook.","Find the horizontal ladder bars above the dropped stitch.","Use the crochet hook to pull the lowest ladder bar through the dropped stitch.","Repeat one ladder bar at a time, moving upward row by row.","Place the rescued stitch back on the needle facing the correct direction.","Knit slowly across that area and check that the stitch is not twisted."],commonMistakes:["Pulling the fabric and making the drop travel farther.","Skipping one ladder bar while repairing.","Putting the rescued stitch back on the needle twisted."],relatedTechniques:["fixing dropped stitches","knitting mistakes","stitch orientation"],libraryLinks:[{title:"Fixing Dropped Stitches",target:"library:fixing-dropped-stitches"},{title:"Knitting Mistakes",target:"library:knitting-mistakes"}]};
+  },
+  troubleshootGaugeIssue(context={},skillLevel="beginner"){
+    return {questionType:"gaugeProblem",quickAnswer:"Gauge problems usually come from stitch tension, row tension, yarn weight, fibre behaviour, hook or needle size, or blocking.",whatToDoNow:"Measure stitches and rows across 10 cm before changing the project. If stitch gauge is too wide, try a smaller tool; if too narrow, try a larger tool.",steps:["Lay the fabric flat without stretching it.","Count stitches across 10 cm or 4 in.","Count rows across 10 cm or 4 in.","Compare both numbers with the pattern gauge.","Check yarn weight, fibre content, and hook or needle size.","Block a swatch if the pattern gauge is measured after blocking."],commonMistakes:["Measuring across too few stitches.","Checking stitch gauge but ignoring row gauge.","Comparing unblocked fabric to blocked pattern measurements."],relatedTechniques:["gauge","swatching","blocking"],libraryLinks:[{title:"Gauge & Swatch Basics",target:"library:gauge-swatch-basics"},{title:"Blocking Guide",target:"library:blocking-guide"},{title:"Yarn Substitution",target:"library:yarn-substitution"}]};
+  },
+  troubleshootProjectLooksDifferent(context={},skillLevel="beginner"){
+    return {questionType:"projectLooksDifferent",quickAnswer:"A project can look different because of gauge, yarn weight, fibre, tool size, tension, blocking, stitch count, row count, or reading right-side/wrong-side rows incorrectly.",whatToDoNow:"Check gauge and counts before assuming the pattern is wrong. Measure 10 cm, count stitches and rows, then compare your yarn and tool size with the pattern.",steps:["Measure your stitch gauge across 10 cm.","Measure your row gauge across 10 cm.","Compare both with the pattern gauge.","Check yarn weight, fibre content, hook or needle size, and whether your yarn has similar drape.","Count stitches and rows in the section that looks wrong.","Check whether the pattern is asking for right side or wrong side, and whether increases or decreases are placed correctly.","Block or gently smooth a swatch before judging the final look."],commonMistakes:["Expecting the first few rows to look like the finished photo.","Using a yarn substitution with very different drape.","Missing increases or decreases that shape the project.","Reading wrong-side chart rows in the wrong direction."],relatedTechniques:["gauge","blocking","yarn substitution"],libraryLinks:[{title:"Gauge & Swatch Basics",target:"library:gauge-swatch-basics"},{title:"Blocking Guide",target:"library:blocking-guide"},{title:"Yarn Substitution",target:"library:yarn-substitution"}]};
+  }
+};
+const yarnchaAssistantService={
+  classifyQuestion(question=""){
+    const lower=String(question||"").toLowerCase();
+    if(/symbol|chart mark|legend|circle|slash|\/|what is this mark/.test(lower))return "symbolMeaning";
+    if(/dropped|drop(ped)? stitch|ladder|fell down|loose loop/.test(lower))return "droppedStitch";
+    if(/stitch count|row count|lost count|extra stitch|too many|too few|should have|have \d+ stitches|wrong count/.test(lower))return "stitchCountProblem";
+    if(/abbrev|abbreviation|what does\b|k2tog|ssk|yo\b|sc\b|dc\b|tss\b|pm\b|sl st|slst/.test(lower))return "abbreviation";
+    if(/gauge|swatch|too tight|too loose/.test(lower))return "gaugeProblem";
+    if(/look different|doesn.t look|too wide|too narrow|too big|too small|shape weird|different from the photo/.test(lower))return "projectLooksDifferent";
+    if(/read.*pattern|repeat|bracket|\*|row \d+|this row|instruction|pattern line|what should i do on row/.test(lower))return "patternReading";
+    if(/how do i|technique|stitch|make|work/.test(lower))return "stitchTechnique";
+    return "generalQuestion";
+  },
+  extractAbbreviation(question=""){
+    const lower=String(question||"").toLowerCase();
+    const match=lower.match(/\b(k2tog|ssk|yo|m1|pm|sc|dc|hdc|ch|sl\s?st|tss|tks|return pass)\b/);
+    if(match)return match[1].replace("slst","sl st");
+    return String(question||"").replace(/what does|mean|abbreviation|\?|in knitting|in crochet|in tunisian/gi,"").trim().split(/\s+/).slice(0,3).join(" ");
+  },
+  contextNote(projectContext={}){
+    const bits=[];
+    if(projectContext.projectName)bits.push(`Project: ${projectContext.projectName}`);
+    if(projectContext.craftType)bits.push(`Craft: ${assistantCraftLabel(projectContext.craftType)}`);
+    if(projectContext.currentRow)bits.push(`Current row: ${projectContext.currentRow}`);
+    if(projectContext.expectedStitchCount)bits.push(`Expected stitch count: ${projectContext.expectedStitchCount}`);
+    return bits.length?`Using your current project: ${bits.join(" · ")}`:"";
+  },
+  async askYarnchaAssistant({question="",projectContext={},skillLevel="beginner",craftType="knitting"}={}){
+    const q=String(question||"").trim(),lower=q.toLowerCase();
+    learningMemoryService.saveFrequentQuestion(q);
+    const questionType=this.classifyQuestion(q);
+    const context={...projectContext,craftType};
+    const base=questionType==="stitchCountProblem"?troubleshootingService.troubleshootStitchCount(context,skillLevel,craftType):questionType==="droppedStitch"?troubleshootingService.troubleshootDroppedStitch(context,skillLevel,craftType):questionType==="symbolMeaning"?teachingService.explainSymbol(context.currentSymbol||"this symbol",craftType,skillLevel,context):questionType==="abbreviation"?teachingService.explainAbbreviation(this.extractAbbreviation(q),craftType,skillLevel,context):questionType==="patternReading"||questionType==="rowInstruction"?teachingService.explainPatternLine(context.rowInstruction,craftType,skillLevel,context):questionType==="gaugeProblem"?troubleshootingService.troubleshootGaugeIssue(context,skillLevel):questionType==="projectLooksDifferent"?troubleshootingService.troubleshootProjectLooksDifferent(context,skillLevel):teachingService.explainTechnique(q,craftType,skillLevel,context);
+    const missing=!context.rowInstruction&&/(row|instruction|pattern line|repeat)/i.test(q)?"I need the exact pattern line to be exact. ":!context.expectedStitchCount&&/count|stitch/i.test(q)?"I need the pattern's expected stitch count to be exact. ":"";
+    const checkBeforeContinuing=base.checkBeforeContinuing||[context.expectedStitchCount?"Compare your current stitch count with the expected stitch count.":"Check the pattern notes for the expected stitch count or row count.",context.rowInstruction?"Read the current row instruction once more before moving on.":"Paste or select the exact row if you want Yarncha to be more precise.","If the fabric looks wrong, stop at the end of the row or round before undoing anything."];
+    return {...base,questionType,contextNote:this.contextNote(context),whatToDoNow:`${missing}${base.whatToDoNow||"Start by checking the exact stitch, row, or symbol involved, then compare it with the pattern notes."}`,checkBeforeContinuing,confidence:context.currentRow||context.rowInstruction||context.currentSymbol?"medium":"general",sourceType:"local-rule-based"};
+  }
+};
+function yarnchaAssistantAnswerHtml(answer){
+  if(!answer)return `<div class="empty-state">Ask Yarncha Assistant for stitch, symbol, pattern, or mistake help.</div>`;
+  const list=(title,items)=>items?.length?`<section><h4>${title}</h4><ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`:"";
+  return `<article class="yarncha-assistant-answer">${answer.contextNote?`<section><h4>Project context</h4><p>${escapeHtml(answer.contextNote)}</p></section>`:""}<section><h4>Quick answer</h4><p>${escapeHtml(answer.quickAnswer||"")}</p></section><section><h4>What to do now</h4><p>${escapeHtml(answer.whatToDoNow||"")}</p></section>${list("Step-by-step",answer.steps)}${list("Check this before continuing",answer.checkBeforeContinuing)}${list("Common mistakes",answer.commonMistakes)}${list("Related techniques",answer.relatedTechniques)}<section><h4>Library links</h4><div class="assistant-library-links">${(answer.libraryLinks||[]).map(link=>`<button class="chip" data-library-link="${escapeHtml(link.target)}">${escapeHtml(link.title)}</button>`).join("")}</div></section><p class="assistant-source-note">${escapeHtml(answer.questionType||"generalQuestion")} · ${escapeHtml(answer.sourceType||"local-rule-based")} · confidence ${escapeHtml(answer.confidence||"general")}</p></article>`;
+}
+function yarnchaAssistantChartHtml(p){
+  const assistant=p.yarnchaAssistant||{},context=projectContextService.getCurrentProjectContext(),skill=normalizeAssistantSkill(assistant.skillLevel||context.skillLevel),craft=normalizeAssistantCraft(assistant.craftType||context.craftType),answer=assistant.lastAnswer;
+  const contextText=context.currentRow?`Using row ${context.currentRow} context`:(context.currentChart?"Using current chart":"No chart context available");
+  const suggestions=["My stitch count is wrong","Explain this symbol","Help me read this row","Fix a dropped stitch","What does this abbreviation mean?","Why does my project look different?"];
+  return `<section class="yarncha-assistant-panel card workspace-card">
+    <div class="section-heading compact-row"><div><p class="eyebrow">YARNCHA ASSISTANT</p><h2>Yarncha Assistant</h2><p>Ask for help with stitches, symbols, patterns, and mistakes.</p></div><span class="assistant-context-pill">${escapeHtml(contextText)}</span></div>
+    <div class="assistant-control-grid">
+      <label class="field">Craft type<select id="chart-assistant-craft">${["knitting","crochet","tunisian"].map(value=>`<option value="${value}" ${craft===value?"selected":""}>${assistantCraftLabel(value)}</option>`).join("")}</select></label>
+      <label class="field">Skill level<select id="chart-assistant-skill">${["beginner","intermediate","advanced"].map(value=>`<option value="${value}" ${skill===value?"selected":""}>${value[0].toUpperCase()+value.slice(1)}</option>`).join("")}</select></label>
+    </div>
+    <div class="assistant-suggestion-row">${suggestions.map(text=>`<button class="chip" data-assistant-suggestion="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div>
+    <div class="assistant-ask-row"><textarea id="chart-assistant-question" rows="3" placeholder="Ask about a stitch, symbol, row, mistake, or pattern line...">${escapeHtml(assistant.draftQuestion||"")}</textarea><button class="primary-button" id="ask-chart-assistant">Ask</button></div>
+    <div id="chart-assistant-answer" aria-live="polite">${yarnchaAssistantAnswerHtml(answer)}</div>
+    <div class="assistant-memory-actions"><button class="mini-button" data-assistant-memory="save-explanation">Save explanation</button><button class="mini-button" data-assistant-memory="add-notes">Add to project notes</button><button class="mini-button" data-assistant-memory="remember-correction">Remember correction</button><button class="mini-button" data-assistant-memory="verify-symbol">Mark symbol as verified</button></div>
+  </section>`;
+}
+
 function projectProjectHtml(p){
   return `<div class="project-info-grid">
     ${sharedProjectSetupSummaryHtml(p)}
@@ -1337,7 +1519,7 @@ function openToolHistoryModal(id){
   document.getElementById("save-history-modal").onclick=()=>{item.notes=document.getElementById("history-modal-notes").value;saveProjectTouch(p);closeModal();renderProjectDetail();};
 }
 function projectAssistantTabHtml(p){
-  return `<div class="assistant-tab-grid">${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Automatic Flow Mode remains paused. The optional signed-in cloud chart reader produces an editable draft; Manual OG Chart Mode remains the reliable daily workflow.</p><p>The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.</p></div></div>`;
+  return `<div class="assistant-tab-grid">${yarnchaAssistantChartHtml(p)}${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Flow Mode stays focused on chart reading, row highlighting, progress tracking, and read-aloud row help. Yarncha Assistant is the separate teaching and troubleshooting space.</p><p>The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.</p></div></div>`;
 }
 function themeLabel(t){return themePresets.find(theme=>theme.id===normalizeThemeName(t))?.name||t;}
 function themeComparePreviewHtml(theme){
@@ -1968,6 +2150,7 @@ function bindProjectDetail() {
   document.querySelectorAll("#voice-project").forEach(b=>b.onclick = startVoice);
   document.getElementById("toggle-reading")?.addEventListener("click",()=>{p.readingMode=!p.readingMode;p.activeTab="chart";saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-chart-mode]").forEach(b=>b.onclick=()=>{p.chartMode=b.dataset.chartMode;if(p.chartMode==="flow")toast("Flow Mode stays inside this project chart. Review every AI suggestion before using it.");saveProjectTouch(p);renderProjectDetail();});
+  bindYarnchaAssistant(p);
   document.getElementById("flow-toggle")?.addEventListener("click",()=>{p.flowMode=!p.flowMode;saveProjectTouch(p);renderProjectDetail();});
   document.getElementById("edit-chart-legend")?.addEventListener("click",openChartLegendModal);
   document.getElementById("add-analysis-row")?.addEventListener("click",()=>openChartRowModal());
@@ -2054,6 +2237,53 @@ function bindProjectDetail() {
   document.getElementById("redo-annotation")?.addEventListener("click",redoAnnotation);
   document.getElementById("clear-annotations")?.addEventListener("click",()=>{pushAnnotationHistory(p);p.annotations=[];p.annotationRedo=[];saveProjectTouch(p);renderProjectDetail();});
   ["project-yarn","project-needles","project-gauge","project-sizing"].forEach(id=>document.getElementById(id)?.addEventListener("input",e=>{const key={ "project-yarn":"yarn","project-needles":"needles","project-gauge":"gauge","project-sizing":"sizingNotes"}[id];p[key]=e.target.value;saveProjectTouch(p);}));
+}
+function bindYarnchaAssistant(p=getProject()){
+  if(!document.querySelector(".yarncha-assistant-panel"))return;
+  p.yarnchaAssistant=p.yarnchaAssistant||{};
+  const savePrefs=()=>{
+    p.yarnchaAssistant.skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
+    p.yarnchaAssistant.craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
+    p.yarnchaAssistant.draftQuestion=document.getElementById("chart-assistant-question")?.value||"";
+    saveProjectTouch(p);
+  };
+  document.getElementById("chart-assistant-skill")?.addEventListener("change",()=>{savePrefs();renderProjectDetail();});
+  document.getElementById("chart-assistant-craft")?.addEventListener("change",()=>{savePrefs();renderProjectDetail();});
+  document.getElementById("chart-assistant-question")?.addEventListener("input",()=>{p.yarnchaAssistant.draftQuestion=document.getElementById("chart-assistant-question").value;saveStateSoon();});
+  const suggestionPrompts={
+    "My stitch count is wrong":"My stitch count is wrong on this row. Help me check what I should do next.",
+    "Explain this symbol":"Explain this chart symbol and tell me how to check it against the legend.",
+    "Help me read this row":"Help me read this row. Break down the repeats and tell me what to do first.",
+    "Fix a dropped stitch":"I dropped a stitch. Help me fix it step by step.",
+    "What does this abbreviation mean?":"What does this abbreviation mean, and does it change my stitch count?",
+    "Why does my project look different?":"Why does my project look different from the pattern photo? Help me check gauge, yarn, and stitch count."
+  };
+  document.querySelectorAll("[data-assistant-suggestion]").forEach(button=>button.onclick=()=>{const box=document.getElementById("chart-assistant-question");if(box){box.value=suggestionPrompts[button.dataset.assistantSuggestion]||button.dataset.assistantSuggestion;box.focus();p.yarnchaAssistant.draftQuestion=box.value;saveStateSoon();}});
+  document.getElementById("ask-chart-assistant")?.addEventListener("click",()=>askChartYarnchaAssistant(p));
+  document.querySelectorAll("[data-assistant-memory]").forEach(button=>button.onclick=()=>handleAssistantMemoryAction(button.dataset.assistantMemory,p));
+  document.querySelectorAll("[data-library-link]").forEach(button=>button.onclick=()=>toast(button.textContent.trim()+" is saved in Yarncha Library references."));
+}
+async function askChartYarnchaAssistant(p=getProject()){
+  p.yarnchaAssistant=p.yarnchaAssistant||{};
+  const question=document.getElementById("chart-assistant-question")?.value.trim();
+  if(!question)return toast("Ask Yarncha Assistant a question first.");
+  const skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
+  const craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
+  const projectContext={...projectContextService.getCurrentProjectContext(),skillLevel,craftType};
+  const answer=await yarnchaAssistantService.askYarnchaAssistant({question,projectContext,skillLevel,craftType});
+  p.yarnchaAssistant={...p.yarnchaAssistant,skillLevel,craftType,lastQuestion:question,draftQuestion:"",lastAnswer:answer,recentQuestions:[question,...(p.yarnchaAssistant.recentQuestions||[])].slice(0,8)};
+  saveProjectTouch(p);
+  renderProjectDetail();
+}
+function handleAssistantMemoryAction(action,p=getProject()){
+  const assistant=p.yarnchaAssistant||{},answer=assistant.lastAnswer,context=projectContextService.getCurrentProjectContext();
+  if(!answer)return toast("Ask Yarncha Assistant first.");
+  const summary=answer.quickAnswer||assistant.lastQuestion||"Yarncha Assistant explanation";
+  if(action==="save-explanation"){learningMemoryService.saveProjectNote(p.id,summary);toast("Explanation saved to local learning memory.");}
+  if(action==="add-notes"){p.notes=`${p.notes||""}${p.notes?"\n\n":""}Yarncha Assistant: ${summary}`;saveProjectTouch(p);toast("Added to project notes.");}
+  if(action==="remember-correction"){learningMemoryService.saveUserCorrection({projectId:p.id,question:assistant.lastQuestion,correction:summary,craftType:assistant.craftType});toast("Correction remembered locally.");}
+  if(action==="verify-symbol"){learningMemoryService.saveVerifiedSymbol(p.id,{symbol:context.currentSymbol||assistant.lastQuestion,meaning:summary,question:assistant.lastQuestion});toast("Symbol marked as verified locally.");}
+  renderProjectDetail();
 }
 function saveProjectFitCheck(){
   const p=getProject();
@@ -4564,7 +4794,7 @@ function openProjectModal() {
     const name = document.getElementById("new-name").value.trim();
     if (!name) return toast("Give your project a name.");
     const files=document.getElementById("new-chart").files;
-    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,patternSource:normalizePatternSource(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
+    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,patternSource:normalizePatternSource(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
     state.projects.push(p); saveState(); closeModal(); openProject(p.id); if(files.length)handleChartFiles(files);
   };
 }
@@ -4709,7 +4939,7 @@ function openCartItemModal(itemId=null){
   };
 }
 function openBudgetModal(){const b=state.budgetSettings;openModal(`<p class="eyebrow">SHOPPING BOUNDARY</p><h2>Set cart budget</h2><div class="form-grid"><div class="field"><label>Budget amount</label><input id="market-budget" type="number" min="0" step="1" value="${b.amount}"></div><div class="field"><label>Budget currency</label><select id="budget-currency">${["AUD","HKD","USD","CNY","JPY","EUR"].map(c=>`<option ${c===b.currency?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Reset period</label><select id="budget-period"><option value="weekly" ${b.period==="weekly"?"selected":""}>Every week</option><option value="monthly" ${b.period==="monthly"?"selected":""}>Every month</option><option value="yearly" ${b.period==="yearly"?"selected":""}>Every year</option><option value="never" ${b.period==="never"?"selected":""}>Never</option></select></div><div class="field"><label>Current period started</label><input id="budget-start" type="date" value="${b.periodStart}"></div></div><div class="modal-actions"><button class="secondary-button" id="reset-budget-now">Reset spent now</button><button class="primary-button" id="save-budget">Save</button></div>`);document.getElementById("reset-budget-now").onclick=()=>{b.spent=0;b.periodStart=new Date().toISOString().slice(0,10);saveState();closeModal();renderMarket();};document.getElementById("save-budget").onclick=()=>{b.amount=Math.max(0,+document.getElementById("market-budget").value||0);b.currency=document.getElementById("budget-currency").value;b.period=document.getElementById("budget-period").value;b.periodStart=document.getElementById("budget-start").value||new Date().toISOString().slice(0,10);saveState();closeModal();renderMarket();};}
-function purchaseCartItem(itemId){const item=state.cart.find(i=>i.id===itemId);if(!item)return;const cost=toAud(item.quantity*item.price,item.currency||"AUD");if(state.budgetSettings.spent+cost>budgetAmountAud())return toast("Purchase blocked: this exceeds the active budget.");const owned=state.inventory.find(i=>i.name.toLowerCase()===item.name.toLowerCase());if(owned)owned.quantity+=item.quantity;else state.inventory.push({id:`inv${Date.now()}`,name:item.name,category:item.category,quantity:item.quantity,unit:item.category==="Yarn"?"balls":"items",color:"#718c72",details:"Added from shopping cart"});state.budgetSettings.spent+=cost;state.purchaseHistory.push({...item,boughtAt:new Date().toISOString(),audCost:cost});if(item.category==="DIY kit"&&item.createProject){const p={id:`p${Date.now()}`,name:item.name,type:"Other",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"Created from a purchased DIY kit.",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,linkedKit:item.name};state.projects.push(p);item.projectId=p.id;}state.cart=state.cart.filter(i=>i.id!==itemId);saveState();renderMarket();toast("Purchase moved into inventory");}
+function purchaseCartItem(itemId){const item=state.cart.find(i=>i.id===itemId);if(!item)return;const cost=toAud(item.quantity*item.price,item.currency||"AUD");if(state.budgetSettings.spent+cost>budgetAmountAud())return toast("Purchase blocked: this exceeds the active budget.");const owned=state.inventory.find(i=>i.name.toLowerCase()===item.name.toLowerCase());if(owned)owned.quantity+=item.quantity;else state.inventory.push({id:`inv${Date.now()}`,name:item.name,category:item.category,quantity:item.quantity,unit:item.category==="Yarn"?"balls":"items",color:"#718c72",details:"Added from shopping cart"});state.budgetSettings.spent+=cost;state.purchaseHistory.push({...item,boughtAt:new Date().toISOString(),audCost:cost});if(item.category==="DIY kit"&&item.createProject){const p={id:`p${Date.now()}`,name:item.name,type:"Other",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"Created from a purchased DIY kit.",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,linkedKit:item.name};state.projects.push(p);item.projectId=p.id;}state.cart=state.cart.filter(i=>i.id!==itemId);saveState();renderMarket();toast("Purchase moved into inventory");}
 function openLibrarySpaceModal(editId=null){const section=state.librarySections.find(s=>s.id===editId);openModal(`<p class="eyebrow">LIBRARY SPACE</p><h2>${section?"Rename space":"New custom space"}</h2><div class="form-grid"><div class="field full"><label>Name</label><input id="space-name" value="${escapeHtml(section?.name||"")}" placeholder="e.g. Embroidery references"></div><div class="field full"><label>Description</label><input id="space-description" value="${escapeHtml(section?.description||"")}" placeholder="What belongs here?"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-space">Save</button></div>`);document.getElementById("save-space").onclick=()=>{const name=document.getElementById("space-name").value.trim();if(!name)return toast("Name this space.");if(section){section.name=name;section.description=document.getElementById("space-description").value;}else state.librarySections.push({id:`lib${Date.now()}`,name,description:document.getElementById("space-description").value,icon:"□",items:[]});saveState();closeModal();renderLibrary();};}
 async function deleteLibraryItem(sectionId,item){
   if(!item)return;

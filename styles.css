@@ -448,6 +448,20 @@ blockquote { font: 600 24px/1.35 "Fraunces", serif; margin: 28px 0 16px; }.daily
 .annotation-arrow { font-size:34px; font-weight:900; }
 .annotation-marker { font-size:28px; }
 .manual-chart-tools { display:grid; grid-template-columns:1fr 1.2fr; gap:12px; }
+.assistant-chart-tools { grid-template-columns:1fr; }
+.yarncha-assistant-panel { display:grid; gap:16px; padding:18px; }
+.assistant-context-pill { display:inline-flex; align-items:center; min-height:34px; padding:0 12px; border:1px solid var(--border); border-radius:999px; background:var(--bg-secondary); color:var(--text-secondary); font-size:12px; font-weight:900; }
+.assistant-control-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.assistant-suggestion-row,.assistant-memory-actions,.assistant-library-links { display:flex; gap:8px; flex-wrap:wrap; }
+.assistant-suggestion-row .chip,.assistant-memory-actions button,.assistant-library-links .chip { min-height:44px; }
+.assistant-ask-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(96px,140px); gap:10px; align-items:stretch; }
+.assistant-ask-row textarea { min-height:92px; resize:vertical; }
+.yarncha-assistant-answer { display:grid; gap:14px; padding:16px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated); }
+.yarncha-assistant-answer section { display:grid; gap:7px; }
+.yarncha-assistant-answer h4 { margin:0; color:var(--text-primary); }
+.yarncha-assistant-answer p,.yarncha-assistant-answer ul { margin:0; color:var(--text-secondary); line-height:1.55; }
+.yarncha-assistant-answer ul { padding-left:20px; }
+.assistant-source-note { color:var(--text-secondary); font-size:12px; }
 .ai-beta-safe { border:1px solid var(--line); background:var(--paper); border-radius:15px; }
 .beta-checks { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
 .beta-checks span { padding:7px 10px; border-radius:999px; background:var(--sage-pale); color:var(--sage-dark); font-size:12px; font-weight:700; }
@@ -647,6 +661,9 @@ input,select,textarea,.search,.field input,.field select,.field textarea,.langua
   .nav-item{min-width:54px;}
   .chart-mode-switch{align-items:stretch;flex-direction:column;}
   .chart-mode-switch span{min-width:0;}
+  .chart-mode-actions .chart-mode-switch{grid-template-columns:1fr;}
+  .assistant-control-grid,.assistant-ask-row{grid-template-columns:1fr;}
+  .yarncha-assistant-panel{padding:15px;}
   .annotation-toolbar{align-items:stretch;}
   .annotation-toolbar button{min-width:50px;min-height:50px;padding:6px 8px;}
   .annotation-control{min-width:112px;}
