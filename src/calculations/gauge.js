@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.gauge={calculateGauge:C.calculateGauge,calculateGaugeSwatchPlan:C.calculateGaugeSwatchPlan,calculateTargetStitches:C.calculateTargetStitches,calculateTargetRows:C.calculateTargetRows};})(typeof window!=="undefined"?window:globalThis);

@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.sizing={sizeReference:C.SIZE_REFERENCE,calculateGarmentResize:C.calculateGarmentResize,calculateGarmentSectionResize:C.calculateGarmentSectionResize,calculateBlocking:C.calculateBlocking};})(typeof window!=="undefined"?window:globalThis);

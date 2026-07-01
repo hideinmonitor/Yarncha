@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.repeat={roundToRepeat:C.roundToRepeat,calculateRepeat:C.calculateRepeat,calculateRowProgress:C.calculateRowProgress};})(typeof window!=="undefined"?window:globalThis);

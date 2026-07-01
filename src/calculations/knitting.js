@@ -1,0 +1,1 @@
+(function(root){"use strict";const C=root.YarnchaCalculations;if(C)C.knitting={calculateCastOn:C.calculateCastOn,calculateHatPlan:C.calculateHatPlan,calculateSockPlan:C.calculateSockPlan,calculateSleevePlan:C.calculateSleevePlan,calculateRaglanPlan:C.calculateRaglanPlan};})(typeof window!=="undefined"?window:globalThis);

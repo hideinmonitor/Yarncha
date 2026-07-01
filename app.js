@@ -213,14 +213,36 @@ function normalizeProjectSetup(setup={},project={}){
   const projectTypes=["Scarf","Socks","Hat / Beanie","Shawl","Bag","Blanket","Amigurumi","Top","Cardigan","Jumper / Sweater","Vest","Dress","Other"];
   const measurements=setup.bodyMeasurements||{};
   const details=setup.itemDetails||{};
+  const numberText=value=>String(value??"").trim();
   return {
     craft:["Knitting","Crochet"].includes(setup.craft)?setup.craft:(/crochet/i.test(project.type||"")?"Crochet":"Knitting"),
     projectType:projectTypes.includes(setup.projectType)?setup.projectType:projectTypes.includes(project.projectKind)?project.projectKind:"Other",
     patternGauge:setup.patternGauge||project.gauge||"",
-    patternToolSize:setup.patternToolSize||project.needles||"",
+    patternToolSize:setup.patternToolSize||setup.patternToolSizeMm||project.needles||"",
     patternYarnWeight:setup.patternYarnWeight||project.yarn||"",
-    userToolSize:setup.userToolSize||project.needles||"",
+    userToolSize:setup.userToolSize||setup.userToolSizeMm||project.needles||"",
     userYarnWeight:setup.userYarnWeight||project.yarn||"",
+    patternToolSizeMm:numberText(setup.patternToolSizeMm||setup.patternToolSize||project.needles),
+    userToolSizeMm:numberText(setup.userToolSizeMm||setup.userToolSize||project.needles),
+    patternGaugeStitches:numberText(setup.patternGaugeStitches),
+    patternGaugeRows:numberText(setup.patternGaugeRows),
+    userGaugeStitches:numberText(setup.userGaugeStitches),
+    userGaugeRows:numberText(setup.userGaugeRows),
+    gaugeWidthCm:numberText(setup.gaugeWidthCm||10),
+    gaugeHeightCm:numberText(setup.gaugeHeightCm||10),
+    stitchRepeatMultiple:numberText(setup.stitchRepeatMultiple),
+    edgeStitches:numberText(setup.edgeStitches),
+    easeCm:numberText(setup.easeCm),
+    easePercent:numberText(setup.easePercent),
+    swatchWidthCm:numberText(setup.swatchWidthCm),
+    swatchHeightCm:numberText(setup.swatchHeightCm),
+    swatchWeightGrams:numberText(setup.swatchWeightGrams),
+    patternYarnGrams:numberText(setup.patternYarnGrams),
+    patternAreaCm2:numberText(setup.patternAreaCm2),
+    originalPatternStitches:numberText(setup.originalPatternStitches),
+    originalPatternRows:numberText(setup.originalPatternRows),
+    patternWidthCm:numberText(setup.patternWidthCm),
+    patternLengthCm:numberText(setup.patternLengthCm),
     desiredSize:sizeOptions.includes(setup.desiredSize)?setup.desiredSize:(sizeOptions.includes(project.size)?project.size:"M"),
     customSize:setup.customSize||project.size||"",
     patternLanguage:["abbreviations","full"].includes(setup.patternLanguage)?setup.patternLanguage:"abbreviations",
@@ -245,18 +267,28 @@ function normalizeProjectSetup(setup={},project={}){
       ankleCircumference:details.ankleCircumference||"",
       calfCircumference:details.calfCircumference||"",
       fitPreference:details.fitPreference||"Regular",
+      easePreference:details.easePreference||"Regular",
       constructionMethod:details.constructionMethod||"Cuff-down",
+      garmentConstruction:details.garmentConstruction||details.constructionMethod||"Pattern decides",
       heelStyle:details.heelStyle||"Pattern decides",
+      toeLength:details.toeLength||"",
+      desiredLegHeight:details.desiredLegHeight||"",
+      cuffHeight:details.cuffHeight||"",
+      pickedUpGussetStitches:details.pickedUpGussetStitches||"",
       headCircumference:details.headCircumference||"",
       hatStyle:details.hatStyle||"Fitted beanie",
       hatDepth:details.hatDepth||"",
+      brimDepth:details.brimDepth||"",
       brimStyle:details.brimStyle||"Ribbed brim",
       crownStyle:details.crownStyle||"Pattern decides",
+      decreaseSections:details.decreaseSections||"8",
+      finalTopStitchesPerSection:details.finalTopStitchesPerSection||"1",
       bagType:details.bagType||"Tote",
       width:details.width||"",
       height:details.height||"",
       length:details.length||"",
       strapLength:details.strapLength||"",
+      strapWidth:details.strapWidth||"",
       depth:details.depth||"",
       handleDrop:details.handleDrop||"",
       closure:details.closure||"None",
@@ -267,6 +299,9 @@ function normalizeProjectSetup(setup={},project={}){
       warmth:details.warmth||"Medium",
       borderWidth:details.borderWidth||"",
       fringe:details.fringe||"None",
+      squareSize:details.squareSize||"",
+      blockWidth:details.blockWidth||"",
+      blockHeight:details.blockHeight||"",
       amigurumiType:details.amigurumiType||"Animal",
       finishedHeight:details.finishedHeight||"",
       finishedWidth:details.finishedWidth||"",
@@ -274,10 +309,20 @@ function normalizeProjectSetup(setup={},project={}){
       stuffingFirmness:details.stuffingFirmness||"Medium",
       safetyRecipient:details.safetyRecipient||"Adult",
       originalHeight:details.originalHeight||"",
+      originalWidth:details.originalWidth||"",
       targetHeight:details.targetHeight||"",
+      originalYarnGrams:details.originalYarnGrams||"",
+      originalStuffingGrams:details.originalStuffingGrams||"",
+      originalEyeSizeMm:details.originalEyeSizeMm||"",
       shawlShape:details.shawlShape||"Triangle",
       shawlFit:details.shawlFit||"Everyday Shawl",
-      wingspan:details.wingspan||""
+      wearStyle:details.wearStyle||details.shawlFit||"Shoulder shawl",
+      wingspan:details.wingspan||"",
+      skirtLength:details.skirtLength||"",
+      upperArmCircumference:details.upperArmCircumference||"",
+      wristCircumference:details.wristCircumference||"",
+      armholeDepth:details.armholeDepth||"",
+      buttonBandStitches:details.buttonBandStitches||""
     },
     updatedAt:setup.updatedAt||""
   };
@@ -291,9 +336,60 @@ function firstNumber(value,fallback=0){
   const match=String(value||"").match(/-?\d+(?:\.\d+)?/);
   return match?Number(match[0]):fallback;
 }
+function cleanNumber(value,fallback=0){
+  const number=Number(String(value??"").replace(/[^\d.-]/g,""));
+  return Number.isFinite(number)?number:fallback;
+}
+function hasPositive(value){return cleanNumber(value,0)>0;}
+function roundFlow(value,digits=1){
+  const factor=10**digits;
+  return Math.round((Number(value)||0)*factor)/factor;
+}
+function roundToNearestMultiple(value,multiple=1){
+  const step=Math.max(1,Math.round(Number(multiple)||1));
+  return Math.round((Number(value)||0)/step)*step;
+}
+function roundCircular(value,multiple=4){
+  return Math.max(multiple,roundToNearestMultiple(value,multiple));
+}
 function parseGaugePair(gauge=""){
   const nums=String(gauge||"").match(/\d+(?:\.\d+)?/g)?.map(Number)||[];
-  return {stitches:nums[0]||20,rows:nums[1]||28,span:nums[2]||10};
+  return {stitches:nums[0]||0,rows:nums[1]||0,span:nums[2]||10};
+}
+function sharedCalculationEngine(){
+  return globalThis.YarnchaCalculations;
+}
+function flowGaugeValues(setup={}){
+  const engine=sharedCalculationEngine();
+  if(engine?.gaugeFromSetup)return engine.gaugeFromSetup(setup);
+  const parsed=parseGaugePair(setup.patternGauge);
+  const gaugeWidthCm=Math.max(1,cleanNumber(setup.gaugeWidthCm,10)||10);
+  const gaugeHeightCm=Math.max(1,cleanNumber(setup.gaugeHeightCm,gaugeWidthCm)||gaugeWidthCm);
+  const patternGaugeStitches=cleanNumber(setup.patternGaugeStitches,parsed.stitches||20);
+  const patternGaugeRows=cleanNumber(setup.patternGaugeRows,parsed.rows||28);
+  return {gaugeWidthCm,gaugeHeightCm,patternGaugeStitches,patternGaugeRows,userGaugeStitches:patternGaugeStitches,userGaugeRows:patternGaugeRows,hasUserGauge:false,stitchesPerCm:patternGaugeStitches/gaugeWidthCm,rowsPerCm:patternGaugeRows/gaugeHeightCm,patternStitchesPerCm:patternGaugeStitches/gaugeWidthCm,patternRowsPerCm:patternGaugeRows/gaugeHeightCm};
+}
+function flowSafetyMargin(setup={}){
+  const type=setup.projectType;
+  if(type==="Amigurumi")return 1.20;
+  if(isGarmentProject(type))return 1.15;
+  if(["Scarf","Blanket"].includes(type))return 1.10;
+  return /cable|bobble|texture/i.test(setup.sizingNotes||setup.patternGauge||"")?1.20:1.15;
+}
+function gramsPerCm2(setup={}){
+  const engine=sharedCalculationEngine();
+  const density=engine?.calculateSwatchYarnDensity?.({swatchWidthCm:setup.swatchWidthCm,swatchHeightCm:setup.swatchHeightCm,swatchWeightGrams:setup.swatchWeightGrams});
+  return density?.gramsPerCm2||0.12;
+}
+function estimateYarnFromArea(areaCm2,setup={},safetyMargin=flowSafetyMargin(setup)){
+  const patternYarn=cleanNumber(setup.patternYarnGrams),patternArea=cleanNumber(setup.patternAreaCm2);
+  if(patternYarn>0&&patternArea>0)return patternYarn*(areaCm2/patternArea)*safetyMargin;
+  const engine=sharedCalculationEngine();
+  return engine?.calculateAreaYarnEstimate?.({targetAreaCm2:areaCm2,gramsPerCm2:gramsPerCm2(setup),safetyMargin})?.estimatedGrams||areaCm2*gramsPerCm2(setup)*safetyMargin;
+}
+function applyRepeatRounding(raw,setup={},fallbackMultiple=1){
+  const engine=sharedCalculationEngine();
+  return engine?.roundToRepeat?.(raw,cleanNumber(setup.stitchRepeatMultiple,fallbackMultiple)||fallbackMultiple,cleanNumber(setup.edgeStitches,0))||roundToNearestMultiple(raw,fallbackMultiple);
 }
 function normalizeYarnWeightName(value=""){
   const text=String(value||"").toLowerCase();
@@ -356,37 +452,39 @@ function flowProjectDimensions(setup={}){
 }
 function setupWarnings(setup={}){
   const warnings=[];
-  const patternTool=firstNumber(setup.patternToolSize,0),userTool=firstNumber(setup.userToolSize,0);
-  if(patternTool&&userTool&&Math.abs(patternTool-userTool)>=.5){
-    warnings.push(`Your ${setup.craft==="Crochet"?"hook":"needle"} is ${userTool>patternTool?"larger":"smaller"} than the pattern. Your stitches may come out ${userTool>patternTool?"bigger and looser":"smaller and firmer"}, so the finished size may change.`);
+  const gauge=flowGaugeValues(setup),patternTool=firstNumber(setup.patternToolSizeMm||setup.patternToolSize,0),userTool=firstNumber(setup.userToolSizeMm||setup.userToolSize,0);
+  const toolDiff=patternTool&&userTool&&Math.abs(patternTool-userTool)>=.25;
+  if(toolDiff&&userTool>patternTool){
+    warnings.push("Your tool is larger than the pattern. Your stitches may be bigger.");
+  }else if(toolDiff&&userTool<patternTool){
+    warnings.push("Your tool is smaller than the pattern. Your stitches may be tighter.");
   }
   const patternRank=yarnWeightRank(setup.patternYarnWeight),userRank=yarnWeightRank(setup.userYarnWeight);
-  if(patternRank>=0&&userRank>=0&&patternRank!==userRank){
-    warnings.push(`Your yarn is ${userRank>patternRank?"heavier":"lighter"} than the pattern yarn. The finished piece may be ${userRank>patternRank?"larger and use more yarn":"smaller and use less yarn"}.`);
+  const yarnDiff=patternRank>=0&&userRank>=0&&patternRank!==userRank;
+  if(yarnDiff&&userRank>patternRank){
+    warnings.push("Your yarn is thicker than the pattern yarn. The project may become larger or firmer.");
+  }else if(yarnDiff&&userRank<patternRank){
+    warnings.push("Your yarn is thinner than the pattern yarn. The project may become smaller or softer.");
+  }
+  if((toolDiff||yarnDiff)&&!gauge.hasUserGauge){
+    warnings.push("Your yarn or tool size is different from the pattern. The finished size may change. Please enter your gauge for a better estimate.");
+  }
+  if(!gauge.hasUserGauge){
+    warnings.push("Yarncha needs your gauge to give a more accurate size estimate.");
   }
   return warnings;
 }
 function calculateFlowProjectPlan(p={},setup=normalizeProjectSetup(p.projectSetup,p)){
-  const gauge=parseGaugePair(setup.patternGauge),measurements=setupMeasurements(setup),toolDelta=Math.abs(firstNumber(setup.userToolSize)-firstNumber(setup.patternToolSize)),weightDelta=Math.abs((yarnWeightRank(setup.userYarnWeight)+1||0)-(yarnWeightRank(setup.patternYarnWeight)+1||0));
-  const dims=flowProjectDimensions(setup),width=Math.max(1,dims.width),length=Math.max(1,dims.length),sleeve=Math.max(0,dims.sleeve||0);
-  const stitchCount=Math.max(1,Math.round(width*gauge.stitches/gauge.span)),rowCount=Math.max(1,Math.round(length*gauge.rows/gauge.span)),sleeveRows=Math.max(1,Math.round(sleeve*gauge.rows/gauge.span));
-  const startCount=setup.craft==="Crochet"?Math.max(1,Math.round(stitchCount*.48)):stitchCount;
-  const yarnBase=Math.max(1,Math.round((stitchCount*rowCount)/75)),yarnUsage=Math.round(yarnBase*(1+toolDelta*.06+weightDelta*.12));
-  const shaping=Math.max(0,stitchCount-startCount),increaseEvery=shaping?Math.max(1,Math.round(rowCount/Math.max(1,Math.ceil(shaping/2)))):0;
-  return {
-    updatedAt:new Date().toISOString(),
-    castOnOrChain:startCount,
-    startingLabel:setup.craft==="Crochet"?"Starting chain":"Cast-on",
-    stitchCount,
-    rowCount,
-    widthCm:Math.round(width),
-    lengthCm:Math.round(length),
-    sleeveLengthCm:Math.round(sleeve),
-    bodyLengthCm:Math.round(dims.body||length),
-    shapingNotes:shaping?`Add about ${shaping} stitch${shaping===1?"":"es"} across the project, roughly every ${increaseEvery} row${increaseEvery===1?"":"s"} if your pattern does not already place them.`:"No extra shaping is suggested from these setup numbers.",
-    estimatedYarnUsage:`About ${yarnUsage} ball${yarnUsage===1?"":"s"} or skein${yarnUsage===1?"":"s"} as a planning estimate.`,
-    warnings:setupWarnings(setup)
-  };
+  const engine=sharedCalculationEngine();
+  if(!engine?.calculateProjectPlan){
+    const g=flowGaugeValues(setup);
+    const dims=flowProjectDimensions(setup);
+    return {updatedAt:new Date().toISOString(),estimateOnly:!g.hasUserGauge,gauge:g,safetyMargin:flowSafetyMargin(setup),summary:`You’re ${setup.craft==="Crochet"?"crocheting":"knitting"} a ${String(setup.projectType||"project").toLowerCase()}.`,castOnOrChain:applyRepeatRounding(dims.width*g.stitchesPerCm,setup),startingLabel:setup.craft==="Crochet"?"Starting chain":"Cast-on",stitchCount:Math.max(1,Math.round(dims.width*g.stitchesPerCm)),rowCount:Math.max(1,Math.round(dims.length*g.rowsPerCm)),widthCm:roundFlow(dims.width),lengthCm:roundFlow(dims.length),sleeveLengthCm:roundFlow(dims.sleeve||0),bodyLengthCm:roundFlow(dims.body||dims.length||0),shapingNotes:"No extra shaping is suggested from these setup numbers.",estimatedYarnGrams:roundFlow(estimateYarnFromArea(dims.width*dims.length,setup)),estimatedYarnUsage:"Add swatch yarn weight for a better yarn estimate",warnings:setupWarnings(setup),details:{}};
+  }
+  const plan=engine.calculateProjectPlan(p,setup);
+  const warnings=[...(plan.warnings||[]),...setupWarnings(setup)];
+  const uniqueWarnings=[...new Set(warnings.filter(Boolean))];
+  return {...plan,warnings:uniqueWarnings};
 }
 function isLegacySymbolLearningSection(section={}){
   const id=String(section.id||"").toLowerCase();
@@ -461,6 +559,7 @@ function loadState() {
       activeTab:p.activeTab || "track",
       readingMode:!!p.readingMode,
       chartMode:p.chartMode || "og",
+      yarnchaAssistant:p.yarnchaAssistant || {},
       chartZoom:Number(p.chartZoom)||1,
       annotations:p.annotations || [],
       annotationHistory:p.annotationHistory || [],
@@ -803,7 +902,7 @@ function projectChartHtml(p){
       <div class="chart-mode-actions"><div class="chart-mode-switch" role="radiogroup" aria-label="Chart mode">
         <button class="${chartMode==="og"?"active":""}" data-chart-mode="og" aria-checked="${chartMode==="og"}"><strong>OG Mode</strong><small>Manual Reading</small></button>
         <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}"><strong>Flow Mode</strong><small>Smart Reading</small></button>
-        <span>Recommended for accurate row-by-row tracking.</span>
+        <span>Recommended for accurate row-by-row tracking. Yarncha Assistant lives in the Assistant section.</span>
       </div></div>
       <input type="file" id="chart-upload" accept=".pdf,image/*" multiple hidden>
     </div>
@@ -902,15 +1001,36 @@ function friendlyChartBetaHtml(p){
         <div class="field"><label>Pattern yarn weight</label><input id="flow-pattern-yarn-weight" value="${escapeHtml(setup.patternYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
         <div class="field"><label>Your hook / needle size</label><input id="flow-user-tool" value="${escapeHtml(setup.userToolSize)}" placeholder="4.5 mm"></div>
         <div class="field"><label>Your yarn weight</label><input id="flow-user-yarn-weight" value="${escapeHtml(setup.userYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
+        <div class="field"><label>Pattern gauge stitches</label><input id="flow-pattern-gauge-stitches" type="number" step=".1" value="${escapeHtml(setup.patternGaugeStitches)}" placeholder="22"></div>
+        <div class="field"><label>Pattern gauge rows</label><input id="flow-pattern-gauge-rows" type="number" step=".1" value="${escapeHtml(setup.patternGaugeRows)}" placeholder="30"></div>
+        <div class="field"><label>Your gauge stitches</label><input id="flow-user-gauge-stitches" type="number" step=".1" value="${escapeHtml(setup.userGaugeStitches)}" placeholder="Enter your swatch"></div>
+        <div class="field"><label>Your gauge rows</label><input id="flow-user-gauge-rows" type="number" step=".1" value="${escapeHtml(setup.userGaugeRows)}" placeholder="Enter your swatch"></div>
+        <div class="field"><label>Gauge width cm</label><input id="flow-gauge-width" type="number" step=".1" value="${escapeHtml(setup.gaugeWidthCm||10)}" placeholder="10"></div>
+        <div class="field"><label>Gauge height cm</label><input id="flow-gauge-height" type="number" step=".1" value="${escapeHtml(setup.gaugeHeightCm||10)}" placeholder="10"></div>
+        <details class="flow-inline-advanced full"><summary>Helpful extras for better estimates</summary>
+          ${flowField("flow-repeat-multiple","Stitch repeat multiple",setup.stitchRepeatMultiple,"Optional")}
+          ${flowField("flow-edge-stitches","Edge stitches",setup.edgeStitches,"Optional")}
+          ${flowField("flow-swatch-width","Swatch width cm",setup.swatchWidthCm,"Optional")}
+          ${flowField("flow-swatch-height","Swatch height cm",setup.swatchHeightCm,"Optional")}
+          ${flowField("flow-swatch-weight","Swatch weight grams",setup.swatchWeightGrams,"Optional")}
+          ${flowField("flow-pattern-yarn-grams","Pattern yarn grams",setup.patternYarnGrams,"Optional")}
+          ${flowField("flow-pattern-area","Pattern area cm²",setup.patternAreaCm2,"Optional")}
+          ${flowField("flow-original-stitches","Original pattern stitches",setup.originalPatternStitches,"Optional")}
+          ${flowField("flow-original-rows","Original pattern rows",setup.originalPatternRows,"Optional")}
+          ${flowField("flow-pattern-width","Pattern finished width cm",setup.patternWidthCm,"Optional")}
+          ${flowField("flow-pattern-length","Pattern finished length cm",setup.patternLengthCm,"Optional")}
+        </details>
         <div class="field full"><label>Project type</label><select id="flow-project-type">${options(projectTypes,setup.projectType)}</select></div>
         ${flowProjectTypeFields(setup,options,sizeOptions)}
       </div>
       <div class="flow-setup-save-row"><button class="primary-button" id="save-flow-project-setup" type="button">Save project setup</button><span id="flow-setup-save-status" class="setup-save-status saved">Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
       ${plan.warnings.length?`<div class="flow-warning-card"><strong>Before you begin</strong>${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<div class="flow-ready-card ready"><p>✓ Your hook or needle and yarn look close enough to the pattern to begin.</p></div>`}
+      <div class="flow-ready-card ${plan.estimateOnly?"almost":"ready"}"><p>${plan.estimateOnly?"Estimate only":"Ready"} · ${escapeHtml(plan.summary||"Project setup summary is ready.")}</p></div>
       ${resultSummaryHtml("Project Setup Summary",flowCalculationItems(plan),"flow-calculation-summary")}
+      <button class="primary-button flow-start-button" id="start-flow-mode" type="button">Start Flow Mode</button>
     </section>
     <section class="flow-reader-panel flow-reading-mode-panel"><h4>Reading Progress</h4>
-      <div class="flow-current-row-card"><label for="flow-current-row">I'm currently on</label><div class="flow-row-line"><span>Row</span><input id="flow-current-row" type="number" min="0" max="${p.chartRows||reader.grid.rows||999}" value="${p.row}"></div><p>${escapeHtml(rowInstruction)}</p></div>
+      <div class="flow-current-row-card"><label for="flow-current-row">I'm currently on</label><div class="flow-row-line"><span>Row</span><input id="flow-current-row" type="number" min="0" max="${p.chartRows||reader.grid.rows||999}" value="${p.row}"></div><p>${escapeHtml(rowInstruction)}</p><small>${escapeHtml(flowCurrentStitchStep(p,setup))}</small></div>
       <div class="flow-row-buttons"><button class="secondary-button" id="flow-prev-row" type="button">Previous Row</button><button class="primary-button" id="flow-next-row" type="button">Next Row</button></div>
       <div class="flow-next-card"><strong>What's next?</strong><p>${flowReadingSummary(p,reader)}</p></div>
       <label class="flow-direction-field">Pattern Language<select id="flow-pattern-language">${options(["abbreviations","full"],setup.patternLanguage,{abbreviations:"Abbreviations",full:"Full wording"})}</select><small>Choose whether Yarncha shows short pattern notation or spells each stitch out.</small></label>
@@ -951,15 +1071,17 @@ function friendlyChartBetaHtml(p){
 }
 function flowCalculationItems(plan={}){
   return [
+    {label:"Finished size",value:plan.widthCm&&plan.lengthCm?`${plan.widthCm} × ${plan.lengthCm} cm`:"Set size first"},
     {label:plan.startingLabel||"Start",value:String(plan.castOnOrChain||"Set gauge first")},
-    {label:"Stitch count",value:String(plan.stitchCount||"Set gauge first")},
-    {label:"Row count",value:String(plan.rowCount||"Set gauge first")},
-    {label:"Width",value:plan.widthCm?`${plan.widthCm} cm`:"Set size first"},
-    {label:"Length",value:plan.lengthCm?`${plan.lengthCm} cm`:"Set size first"},
+    {label:"Recommended stitch count",value:String(plan.stitchCount||"Set gauge first"),description:"Stitch count from your saved gauge."},
+    {label:"Recommended row count",value:String(plan.rowCount||"Set gauge first"),description:"Row count from your saved gauge."},
+    {label:"Estimated finished width",value:plan.widthCm?`${plan.widthCm} cm`:"Set size first"},
+    {label:"Estimated finished length",value:plan.lengthCm?`${plan.lengthCm} cm`:"Set size first"},
     {label:"Sleeve length",value:plan.sleeveLengthCm?`${plan.sleeveLengthCm} cm`:"If needed"},
     {label:"Body length",value:plan.bodyLengthCm?`${plan.bodyLengthCm} cm`:"If needed"},
     {label:"Shaping",value:plan.shapingNotes||"Pattern decides"},
-    {label:"Yarn",value:plan.estimatedYarnUsage||"Add yarn details"}
+    {label:"Yarn estimate",value:plan.estimatedYarnUsage||"Add yarn details"},
+    ...(plan.estimateOnly?[{label:"Estimate only",value:"Add your gauge when you can for a more accurate size estimate."}]:[])
   ];
 }
 function resultSummaryHtml(title,items=[],className=""){
@@ -975,18 +1097,18 @@ function flowProjectTypeFields(setup={},options=(values,current)=>"",sizeOptions
   const d=setup.itemDetails||{},type=setup.projectType;
   const recipient=["Baby","Child","Teen","Adult","Custom"];
   if(isGarmentProject(type)){
-    return `${flowSelect("flow-desired-size","Desired garment size",sizeOptions,setup.desiredSize,options)}${flowField("flow-custom-size","Custom size notes",setup.customSize)}${flowField("flow-body-chest","Chest / bust cm",setup.bodyMeasurements.chest)}${flowField("flow-body-waist","Waist cm",setup.bodyMeasurements.waist)}${flowField("flow-body-hip","Hip cm",setup.bodyMeasurements.hip)}${flowField("flow-body-sleeve","Sleeve length cm",setup.bodyMeasurements.sleeve)}${flowField("flow-body-body","Body length cm",setup.bodyMeasurements.body)}`;
+    return `${flowSelect("flow-desired-size","Desired garment size",sizeOptions,setup.desiredSize,options)}${flowField("flow-custom-size","Custom size notes",setup.customSize)}${flowSelect("flow-ease-preference","Fit preference",["Fitted","Regular","Relaxed","Oversized"],d.easePreference,options)}${flowSelect("flow-garment-construction","Construction",["Raglan","Drop shoulder","Set-in sleeve","Circular yoke","Panels","Pattern decides"],d.garmentConstruction,options)}${flowField("flow-body-chest","Chest / bust cm",setup.bodyMeasurements.chest)}${flowField("flow-body-waist","Waist cm",setup.bodyMeasurements.waist)}${flowField("flow-body-hip","Hip cm",setup.bodyMeasurements.hip)}${flowField("flow-body-sleeve","Sleeve length cm",setup.bodyMeasurements.sleeve)}${flowField("flow-body-body","Body length cm",setup.bodyMeasurements.body)}<details class="flow-inline-advanced"><summary>Sleeve and shaping details</summary>${flowField("flow-upper-arm","Upper arm circumference cm",d.upperArmCircumference)}${flowField("flow-wrist","Wrist circumference cm",d.wristCircumference)}${flowField("flow-armhole-depth","Armhole depth cm",d.armholeDepth)}${flowField("flow-button-band","Button band stitches",d.buttonBandStitches)}${type==="Dress"?flowField("flow-skirt-length","Skirt length cm",d.skirtLength):""}</details>`;
   }
   if(type==="Scarf")return `${flowSelect("flow-recipient","Who are you making this for?",recipient,d.recipient,options)}${d.recipient==="Adult"?flowSelect("flow-adult-height","Approximate height",["Under 150 cm","150–160 cm","160–170 cm","170–180 cm","180–190 cm","190+ cm"],d.adultHeight,options):""}${flowSelect("flow-scarf-style","How do you want the scarf to fit?",["Neck warmer","One wrap","Two wraps","Long winter scarf","Oversized scarf","Fashion scarf","Custom length"],d.scarfStyle,options)}${d.scarfStyle==="Custom length"?flowField("flow-item-length","Custom length cm",d.length):""}${flowField("flow-item-width","Scarf width cm",d.width)}`;
-  if(type==="Socks")return `${flowSelect("flow-sock-type","Sock type",["No-show","Ankle","Quarter Crew","Crew","Mid-Calf","Knee High","Over-the-Knee"],d.sockType,options,false,"This changes the pattern length and shaping.")}${flowSelect("flow-recipient","Who are you making these for?",recipient,d.recipient,options)}${flowSelect("flow-sock-sizing-mode","How would you like to size the socks?",["Shoe Size","Foot Measurements"],d.sockSizingMode,options)}${d.sockSizingMode==="Shoe Size"?`${flowSelect("flow-shoe-region","Region",["AU","US","UK","EU","JP"],d.shoeRegion,options)}${flowField("flow-shoe-size","Shoe size",d.shoeSize)}`:""}${flowField("flow-foot-length","Foot length cm",d.footLength)}${flowField("flow-foot-circumference","Foot circumference cm",d.footCircumference)}${flowField("flow-heel-to-ankle","Heel to ankle cm",d.heelToAnkle)}${flowField("flow-ankle-circumference","Ankle circumference cm",d.ankleCircumference)}${["Mid-Calf","Knee High","Over-the-Knee"].includes(d.sockType)?flowField("flow-calf-circumference","Calf circumference cm",d.calfCircumference):""}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-construction-method","Construction method",["Toe-up","Cuff-down"],d.constructionMethod,options)}${flowSelect("flow-heel-style","Heel style",["Heel Flap","Short Row","Afterthought","Fish Lips Kiss","Pattern decides"],d.heelStyle,options)}`;
-  if(type==="Hat / Beanie")return `${flowSelect("flow-recipient","Recipient",recipient,d.recipient,options)}${flowField("flow-head-circumference","Head circumference cm",d.headCircumference)}${flowSelect("flow-hat-style","Hat style",["Fitted beanie","Slouchy beanie","Folded brim","Bucket hat","Beret","Bonnet / baby hat","Custom"],d.hatStyle,options)}${flowField("flow-hat-depth","Desired hat depth cm",d.hatDepth)}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-brim-style","Brim style",["No brim","Ribbed brim","Folded brim","Rolled brim"],d.brimStyle,options)}${flowSelect("flow-crown-style","Crown style",["Rounded crown","Pointed crown","Flat top","Pattern decides"],d.crownStyle,options)}`;
-  if(type==="Bag")return `${flowSelect("flow-bag-type","Bag type",["Tote","Market bag","Crossbody","Shoulder bag","Drawstring pouch","Mini bag","Project bag","Custom"],d.bagType,options)}${flowField("flow-item-width","Desired width cm",d.width)}${flowField("flow-item-height","Desired height cm",d.height)}${flowField("flow-strap-length","Strap length cm",d.strapLength)}<details class="flow-inline-advanced"><summary>Advanced bag options</summary>${flowField("flow-item-depth","Bag depth / gusset cm",d.depth)}${flowField("flow-handle-drop","Handle drop cm",d.handleDrop)}${flowSelect("flow-closure","Closure",["None","Button","Zip","Drawstring","Flap"],d.closure,options)}${flowSelect("flow-lining","Lining",["No lining","Fabric lining"],d.lining,options)}${flowSelect("flow-structure","Fit / structure",["Soft","Medium","Firm"],d.structure,options)}</details>`;
+  if(type==="Socks")return `${flowSelect("flow-sock-type","Sock type",["No-show","Ankle","Quarter Crew","Crew","Mid-Calf","Knee High","Over-the-Knee"],d.sockType,options,false,"This changes the pattern length and shaping.")}${flowSelect("flow-recipient","Who are you making these for?",recipient,d.recipient,options)}${flowSelect("flow-sock-sizing-mode","How would you like to size the socks?",["Shoe Size","Foot Measurements"],d.sockSizingMode,options)}${d.sockSizingMode==="Shoe Size"?`${flowSelect("flow-shoe-region","Region",["AU","US","UK","EU","JP"],d.shoeRegion,options)}${flowField("flow-shoe-size","Shoe size",d.shoeSize)}`:""}${flowField("flow-foot-length","Foot length cm",d.footLength)}${flowField("flow-foot-circumference","Foot circumference cm",d.footCircumference)}${flowField("flow-heel-to-ankle","Heel to ankle cm",d.heelToAnkle)}${flowField("flow-ankle-circumference","Ankle circumference cm",d.ankleCircumference)}${["Mid-Calf","Knee High","Over-the-Knee"].includes(d.sockType)?flowField("flow-calf-circumference","Calf circumference cm",d.calfCircumference):""}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-construction-method","Construction method",["Toe-up","Cuff-down"],d.constructionMethod,options)}${flowSelect("flow-heel-style","Heel style",["Heel Flap","Short Row","Afterthought","Pattern decides"],d.heelStyle,options)}<details class="flow-inline-advanced"><summary>Heel, toe and leg details</summary>${flowField("flow-toe-length","Toe length cm",d.toeLength)}${flowField("flow-leg-height","Desired leg height cm",d.desiredLegHeight)}${flowField("flow-cuff-height","Cuff height cm",d.cuffHeight)}${flowField("flow-gusset-stitches","Picked up gusset stitches",d.pickedUpGussetStitches)}</details>`;
+  if(type==="Hat / Beanie")return `${flowSelect("flow-recipient","Recipient",recipient,d.recipient,options)}${flowField("flow-head-circumference","Head circumference cm",d.headCircumference)}${flowSelect("flow-hat-style","Hat style",["Fitted beanie","Slouchy beanie","Folded brim","Bucket hat","Beret","Bonnet / baby hat","Custom"],d.hatStyle,options)}${flowField("flow-hat-depth","Desired hat depth cm",d.hatDepth)}${flowSelect("flow-fit-preference","Fit preference",["Snug","Regular","Relaxed"],d.fitPreference,options)}${flowSelect("flow-brim-style","Brim style",["No brim","Ribbed brim","Folded brim","Rolled brim"],d.brimStyle,options)}${flowSelect("flow-crown-style","Crown style",["Rounded crown","Pointed crown","Flat top","Pattern decides"],d.crownStyle,options)}<details class="flow-inline-advanced"><summary>Crown details</summary>${flowField("flow-brim-depth","Brim depth cm",d.brimDepth)}${flowField("flow-decrease-sections","Decrease sections",d.decreaseSections)}${flowField("flow-final-top-stitches","Final top stitches per section",d.finalTopStitchesPerSection)}</details>`;
+  if(type==="Bag")return `${flowSelect("flow-bag-type","Bag type",["Tote","Market bag","Crossbody","Shoulder bag","Drawstring pouch","Mini bag","Project bag","Custom"],d.bagType,options)}${flowField("flow-item-width","Desired width cm",d.width)}${flowField("flow-item-height","Desired height cm",d.height)}${flowField("flow-strap-length","Strap length cm",d.strapLength)}${flowField("flow-strap-width","Strap width cm",d.strapWidth)}<details class="flow-inline-advanced"><summary>Advanced bag options</summary>${flowField("flow-item-depth","Bag depth / gusset cm",d.depth)}${flowField("flow-handle-drop","Handle drop cm",d.handleDrop)}${flowSelect("flow-closure","Closure",["None","Button","Zip","Drawstring","Flap"],d.closure,options)}${flowSelect("flow-lining","Lining",["No lining","Fabric lining"],d.lining,options)}${flowSelect("flow-structure","Fit / structure",["Soft","Medium","Firm"],d.structure,options)}</details>`;
   if(type==="Blanket"){
     const preset=blanketPresetSize(d.blanketType);
-    return `${flowSelect("flow-blanket-type","Blanket type",["Lovey","Baby Blanket","Crib Blanket","Stroller Blanket","Lap Blanket","Throw Blanket","Twin","Full / Double","Queen","King","Custom"],d.blanketType,options)}<div class="flow-ready-card ready"><p>Recommended size: ${preset[0]} × ${preset[1]} cm. Use this size or edit below.</p></div>${flowField("flow-item-width","Finished width cm",d.width||preset[0])}${flowField("flow-item-length","Finished length cm",d.length||preset[1])}${flowSelect("flow-blanket-shape","Blanket shape",["Rectangle","Square","Circle","Hexagon","Custom"],d.blanketShape,options)}${flowSelect("flow-warmth","Warmth",["Lightweight","Medium","Thick & Cozy"],d.warmth,options)}${flowField("flow-border-width","Border width cm",d.borderWidth)}${flowSelect("flow-fringe","Fringe / tassels",["None","Short","Long"],d.fringe,options)}`;
+    return `${flowSelect("flow-blanket-type","Blanket type",["Lovey","Baby Blanket","Crib Blanket","Stroller Blanket","Lap Blanket","Throw Blanket","Twin","Full / Double","Queen","King","Custom"],d.blanketType,options)}<div class="flow-ready-card ready"><p>Recommended size: ${preset[0]} × ${preset[1]} cm. Use this size or edit below.</p></div>${flowField("flow-item-width","Finished width cm",d.width||preset[0])}${flowField("flow-item-length","Finished length cm",d.length||preset[1])}${flowSelect("flow-blanket-shape","Blanket shape",["Rectangle","Square","Circle","Hexagon","Custom"],d.blanketShape,options)}${flowSelect("flow-warmth","Warmth",["Lightweight","Medium","Thick & Cozy"],d.warmth,options)}${flowField("flow-border-width","Border width cm",d.borderWidth)}${flowSelect("flow-fringe","Fringe / tassels",["None","Short","Long"],d.fringe,options)}<details class="flow-inline-advanced"><summary>Squares or C2C details</summary>${flowField("flow-square-size","Granny square size cm",d.squareSize)}${flowField("flow-block-width","C2C block width cm",d.blockWidth)}${flowField("flow-block-height","C2C block height cm",d.blockHeight)}</details>`;
   }
-  if(type==="Amigurumi")return `${flowSelect("flow-amigurumi-type","What are you making?",["Animal","Doll","Character","Food","Plant","Keychain","Decoration","Plush","Custom"],d.amigurumiType,options)}${flowField("flow-finished-height","Desired finished height cm",d.finishedHeight)}${flowField("flow-finished-width","Desired finished width cm",d.finishedWidth)}${flowSelect("flow-shape","Overall shape",["Round","Oval","Long","Chubby","Standing","Sitting","Custom"],d.shape,options)}${flowSelect("flow-stuffing-firmness","Stuffing firmness",["Soft","Medium","Firm"],d.stuffingFirmness,options)}${flowSelect("flow-safety-recipient","Who is it for?",["Baby","Child","Adult","Display only"],d.safetyRecipient,options)}${d.safetyRecipient==="Baby"?`<div class="flow-warning-card"><p>For babies, embroidered eyes are safer than plastic safety eyes.</p></div>`:""}<details class="flow-inline-advanced" open><summary>Scale Existing Pattern</summary>${flowField("flow-original-height","Original pattern height cm",d.originalHeight)}${flowField("flow-target-height","I want cm",d.targetHeight)}</details>`;
-  if(type==="Shawl")return `${flowSelect("flow-shawl-shape","Shawl shape",["Triangle","Crescent","Half Circle","Rectangle","Wrap","Asymmetrical","Custom"],d.shawlShape,options)}${flowSelect("flow-shawl-fit","Size",["Small Shoulder Shawl","Everyday Shawl","Large Wrap","Oversized Wrap","Custom"],d.shawlFit,options)}${flowField("flow-wingspan","Desired wingspan cm",d.wingspan)}${flowField("flow-item-height","Desired depth cm",d.height)}${flowSelect("flow-recipient","Who is it for?",["Child","Teen","Adult","Custom"],d.recipient,options)}`;
+  if(type==="Amigurumi")return `${flowSelect("flow-amigurumi-type","What are you making?",["Animal","Doll","Character","Food","Plant","Keychain","Decoration","Plush","Custom"],d.amigurumiType,options)}${flowField("flow-finished-height","Desired finished height cm",d.finishedHeight)}${flowField("flow-finished-width","Desired finished width cm",d.finishedWidth)}${flowSelect("flow-shape","Overall shape",["Round","Oval","Long","Chubby","Standing","Sitting","Custom"],d.shape,options)}${flowSelect("flow-stuffing-firmness","Stuffing firmness",["Soft","Medium","Firm"],d.stuffingFirmness,options)}${flowSelect("flow-safety-recipient","Who is it for?",["Baby","Child","Adult","Display only"],d.safetyRecipient,options)}${d.safetyRecipient==="Baby"?`<div class="flow-warning-card"><p>For babies, embroidered eyes are safer than plastic safety eyes.</p></div>`:""}<details class="flow-inline-advanced" open><summary>Scale existing pattern</summary>${flowField("flow-original-height","Original pattern height cm",d.originalHeight)}${flowField("flow-original-width","Original pattern width cm",d.originalWidth)}${flowField("flow-target-height","I want cm",d.targetHeight)}${flowField("flow-original-yarn","Original yarn grams",d.originalYarnGrams)}${flowField("flow-original-stuffing","Original stuffing grams",d.originalStuffingGrams)}${flowField("flow-original-eye","Original eye size mm",d.originalEyeSizeMm)}</details>`;
+  if(type==="Shawl")return `${flowSelect("flow-shawl-shape","Shawl shape",["Triangle","Crescent","Half Circle","Rectangle","Wrap","Asymmetrical","Custom"],d.shawlShape,options)}${flowSelect("flow-shawl-fit","Wear style",["Neck scarf","Shoulder shawl","Large wrap","Oversized wrap"],d.wearStyle,options)}${flowField("flow-wingspan","Desired wingspan cm",d.wingspan)}${flowField("flow-item-height","Desired depth cm",d.height)}${flowField("flow-item-width","Finished width cm",d.width)}${flowField("flow-item-length","Finished length cm",d.length)}${flowSelect("flow-recipient","Who is it for?",["Child","Teen","Adult","Custom"],d.recipient,options)}`;
   return `${flowField("flow-item-width","Width cm",d.width)}${flowField("flow-item-length","Length cm",d.length)}${flowField("flow-item-height","Height cm",d.height)}`;
 }
 function readFlowSetupDetails(previous={}){
@@ -1006,18 +1128,28 @@ function readFlowSetupDetails(previous={}){
     ankleCircumference:pick("flow-ankle-circumference","ankleCircumference"),
     calfCircumference:pick("flow-calf-circumference","calfCircumference"),
     fitPreference:pick("flow-fit-preference","fitPreference"),
+    easePreference:pick("flow-ease-preference","easePreference"),
     constructionMethod:pick("flow-construction-method","constructionMethod"),
+    garmentConstruction:pick("flow-garment-construction","garmentConstruction"),
     heelStyle:pick("flow-heel-style","heelStyle"),
+    toeLength:pick("flow-toe-length","toeLength"),
+    desiredLegHeight:pick("flow-leg-height","desiredLegHeight"),
+    cuffHeight:pick("flow-cuff-height","cuffHeight"),
+    pickedUpGussetStitches:pick("flow-gusset-stitches","pickedUpGussetStitches"),
     headCircumference:pick("flow-head-circumference","headCircumference"),
     hatStyle:pick("flow-hat-style","hatStyle"),
     hatDepth:pick("flow-hat-depth","hatDepth"),
+    brimDepth:pick("flow-brim-depth","brimDepth"),
     brimStyle:pick("flow-brim-style","brimStyle"),
     crownStyle:pick("flow-crown-style","crownStyle"),
+    decreaseSections:pick("flow-decrease-sections","decreaseSections"),
+    finalTopStitchesPerSection:pick("flow-final-top-stitches","finalTopStitchesPerSection"),
     bagType:pick("flow-bag-type","bagType"),
     width:pick("flow-item-width","width"),
     height:pick("flow-item-height","height"),
     length:pick("flow-item-length","length"),
     strapLength:pick("flow-strap-length","strapLength"),
+    strapWidth:pick("flow-strap-width","strapWidth"),
     depth:pick("flow-item-depth","depth"),
     handleDrop:pick("flow-handle-drop","handleDrop"),
     closure:pick("flow-closure","closure"),
@@ -1028,6 +1160,9 @@ function readFlowSetupDetails(previous={}){
     warmth:pick("flow-warmth","warmth"),
     borderWidth:pick("flow-border-width","borderWidth"),
     fringe:pick("flow-fringe","fringe"),
+    squareSize:pick("flow-square-size","squareSize"),
+    blockWidth:pick("flow-block-width","blockWidth"),
+    blockHeight:pick("flow-block-height","blockHeight"),
     amigurumiType:pick("flow-amigurumi-type","amigurumiType"),
     finishedHeight:pick("flow-finished-height","finishedHeight"),
     finishedWidth:pick("flow-finished-width","finishedWidth"),
@@ -1035,10 +1170,20 @@ function readFlowSetupDetails(previous={}){
     stuffingFirmness:pick("flow-stuffing-firmness","stuffingFirmness"),
     safetyRecipient:pick("flow-safety-recipient","safetyRecipient"),
     originalHeight:pick("flow-original-height","originalHeight"),
+    originalWidth:pick("flow-original-width","originalWidth"),
     targetHeight:pick("flow-target-height","targetHeight"),
+    originalYarnGrams:pick("flow-original-yarn","originalYarnGrams"),
+    originalStuffingGrams:pick("flow-original-stuffing","originalStuffingGrams"),
+    originalEyeSizeMm:pick("flow-original-eye","originalEyeSizeMm"),
     shawlShape:pick("flow-shawl-shape","shawlShape"),
     shawlFit:pick("flow-shawl-fit","shawlFit"),
-    wingspan:pick("flow-wingspan","wingspan")
+    wearStyle:pick("flow-shawl-fit","wearStyle"),
+    wingspan:pick("flow-wingspan","wingspan"),
+    skirtLength:pick("flow-skirt-length","skirtLength"),
+    upperArmCircumference:pick("flow-upper-arm","upperArmCircumference"),
+    wristCircumference:pick("flow-wrist","wristCircumference"),
+    armholeDepth:pick("flow-armhole-depth","armholeDepth"),
+    buttonBandStitches:pick("flow-button-band","buttonBandStitches")
   };
 }
 function sharedProjectSetupSummaryHtml(p){
@@ -1105,13 +1250,55 @@ function projectFitCheckHtml(p){
     <div class="fit-check-actions"><button class="secondary-button" id="save-fit-check">Save Fit Check</button><button class="mini-button" id="open-fit-tools">Open sizing tools</button></div>
   </section>`;
 }
+const flowExampleRows={
+  crochet:"sc, 2(sc, inc, sc)",
+  crochetLegacy:"sc, 2(sc, inc), sc",
+  knitting:"K, K, K, SSK, P, P, YO"
+};
 function flowCurrentRowInstruction(p=getProject(),setup=normalizeProjectSetup(p.projectSetup,p)){
   const analysed=highlightedRowAnalysis(p);
   const raw=analysed?.sequence||highlightedRowRecognition(p).map(cell=>cell.candidates?.[0]?.abbreviation||cell.detectedSymbol||"").filter(Boolean).join(", ");
-  const fallback=setup.craft==="Crochet"?"sc, 2(sc, inc), sc":"K, K, K, SSK, P, P, YO";
+  const fallback=setup.craft==="Crochet"?flowExampleRows.crochet:flowExampleRows.knitting;
   const sequence=raw||fallback;
   if(setup.patternLanguage==="full")return sequenceToSpokenInstructions(sequence,{readAloud:{mode:"teaching",language:"en",voiceSpeed:1}},setup.craft);
   return sequence;
+}
+function flowCurrentStitchStep(p=getProject(),setup=normalizeProjectSetup(p.projectSetup,p)){
+  const sequence=flowCurrentRowInstruction(p,{...setup,patternLanguage:"abbreviations"});
+  const analysis=analyzeRowInstruction(sequence,{craft:setup.craft,startingStitches:previousRowStitchCount(p)});
+  const firstStep=analysis.steps[0]?.token||"start this row";
+  return `${analysis.steps.length?`First stitch: ${firstStep}. `:""}${analysis.warning||"Stitch count looks ready."}`;
+}
+function previousRowStitchCount(p=getProject()){
+  const previous=p.chartAnalysis?.rows?.find(r=>Number(r.number)===Number(p.row)-1);
+  return Number(previous?.stitchCount)||Number(p.projectCalculations?.stitchCount)||0;
+}
+function expandInstructionRepeats(sequence=""){
+  let text=String(sequence||"");
+  let guard=0;
+  while(/\d+\s*\([^()]+\)/.test(text)&&guard++<12){
+    text=text.replace(/(\d+)\s*\(([^()]+)\)/g,(_,count,body)=>Array.from({length:Math.max(1,Math.min(99,Number(count)||1))},()=>body).join(", "));
+  }
+  return text;
+}
+function instructionSteps(sequence=""){
+  return expandInstructionRepeats(sequence).split(/[,;]+|\s+(?=(?:K2tog|SSK|YO|M1|BO|K|P|sc|dc|hdc|inc|dec|ch|sl\s*st)\b)/i).map(token=>token.trim()).filter(Boolean);
+}
+function stitchActionForToken(token,craft="Knitting"){
+  const clean=String(token||"").trim(),lower=clean.toLowerCase().replace(/\s+/g," ");
+  const crochet={sc:[1,1],dc:[1,1],hdc:[1,1],inc:[1,2],dec:[2,1],ch:[0,1],"sl st":[1,1],slst:[1,1]};
+  const knitting={k:[1,1],p:[1,1],yo:[0,1],k2tog:[2,1],ssk:[2,1],m1:[0,1],bo:[1,0]};
+  const table=/crochet/i.test(craft)?crochet:knitting;
+  const match=Object.keys(table).find(key=>lower===key||lower.startsWith(key+" "));
+  const pair=table[match]||[1,1];
+  return {token:clean,consumes:pair[0],produces:pair[1]};
+}
+function analyzeRowInstruction(sequence="",{craft="Knitting",startingStitches=0}={}){
+  const steps=instructionSteps(sequence).map(token=>stitchActionForToken(token,craft));
+  const consumedStitches=steps.reduce((sum,step)=>sum+step.consumes,0);
+  const endingStitches=steps.reduce((sum,step)=>sum+step.produces,0);
+  const warning=startingStitches&&consumedStitches&&Math.abs(consumedStitches-startingStitches)>1?"This row may need a quick check. The stitch count does not fully match the previous row.":"";
+  return {steps,startingStitches,consumedStitches,endingStitches,warning};
 }
 function flowRecognitionResultsHtml(results=[]){
   if(!results.length)return `<div class="flow-recognition-empty">Nothing to look over yet. Use Check chart or add a written row when you want extra help.</div>`;
@@ -1122,6 +1309,255 @@ function flowReadingSummary(p,reader=normalizeChartReaderConfig(p.chartReader,p)
   const rows=reader.grid.rows||p.chartRows||p.totalRows||0;
   const direction={ "left-to-right":"left to right", "right-to-left":"right to left", "alternating-rs-ws":"alternating rows", round:"in the round" }[reader.rowDirection]||"alternating rows";
   return `You are on row ${p.row}${rows?` of ${rows}`:""}. Keep following the chart ${direction}, then tap Next Row when you finish this row.`;
+}
+
+const YARNCHA_LEARNING_MEMORY_KEY="yarncha-learning-memory-v1";
+function normalizeAssistantCraft(value=""){
+  const text=String(value||"").toLowerCase();
+  if(/tunisian/.test(text))return "tunisian";
+  if(/crochet/.test(text))return "crochet";
+  return "knitting";
+}
+function assistantCraftLabel(craftType="knitting"){return {knitting:"Knitting",crochet:"Crochet",tunisian:"Tunisian Crochet"}[craftType]||"Knitting";}
+function normalizeAssistantSkill(value="beginner"){return ["beginner","intermediate","advanced"].includes(value)?value:"beginner";}
+function titleCaseTechnique(value=""){return String(value||"").replace(/[-_]+/g," ").replace(/\s+/g," ").trim().replace(/\b\w/g,letter=>letter.toUpperCase());}
+function defaultLearningMemory(){return {verifiedSymbols:[],userCorrections:[],frequentQuestions:{},preferredTerminology:{},projectMemories:{}};}
+const learningMemoryService={
+  getAll(){
+    try{return {...defaultLearningMemory(),...(JSON.parse(localStorage.getItem(YARNCHA_LEARNING_MEMORY_KEY)||"null")||{})};}
+    catch{return defaultLearningMemory();}
+  },
+  saveAll(memory){localStorage.setItem(YARNCHA_LEARNING_MEMORY_KEY,JSON.stringify({...defaultLearningMemory(),...(memory||{})}));},
+  getLearningMemory(projectId=""){
+    const memory=this.getAll();
+    return {...memory,projectMemory:memory.projectMemories?.[projectId]||{}};
+  },
+  saveVerifiedSymbol(projectId,symbolData={}){
+    const memory=this.getAll(),item={projectId,symbol:symbolData.symbol||symbolData.currentSymbol||"",meaning:symbolData.meaning||symbolData.question||"Verified in Yarncha Assistant",savedAt:new Date().toISOString()};
+    memory.verifiedSymbols=[item,...(memory.verifiedSymbols||[])].slice(0,80);
+    memory.projectMemories[projectId]={...(memory.projectMemories[projectId]||{}),lastVerifiedSymbol:item};
+    this.saveAll(memory);return item;
+  },
+  saveUserCorrection(correctionData={}){
+    const memory=this.getAll(),item={...correctionData,savedAt:new Date().toISOString()};
+    memory.userCorrections=[item,...(memory.userCorrections||[])].slice(0,80);
+    if(item.projectId)memory.projectMemories[item.projectId]={...(memory.projectMemories[item.projectId]||{}),lastCorrection:item};
+    this.saveAll(memory);return item;
+  },
+  saveFrequentQuestion(question=""){
+    const key=String(question||"").trim().toLowerCase().slice(0,120);
+    if(!key)return;
+    const memory=this.getAll();
+    memory.frequentQuestions[key]=(memory.frequentQuestions[key]||0)+1;
+    this.saveAll(memory);
+  },
+  savePreferredTerminology(term,preference){
+    const memory=this.getAll();
+    memory.preferredTerminology[term]=preference;
+    this.saveAll(memory);
+  },
+  saveProjectNote(projectId,note){
+    const memory=this.getAll();
+    const projectMemory=memory.projectMemories[projectId]||{};
+    projectMemory.notes=[{text:note,savedAt:new Date().toISOString()},...(projectMemory.notes||[])].slice(0,30);
+    memory.projectMemories[projectId]=projectMemory;
+    this.saveAll(memory);
+  }
+};
+const projectContextService={
+  getCurrentProject(){return getProject();},
+  getCurrentChartContext(project=this.getCurrentProject()){
+    const reader=normalizeChartReaderConfig(project?.chartReader,project||{});
+    return {chartType:reader.chartType,currentChart:project?.activeChartAssetId||project?.chart?.name||project?.attachments?.[0]?.name||"",grid:reader.grid,verifiedSymbols:learningMemoryService.getLearningMemory(project?.id||"").verifiedSymbols||[]};
+  },
+  getCurrentRowContext(project=this.getCurrentProject()){
+    const rowNumber=Number(project?.row)||0,row=(project?.chartAnalysis?.rows||[]).find(item=>Number(item.number)===rowNumber);
+    return {currentRow:rowNumber,rowInstruction:row?.sequence||flowCurrentRowInstruction(project||{},ensureProjectSetup(project||{})),expectedStitchCount:row?.stitchCount||project?.projectCalculations?.stitchCount||null,savedProgress:{row:rowNumber,totalRows:project?.chartRows||project?.totalRows||null}};
+  },
+  getCurrentSymbolContext(project=this.getCurrentProject()){
+    const recognition=highlightedRowRecognition(project||{})[0]||project?.chartReader?.recognitionResults?.[0]||null;
+    return {currentSymbol:recognition?.candidates?.[0]?.abbreviation||recognition?.detectedSymbol||"",symbolMeaning:recognition?.candidates?.[0]?.nameEn||""};
+  },
+  getCurrentProjectContext(){
+    const project=this.getCurrentProject(),setup=ensureProjectSetup(project||{}),chart=this.getCurrentChartContext(project),row=this.getCurrentRowContext(project),symbol=this.getCurrentSymbolContext(project),memory=learningMemoryService.getLearningMemory(project?.id||"");
+    return {projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",savedProgress:row.savedProgress,verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}};
+  }
+};
+const techniqueHelpLabels={en:{projectContext:"Project context",technique:"Technique",quickAnswer:"Quick answer",whatToDoNow:"What to do now",stepByStep:"Step-by-step",checkBeforeContinuing:"Check before continuing",commonMistakes:"Common mistakes",relatedTechniques:"Related techniques",moreDetails:"More details",countCheck:"Count check"}};
+const techniqueGuideDatabase=[
+  {id:"crochet-merge-new-yarn",label:"Merge New Yarn",craft:"crochet",category:"joining",level:"beginner",aliases:["join new yarn","add new yarn","change ball","merge yarn","換線","接新線"],stitchCountEffect:"no-change",shortMeaning:"Join a new strand of yarn so you can continue the project.",quickAnswer:"For merging new yarn in crochet, join the new yarn at the correct stitch or edge, then keep the first few stitches relaxed so the join does not look tight or bulky.",whatToDoNow:"Join the new yarn at the next stitch, leave a tail for weaving in, and crochet 3-5 stitches slowly before checking the tension.",steps:["Stop before the stitch where the new yarn needs to begin.","Place the new yarn over the hook and pull it through as instructed.","Leave a tail long enough to weave in later.","Work the next few stitches slowly while holding the tail gently at the back.","Check that the edge is not pulled tight.","Continue the row once the join looks secure."],checks:["Join at the edge if the pattern allows it.","Do not knot tightly unless the pattern or fibre needs it.","The yarn tail should be long enough to weave in securely."],commonMistakes:["Joining one stitch too early or too late.","Pulling the new yarn too tightly.","Accidentally counting the joining loop as an extra stitch."],relatedTechniqueIds:["crochet-weave-in-ends","crochet-standing-stitch","crochet-colour-change","crochet-edge-placement","crochet-tension-control"]},
+  {id:"crochet-chain-space",label:"Work Into Chain Space",craft:"crochet",category:"chain space",level:"beginner",aliases:["chain space","ch space","work into space"],stitchCountEffect:"depends",quickAnswer:"For working into a chain space in crochet, insert the hook into the open space, not into the individual chain stitch, unless the pattern says otherwise.",whatToDoNow:"Find the open chain space, place the hook through the space, and count the stitches you make into it rather than counting the space itself.",steps:["Locate the chain space from the previous row or round.","Insert the hook into the opening under the chain, not through the top loops of one chain.","Work the number of stitches the pattern gives into that space.","Count the produced stitches after the group is complete.","Check whether the chain itself counts as a stitch in this pattern."],checks:["Several stitches may go into one chain space.","Count the stitches you produce, not the empty space.","Check whether the turning chain or chain space counts as a stitch."],commonMistakes:["Piercing the chain stitch instead of entering the space.","Counting the chain space as one finished stitch.","Missing extra stitches that should all go into the same space."],relatedTechniqueIds:["crochet-stitch-anatomy","crochet-turning-chain","crochet-edge-placement"]},
+  {id:"crochet-back-loop-only",label:"Back Loop Only",craft:"crochet",category:"front loop / back loop",level:"beginner",aliases:["back loop","blo","back loop only"],stitchCountEffect:"no-change",quickAnswer:"For back loop only crochet, identify the top V and insert under only the loop farthest from you. This creates a ridge without adding stitches.",whatToDoNow:"Turn the stitch top toward you, find the back loop, and make one stitch through only that loop before checking the ridge.",steps:["Look at the top V of the next stitch.","Find the loop farthest from you.","Insert the hook under that back loop only.","Complete the stitch normally.","Check that the front loop remains visible as a ridge."],checks:["Back loop only should not change the stitch count.","The unused front loop should form a neat ridge.","The hook should not catch both loops."],commonMistakes:["Catching both loops by accident.","Working into the front loop instead of the back loop.","Pulling the back-loop stitch too tight."],relatedTechniqueIds:["crochet-front-loop-only","crochet-stitch-anatomy","crochet-tension-control"]},
+  {id:"crochet-front-loop-only",label:"Front Loop Only",craft:"crochet",category:"front loop / back loop",level:"beginner",aliases:["front loop","flo","front loop only"],stitchCountEffect:"no-change",quickAnswer:"For front loop only crochet, use only the loop closest to you and leave the back loop unworked, which can create a decorative ridge.",whatToDoNow:"Find the front loop of the next stitch, insert only under that loop, and keep the tension relaxed so the row does not stretch.",steps:["Look for the top V of the next stitch.","Use the loop closest to you.","Insert the hook under the front loop only.","Complete the stitch normally.","Check the fabric stretch after a few stitches."],checks:["Front loop only should not change the stitch count.","The unused back loop should remain visible.","Front-loop work can stretch, so check tension often."],commonMistakes:["Working under both loops.","Confusing the front loop with a chain space.","Pulling too tightly and making the ridge uneven."],relatedTechniqueIds:["crochet-back-loop-only","crochet-stitch-anatomy","crochet-tension-control"]},
+  {id:"crochet-post-stitch",label:"Post Stitch",craft:"crochet",category:"post stitch",level:"intermediate",aliases:["front post","back post","fpdc","bpdc","post stitch"],stitchCountEffect:"no-change",quickAnswer:"For a crochet post stitch, the hook goes around the post or body of the stitch below, not into the top V. Front post comes toward you; back post goes away from you.",whatToDoNow:"Find the stitch body below, decide front post or back post, then place the hook around the post before pulling up a loop.",steps:["Locate the post of the stitch from the previous row.","For front post, insert from front to back and back to front around the post.","For back post, insert from back to front and front to back around the post.","Pull up a loop around the post, then finish the stitch.","Check that the fabric texture pops in the intended direction."],checks:["Post stitches usually do not change stitch count.","The hook should not enter the top V.","Post stitches add thickness, so check tension and drape."],commonMistakes:["Working into the stitch top instead of around the post.","Mixing up front post and back post direction.","Pulling the post stitch too tight."],relatedTechniqueIds:["crochet-stitch-anatomy","crochet-tension-control","crochet-front-loop-only"]},
+  {id:"crochet-turning-chain",label:"Turning Chain",craft:"crochet",category:"turning chain",level:"beginner",aliases:["turning chain","chain at beginning","ch 1","ch 2","ch 3"],stitchCountEffect:"depends",quickAnswer:"For a crochet turning chain, first check whether the pattern counts it as the first stitch. The wrong choice can add or remove one stitch from the row.",whatToDoNow:"Mark the first real stitch and read the pattern note about whether the turning chain counts before you work across.",steps:["Read the pattern note for turning chains.","Chain the required number for the stitch height.","If the chain counts, treat it as the first stitch.","If it does not count, work into the first stitch at the base of the chain.","Count the row at the end."],checks:["The turning chain rule can change the row count by one.","Mark the first real stitch if you are unsure.","The row edge should not lean or gap."],commonMistakes:["Counting the chain when the pattern says not to.","Skipping the first real stitch by accident.","Adding an extra stitch at the row edge."],relatedTechniqueIds:["crochet-edge-placement","crochet-chain-space","crochet-stitch-anatomy"]},
+  {id:"crochet-increase",label:"Increase",craft:"crochet",category:"increase",level:"beginner",aliases:["increase","inc","2 sc in next","two stitches in one"],stitchCountEffect:"increase",quickAnswer:"For a crochet increase, work the stated number of stitches into the same stitch or chain space so the fabric gains stitches.",whatToDoNow:"Identify the exact stitch or space for the increase, work the full increase there, then count the stitches it produced.",steps:["Find whether the increase goes into a stitch top or a chain space.","Work the number of stitches the pattern states into that same place.","Do not skip the next stitch unless the pattern says to.","Count how many stitches the increase produced.","Compare with the row's expected stitch count."],checks:["An increase should add stitches.","The expected count should already include the added stitches.","The increase should not create a hole unless the pattern intends one."],commonMistakes:["Working the second stitch into the next stitch instead of the same stitch.","Skipping after the increase when the pattern did not say to.","Forgetting to include the extra stitch in the count."],relatedTechniqueIds:["crochet-chain-space","crochet-stitch-anatomy","crochet-tension-control"]},
+  {id:"crochet-decrease",label:"Decrease",craft:"crochet",category:"decrease",level:"beginner",aliases:["decrease","dec","sc2tog","dc2tog"],stitchCountEffect:"decrease",quickAnswer:"For a crochet decrease, the stitch consumes two or more stitches and turns them into fewer stitches, so the row count should go down as written.",whatToDoNow:"Identify how many stitches the decrease uses, work only those stitches together, then check that you did not skip an extra stitch after it.",steps:["Read whether the decrease is sc2tog, dc2tog, or another stitch.","Insert into the first stitch and pull up the required loop.","Insert into the next stitch and pull up the required loop.","Finish the decrease as the pattern states.","Count the row to confirm the decrease is included."],checks:["A decrease should reduce the stitch count.","The expected count should already include the removed stitch or stitches.","Do not skip an extra stitch after the decrease."],commonMistakes:["Skipping one extra stitch after the decrease.","Not inserting into enough stitches.","Pulling the decrease too tight."],relatedTechniqueIds:["crochet-stitch-anatomy","crochet-tension-control","crochet-edge-placement"]},
+  {id:"knitting-yarn-over",label:"Yarn Over",craft:"knitting",category:"yarn over",level:"beginner",aliases:["yo","yarn over"],stitchCountEffect:"increase",quickAnswer:"For a knitting yarn over, move the yarn over the needle so it creates a new loop on the next row and usually makes an eyelet.",whatToDoNow:"Check yarn position before and after the yarn over, then count it as one added stitch.",steps:["Look at whether the previous and next stitches are knit or purl.","Move the yarn over the right needle in the direction needed for the next stitch.","Do not knit into an existing stitch for the yarn over itself.","Work the next stitch while keeping the yarn over on the needle.","Count the yarn over as one stitch on the next row."],checks:["A yarn over should add one stitch unless paired with a decrease.","The expected count should include the added loop.","The yarn position should match the next stitch."],commonMistakes:["Dropping the yarn over before the next row.","Wrapping the yarn the wrong way before a purl.","Forgetting the paired decrease."],relatedTechniqueIds:["knitting-k2tog","knitting-ssk","knitting-stitch-anatomy"]},
+  {id:"knitting-k2tog",label:"Knit Two Together",craft:"knitting",category:"decrease",level:"beginner",aliases:["k2tog","knit two together"],stitchCountEffect:"decrease",quickAnswer:"For knit two together, insert the right needle through the next two stitches together and knit them as one stitch, reducing the count by one.",whatToDoNow:"Check the next two stitches are mounted normally, then knit them together and count one stitch made.",steps:["Hold the working yarn at the back.","Insert the right needle through the front legs of the next two stitches together.","Wrap and pull through as for a knit stitch.","Slide both old stitches off the left needle.","Check the decrease leans right."],checks:["Knit Two Together removes one stitch for each decrease.","The expected count should include the decrease.","Both stitches should be worked together, not one at a time."],commonMistakes:["Knitting only the first stitch.","Twisting one stitch before the decrease.","Forgetting that two stitches become one."],relatedTechniqueIds:["knitting-ssk","knitting-yarn-over","knitting-stitch-anatomy"]},
+  {id:"knitting-ssk",label:"Slip Slip Knit",craft:"knitting",category:"decrease",level:"beginner",aliases:["ssk","slip slip knit"],stitchCountEffect:"decrease",quickAnswer:"For slip slip knit, slip two stitches knitwise one at a time, then knit them together through the back loops so the decrease leans left.",whatToDoNow:"Slip the next two stitches separately knitwise, then knit through the back loops and count one stitch made.",steps:["Slip the first stitch knitwise.","Slip the second stitch knitwise.","Place the left needle into the fronts of both slipped stitches if needed.","Knit them together through the back loops.","Check the decrease leans left."],checks:["Slip Slip Knit removes one stitch for each decrease.","The expected count should include the decrease.","The stitches should be slipped one at a time."],commonMistakes:["Slipping both stitches together.","Working a right-leaning decrease by accident.","Pulling the decrease too loose."],relatedTechniqueIds:["knitting-k2tog","knitting-yarn-over","knitting-stitch-anatomy"]},
+  {id:"knitting-make-one-left",label:"Make One Left",craft:"knitting",category:"increase",level:"intermediate",aliases:["m1l","make one left"],stitchCountEffect:"increase",quickAnswer:"For Make One Left, lift the strand between stitches from front to back and knit through the back leg so the increase twists closed.",whatToDoNow:"Find the strand between needles, lift it front to back, and knit through the back leg before counting the added stitch.",steps:["Locate the running strand between the needles.","Lift it from front to back onto the left needle.","Knit through the back leg.","Check that the new stitch is twisted closed.","Continue with the row instruction."],checks:["Make One Left adds one stitch.","The expected count should include the increase.","The increase should not leave a large hole."],commonMistakes:["Lifting the wrong strand.","Knitting through the front leg and making a hole.","Forgetting to count the new stitch."],relatedTechniqueIds:["knitting-make-one-right","knitting-yarn-over","knitting-stitch-anatomy"]},
+  {id:"knitting-make-one-right",label:"Make One Right",craft:"knitting",category:"increase",level:"intermediate",aliases:["m1r","make one right"],stitchCountEffect:"increase",quickAnswer:"For Make One Right, lift the strand between stitches from back to front and knit through the front leg so the increase twists closed.",whatToDoNow:"Find the strand between needles, lift it back to front, and knit through the front leg before counting the added stitch.",steps:["Locate the running strand between the needles.","Lift it from back to front onto the left needle.","Knit through the front leg.","Check that the new stitch is twisted closed.","Continue with the row instruction."],checks:["Make One Right adds one stitch.","The expected count should include the increase.","The increase should lean right."],commonMistakes:["Lifting from the wrong direction.","Making a yarn-over hole by not twisting the strand.","Forgetting to count the new stitch."],relatedTechniqueIds:["knitting-make-one-left","knitting-yarn-over","knitting-stitch-anatomy"]},
+  {id:"knitting-knit-through-back-loop",label:"Knit Through Back Loop",craft:"knitting",category:"twisted stitch",level:"beginner",aliases:["ktbl","knit through back loop"],stitchCountEffect:"no-change",quickAnswer:"For knit through back loop, insert the right needle into the back leg of the stitch instead of the front leg, creating a twisted stitch.",whatToDoNow:"Look at the stitch mount, insert through the back leg, and keep tension relaxed so the twist is visible but not tight.",steps:["Identify the front leg and back leg of the next stitch.","Insert the right needle into the back leg.","Wrap and pull through as for a knit stitch.","Slide the old stitch off the left needle.","Check that the stitch is twisted."],checks:["Knit Through Back Loop should not change stitch count.","The needle should enter the back leg.","Twisted stitches can tighten the row, so check tension."],commonMistakes:["Knitting through the front leg as usual.","Twisting a stitch that was already mounted differently.","Pulling too tight."],relatedTechniqueIds:["knitting-stitch-anatomy","knitting-tension-control"]},
+  {id:"knitting-join-new-yarn",label:"Join New Yarn",craft:"knitting",category:"joining",level:"beginner",aliases:["join new yarn","add new yarn","merge new yarn"],stitchCountEffect:"no-change",quickAnswer:"For joining new yarn in knitting, start the new strand at the edge or required stitch and keep the first few stitches relaxed so the join does not pucker.",whatToDoNow:"Leave a tail, knit the next few stitches with the new yarn, and check the edge before continuing.",steps:["Stop at the stitch where the new yarn begins.","Hold the new yarn with a tail for weaving in.","Knit the next stitch using the new strand.","Work 3-5 stitches slowly.","Check that the join is secure but not tight."],checks:["Join New Yarn should not change stitch count.","The tail should be long enough to weave in.","The edge should not pucker."],commonMistakes:["Knotting tightly when the fabric does not need it.","Joining in the wrong stitch.","Counting the join as an extra stitch."],relatedTechniqueIds:["knitting-weave-in-ends","knitting-tension-control"]},
+  {id:"knitting-bind-off",label:"Bind Off",craft:"knitting",category:"bind off",level:"beginner",aliases:["bind off","cast off"],stitchCountEffect:"decrease",quickAnswer:"For binding off, work stitches and pass one over another until live stitches are secured along the edge.",whatToDoNow:"Bind off loosely enough that the edge can stretch to match the fabric.",steps:["Work the first two stitches as instructed.","Lift the first stitch over the second and off the needle.","Work one more stitch.","Pass the previous stitch over it.","Continue until one stitch remains and fasten off."],checks:["Bind off removes live stitches from the needle.","The edge should not be tighter than the fabric.","Use the pattern bind-off method if specified."],commonMistakes:["Binding off too tightly.","Forgetting pattern stitches during bind off.","Dropping the final loop before securing it."],relatedTechniqueIds:["knitting-tension-control","knitting-stitch-anatomy"]},
+  {id:"knitting-cable-cross",label:"Cable Cross",craft:"knitting",category:"cable",level:"intermediate",aliases:["cable","cable cross","c4f","c4b"],stitchCountEffect:"no-change",quickAnswer:"For a cable cross, hold the stated stitches to the front or back, knit the next stitches, then knit the held stitches in order.",whatToDoNow:"Check whether the cable needle goes front or back before moving stitches.",steps:["Read the cable abbreviation and number of stitches.","Slip the stated stitches onto a cable needle.","Hold them to the front or back as written.","Work the next stitches from the left needle.","Work the held stitches from the cable needle."],checks:["Cable Cross should not change stitch count.","Front and back placement changes cable direction.","Cable rows can tighten, so relax the yarn."],commonMistakes:["Holding the cable needle on the wrong side.","Dropping held stitches.","Pulling the cross too tight."],relatedTechniqueIds:["knitting-tension-control","knitting-stitch-anatomy"]},
+  {id:"knitting-pick-up-stitches",label:"Pick Up Stitches",craft:"knitting",category:"joining",level:"intermediate",aliases:["pick up stitches","pickup stitches"],stitchCountEffect:"increase",quickAnswer:"For picking up stitches, insert the needle through the edge or stitch named by the pattern and pull up new loops evenly.",whatToDoNow:"Mark the pickup span, divide it into sections, and pick up the expected number evenly.",steps:["Mark the start and end of the pickup edge.","Divide the edge into smaller sections with markers.","Insert the needle through the edge stitch or gap named by the pattern.","Pull up a loop with even tension.","Count the picked-up stitches before continuing."],checks:["Pick Up Stitches adds stitches to the needle.","The expected count should include the picked-up stitches.","Spacing should look even along the edge."],commonMistakes:["Picking up too many stitches in one area.","Using the wrong edge strand.","Pulling the pickup row too tight."],relatedTechniqueIds:["knitting-join-new-yarn","knitting-tension-control"]},
+  {id:"knitting-cast-on",label:"Cast On",craft:"knitting",category:"cast on",level:"beginner",aliases:["cast on"],stitchCountEffect:"increase",quickAnswer:"For casting on, create the number of starting stitches the pattern asks for with a method that matches the edge.",whatToDoNow:"Count the cast-on stitches on the needle before working Row 1.",steps:["Choose the cast-on method named by the pattern.","Make the first loop or slip knot if that method uses one.","Cast on each stitch with even spacing.","Count stitches on the needle.","Restart now if the count is wrong."],checks:["Cast On creates the starting stitch count.","The edge should not be too tight.","The first row should match the pattern count."],commonMistakes:["Counting the slip knot incorrectly.","Casting on too tightly.","Starting Row 1 with the wrong count."],relatedTechniqueIds:["knitting-bind-off","knitting-tension-control"]},
+  {id:"tunisian-forward-pass",label:"Forward Pass",craft:"tunisian",category:"forward pass",level:"beginner",aliases:["forward pass","fwd pass"],stitchCountEffect:"depends",quickAnswer:"For the Tunisian forward pass, pick up loops across the row and leave them on the hook before working the return pass.",whatToDoNow:"Count the loops on your hook after the forward pass and make sure the edge stitch is included.",steps:["Start with one loop on the hook.","Insert into each required vertical bar or space.","Yarn over and pull up a loop, leaving it on the hook.","Continue across the row.","Work the edge stitch as the pattern states."],checks:["The loops on hook should match the row stitch count before the return pass.","Do not skip the edge stitch.","The row is not complete until the return pass is worked."],commonMistakes:["Dropping a loop before the return pass.","Missing the last edge stitch.","Pulling loops to different heights."],relatedTechniqueIds:["tunisian-return-pass","tunisian-edge-stitch","tunisian-vertical-bar"]},
+  {id:"tunisian-return-pass",label:"Return Pass",craft:"tunisian",category:"return pass",level:"beginner",aliases:["return pass","standard return pass"],stitchCountEffect:"no-change",quickAnswer:"For the Tunisian return pass, yarn over and pull through loops as instructed until one loop remains on the hook.",whatToDoNow:"Work the first return-pass chain as written, then pull through two loops at a time unless your pattern says otherwise.",steps:["Yarn over and pull through one loop if this is the standard start.","Yarn over and pull through two loops.","Repeat until one loop remains on the hook.","Keep the return-pass chains even.","Check that no loop was skipped."],checks:["Standard Return Pass should not change stitch count by itself.","One loop should remain on the hook at the end.","Row count may treat forward and return pass together as one row."],commonMistakes:["Pulling through two loops at the first step when the pattern says one.","Leaving extra loops on the hook.","Tightening the return pass too much."],relatedTechniqueIds:["tunisian-forward-pass","tunisian-tension-control"]},
+  {id:"tunisian-simple-stitch",label:"Tunisian Simple Stitch",craft:"tunisian",category:"vertical bar",level:"beginner",aliases:["tss","tunisian simple stitch","work into vertical bar","vertical bar"],stitchCountEffect:"no-change",quickAnswer:"For Tunisian Simple Stitch, insert the hook under the front vertical bar, yarn over, and pull up a loop for the forward pass.",whatToDoNow:"Find the next vertical bar, insert under it from right to left, and pull up one loop.",steps:["Identify the front vertical bar of the next stitch.","Insert the hook under that bar.","Yarn over and pull up a loop.","Leave the loop on the hook.","Continue across before the return pass."],checks:["Tunisian Simple Stitch should keep one loop per stitch on the forward pass.","Do not insert into the chain space unless instructed.","Include the edge stitch."],commonMistakes:["Catching two bars instead of one.","Skipping the edge stitch.","Pulling loops too short."],relatedTechniqueIds:["tunisian-forward-pass","tunisian-vertical-bar","tunisian-return-pass"]},
+  {id:"tunisian-knit-stitch",label:"Tunisian Knit Stitch",craft:"tunisian",category:"stitch placement",level:"beginner",aliases:["tks","tunisian knit stitch"],stitchCountEffect:"no-change",quickAnswer:"For Tunisian Knit Stitch, insert the hook between the front and back vertical bars, then pull up a loop.",whatToDoNow:"Open the stitch slightly, place the hook between the vertical bars, and pull up a loop at even height.",steps:["Find the next stitch body.","Insert the hook between the front and back vertical bars.","Yarn over and pull up a loop.","Leave the loop on the hook.","Check the V shape on the front of the fabric."],checks:["Tunisian Knit Stitch should not change stitch count.","The hook goes through the stitch body, not under only the front bar.","Loops should be the same height."],commonMistakes:["Working Tunisian Simple Stitch by accident.","Splitting the yarn inside the stitch body.","Pulling the loop too tight."],relatedTechniqueIds:["tunisian-simple-stitch","tunisian-forward-pass","tunisian-tension-control"]},
+  {id:"tunisian-purl-stitch",label:"Tunisian Purl Stitch",craft:"tunisian",category:"stitch placement",level:"intermediate",aliases:["tps","tunisian purl stitch"],stitchCountEffect:"no-change",quickAnswer:"For Tunisian Purl Stitch, bring the yarn to the front before inserting under the vertical bar, then pull up a loop.",whatToDoNow:"Bring yarn forward, insert under the vertical bar, and keep the front bump relaxed.",steps:["Bring the working yarn to the front.","Insert the hook under the front vertical bar.","Yarn over from the front position.","Pull up a loop and leave it on the hook.","Move to the next stitch without tightening the bump."],checks:["Tunisian Purl Stitch should not change stitch count.","The yarn must begin at the front.","Loops should stay even on the hook."],commonMistakes:["Leaving yarn at the back.","Pulling the purl bump too tight.","Skipping the next vertical bar."],relatedTechniqueIds:["tunisian-simple-stitch","tunisian-tension-control"]},
+  {id:"tunisian-edge-stitch",label:"Edge Stitch",craft:"tunisian",category:"edge stitch",level:"beginner",aliases:["edge stitch","last stitch"],stitchCountEffect:"no-change",quickAnswer:"For a Tunisian edge stitch, work into the two outer loops at the edge unless your pattern gives a different edge method.",whatToDoNow:"Before the return pass, check the last stitch at the edge and make sure it has been picked up.",steps:["Work across the row to the last stitch.","Locate the two outer edge loops.","Insert the hook through those edge loops.","Yarn over and pull up a loop.","Check the side edge is straight."],checks:["Edge Stitch should not add an extra stitch.","Skipping it can make the side edge shrink.","The edge loop should sit at the same height as the row."],commonMistakes:["Skipping the last stitch.","Working into only one edge loop when the pattern expects two.","Pulling the edge loop too tight."],relatedTechniqueIds:["tunisian-forward-pass","tunisian-return-pass","tunisian-tension-control"]},
+  {id:"tunisian-increase",label:"Tunisian Increase",craft:"tunisian",category:"increase",level:"beginner",aliases:["tunisian increase","increase"],stitchCountEffect:"increase",quickAnswer:"For a Tunisian increase, add an extra loop on the forward pass in the place named by the pattern.",whatToDoNow:"Find where the pattern wants the extra loop, make it there, and count loops on hook before the return pass.",steps:["Read whether the increase is in a vertical bar, space, or edge.","Insert the hook where instructed.","Pull up an extra loop.","Continue the forward pass.","Count loops before the return pass."],checks:["Tunisian Increase adds loops on the hook.","The expected count should include the added loop.","Do not add the loop in the wrong space."],commonMistakes:["Adding the increase one bar too early.","Forgetting to count loops before the return pass.","Creating a hole when the pattern wants a closed increase."],relatedTechniqueIds:["tunisian-forward-pass","tunisian-vertical-bar","tunisian-tension-control"]},
+  {id:"tunisian-decrease",label:"Tunisian Decrease",craft:"tunisian",category:"decrease",level:"beginner",aliases:["tunisian decrease","decrease"],stitchCountEffect:"decrease",quickAnswer:"For a Tunisian decrease, insert through the stated bars or loops together so fewer loops are added on the forward pass.",whatToDoNow:"Identify how many bars the decrease consumes, pull up one loop through them together, and check the loop count before the return pass.",steps:["Read how many stitches the decrease uses.","Insert through the stated bars together.","Yarn over and pull up one loop.","Continue the forward pass.","Count loops before the return pass."],checks:["Tunisian Decrease removes stitches from the count.","The expected count should include the decrease.","Do not skip an extra vertical bar after the decrease."],commonMistakes:["Skipping the next bar after decreasing.","Pulling through the wrong bars.","Making the decrease too tight."],relatedTechniqueIds:["tunisian-forward-pass","tunisian-vertical-bar","tunisian-tension-control"]},
+  {id:"tunisian-bind-off",label:"Tunisian Bind Off",craft:"tunisian",category:"bind off",level:"beginner",aliases:["bind off","tunisian bind off"],stitchCountEffect:"decrease",quickAnswer:"For Tunisian bind off, work across the row with slip-stitch-like movements so the final loops are closed neatly.",whatToDoNow:"Bind off loosely through the correct bars so the top edge does not pull inward.",steps:["Insert into the next bar as the pattern states.","Yarn over and pull through the bar and the loop on the hook.","Repeat across the row.","Keep the edge relaxed.","Fasten off at the end."],checks:["Bind off closes live loops.","The edge should not be tighter than the fabric.","Use the pattern's bind-off placement if specified."],commonMistakes:["Binding off too tightly.","Skipping the edge stitch.","Changing stitch placement during bind off."],relatedTechniqueIds:["tunisian-edge-stitch","tunisian-tension-control"]}
+];
+const techniqueRelatedLabels={"crochet-weave-in-ends":"Weave In Ends","crochet-standing-stitch":"Standing Stitch","crochet-colour-change":"Colour Change","crochet-edge-placement":"Edge Stitch Placement","crochet-tension-control":"Tension Control","crochet-stitch-anatomy":"Crochet Stitch Anatomy","crochet-front-loop-only":"Front Loop Only","crochet-back-loop-only":"Back Loop Only","crochet-turning-chain":"Turning Chain","crochet-chain-space":"Work Into Chain Space","knitting-weave-in-ends":"Weave In Ends","knitting-tension-control":"Tension Control","knitting-stitch-anatomy":"Knitting Stitch Anatomy","knitting-yarn-over":"Yarn Over","knitting-k2tog":"Knit Two Together","knitting-ssk":"Slip Slip Knit","knitting-make-one-left":"Make One Left","knitting-make-one-right":"Make One Right","tunisian-forward-pass":"Forward Pass","tunisian-return-pass":"Return Pass","tunisian-edge-stitch":"Edge Stitch","tunisian-vertical-bar":"Work Into Vertical Bar","tunisian-tension-control":"Tension Control","tunisian-simple-stitch":"Tunisian Simple Stitch","tunisian-knit-stitch":"Tunisian Knit Stitch"};
+function normalizeTechniqueSearch(value=""){return String(value||"").toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g," ").trim();}
+function techniqueOptionsForCraft(craftType="crochet"){return techniqueGuideDatabase.filter(item=>item.craft===normalizeAssistantCraft(craftType)).sort((a,b)=>a.label.localeCompare(b.label));}
+function findTechniqueGuide(selectedTechnique="",craftType="crochet"){
+  const craft=normalizeAssistantCraft(craftType),query=normalizeTechniqueSearch(selectedTechnique);
+  if(!query)return null;
+  return techniqueGuideDatabase.find(item=>item.craft===craft&&(normalizeTechniqueSearch(item.id)===query||normalizeTechniqueSearch(item.label)===query||(item.aliases||[]).some(alias=>normalizeTechniqueSearch(alias)===query)))||
+    techniqueGuideDatabase.find(item=>item.craft===craft&&(normalizeTechniqueSearch(item.label).includes(query)||query.includes(normalizeTechniqueSearch(item.label))||(item.aliases||[]).some(alias=>query.includes(normalizeTechniqueSearch(alias))||normalizeTechniqueSearch(alias).includes(query))));
+}
+function techniqueStitchCountMessage(guide,context={}){
+  const name=guide?.label||titleCaseTechnique(context.selectedTechnique)||"Selected technique",row=context.currentRow?` Row ${context.currentRow}`:" this row",expected=context.expectedStitchCount;
+  if(guide?.stitchCountEffect==="no-change")return expected?`${name} should not change your stitch count. You should still have ${expected} stitches at the end of${row}.`:`${name} should not change your stitch count. Count before and after to make sure it stays the same.`;
+  if(guide?.stitchCountEffect==="increase")return expected?`${name} adds stitches. Check that${row} expects the extra stitch or stitches and finishes with ${expected}.`:`${name} adds stitches. Check that the expected count already includes the increase.`;
+  if(guide?.stitchCountEffect==="decrease")return expected?`${name} removes stitches. Check that${row} expects the decrease and finishes with ${expected}.`:`${name} removes stitches. Check that the expected count already includes the decrease.`;
+  if(guide?.stitchCountEffect==="depends")return `${name} may or may not change the stitch count depending on the pattern wording. Compare your count with the row instruction before continuing.`;
+  return "Check the pattern's stitch count note before continuing.";
+}
+function craftSpecificTechniqueFallback(selectedTechnique="",craftType="crochet"){
+  const name=titleCaseTechnique(selectedTechnique),craft=assistantCraftLabel(craftType);
+  const steps={crochet:[`For ${name} in crochet, check hook placement before making the stitch.`,"Look for the stitch top, chain space, front loop, back loop, post, or turning chain named by the pattern.","Make one slow sample movement, then count the stitches produced.","Check that the row edge and tension still look even."],knitting:[`For ${name} in knitting, check needle insertion direction, stitch mount, yarn position, and row tension before continuing.`,"Identify the front leg and back leg of the next stitch.","Work one repeat slowly, watching whether the stitch increases, decreases, or keeps the count.","Count the stitches on the needle before moving on."],tunisian:[`For ${name} in Tunisian crochet, separate the Forward Pass from the Return Pass before judging the result.`,"Check the vertical bars and edge stitch.","Count loops on the hook after the Forward Pass.","Confirm whether the pattern counts a full row as both passes together."]}[craftType]||[];
+  return {questionType:"stitchTechnique",techniqueName:name,techniqueCategory:"unknown",quickAnswer:`I do not have a full guide for ${name} yet, but here is safe ${craft} help.`,whatToDoNow:`Work one small sample of ${name}, then check placement, tension, and stitch count before continuing the project row.`,steps,checkBeforeContinuing:[techniqueStitchCountMessage({label:name,stitchCountEffect:"unknown"},{selectedTechnique:name}),"If the pattern wording is unclear, stop at the end of the row before undoing anything."],commonMistakes:["Working from memory instead of the pattern wording.","Changing stitch count without checking the expected count.","Tightening the yarn while trying an unfamiliar movement."],relatedTechniques:["Stitch Anatomy","Practice Swatch","Tension Control"],libraryLinks:[{title:"Technique Basics",target:"library:technique-basics"},{title:"Practice Swatch",target:"library:practice-swatch"}],sourceType:"local-rule-based"};
+}
+function buildTechniqueHelp({selectedTechnique="",craftType="crochet",context={}}={}){
+  const craft=normalizeAssistantCraft(craftType),chosen=String(selectedTechnique||context.selectedTechnique||"").trim();
+  if(!chosen)return {questionType:"stitchTechnique",techniqueName:"Choose a technique first",quickAnswer:"Choose a technique first so Yarncha can give specific help.",whatToDoNow:"Pick from current row techniques, search by abbreviation, search by stitch name, open Stitch Anatomy, or open Practice Swatch.",steps:["Choose a technique from the Technique Help selector.","If it is from the current row, paste or select the row instruction too.","Ask Yarncha again with the technique selected.","Count before continuing if the technique might change stitch count."],checkBeforeContinuing:["Do not continue from a vague instruction if you are unsure where the hook or needle goes.","If your stitch count is already off, fix the count before learning the next movement."],commonMistakes:["Trying to follow help before choosing the actual technique.","Mixing crochet, knitting, and Tunisian terms.","Skipping the row instruction that tells you where the technique happens."],relatedTechniques:["Stitch Anatomy","Practice Swatch","Search by Abbreviation","Search by Stitch Name"],libraryLinks:[{title:"Stitch Anatomy",target:"library:stitch-anatomy"},{title:"Practice Swatch",target:"library:practice-swatch"}],sourceType:"local-rule-based"};
+  const guide=findTechniqueGuide(chosen,craft);
+  if(!guide)return craftSpecificTechniqueFallback(chosen,craft);
+  const countCheck=techniqueStitchCountMessage(guide,context);
+  return {questionType:"stitchTechnique",techniqueName:guide.label,techniqueCategory:guide.category,techniqueLevel:guide.level,shortMeaning:guide.shortMeaning,quickAnswer:`${guide.quickAnswer} ${countCheck}`,whatToDoNow:guide.whatToDoNow,steps:guide.steps,checkBeforeContinuing:[countCheck,...(guide.checks||[])].slice(0,4),commonMistakes:guide.commonMistakes,relatedTechniques:(guide.relatedTechniqueIds||[]).map(id=>techniqueRelatedLabels[id]||techniqueGuideDatabase.find(item=>item.id===id)?.label||titleCaseTechnique(id)),libraryLinks:[{title:guide.label,target:`library:${guide.id}`},...((guide.relatedTechniqueIds||[]).slice(0,3).map(id=>({title:techniqueRelatedLabels[id]||titleCaseTechnique(id),target:`library:${id}`})))],sourceType:"local-rule-based"};
+}
+const teachingService={
+  style(skillLevel){
+    if(skillLevel==="advanced")return "technical";
+    if(skillLevel==="intermediate")return "direct";
+    return "gentle";
+  },
+  explainSymbol(symbol="",craftType="knitting",skillLevel="beginner",context={}){
+    const craft=assistantCraftLabel(craftType),mark=symbol||context.currentSymbol||"this symbol";
+    const likely=craftType==="crochet"?"a circle often means chain, a tall T-shaped mark often means a taller stitch, and a slash may mean a post or decrease mark":craftType==="tunisian"?"a vertical mark often points to a vertical bar stitch, while return-pass marks may be shown separately":"a circle often means yarn over, a slash often means a decrease, and a blank square often means knit on right-side rows";
+    return {questionType:"symbolMeaning",quickAnswer:`${mark} needs the pattern legend first because chart symbols are not universal. In ${craft}, ${likely}.`,whatToDoNow:`Open the chart legend and compare ${mark} with the designer's key. If Yarncha has selected the wrong mark, tap or zoom the exact symbol before you continue.`,steps:[`Check the legend printed with this pattern before using a general symbol meaning.`,`Confirm whether the current row is worked as ${craftType==="tunisian"?"a forward pass or return pass":craftType==="crochet"?"a row, round, or motif round":"a right-side or wrong-side row"}.`,context.currentRow?`Because you are on Row ${context.currentRow}, check this symbol only in that row before moving ahead.`:"If no row is selected, choose the row or zoom the chart so the symbol can be read clearly.",`If the legend is missing, compare nearby repeats and look for the same symbol used in a familiar stitch pattern.`],commonMistakes:["Assuming a symbol means the same thing in every pattern.","Reading a right-side chart symbol the same way on wrong-side rows when the legend says otherwise.","Ignoring designer notes that override standard chart symbols."],relatedTechniques:["chart legends","symbol reading","row direction"],libraryLinks:[{title:"Chart Symbol Guide",target:"library:symbol-guide"},{title:"Pattern Legend Guide",target:"library:pattern-legend-guide"}]};
+  },
+  explainAbbreviation(abbreviation="",craftType="knitting",skillLevel="beginner",context={}){
+    const clean=String(abbreviation||"").trim().toLowerCase();
+    const terms={
+      knitting:{k2tog:["knit two together","right-leaning decrease","turns 2 stitches into 1, so the stitch count decreases by 1","insert the right needle through the next two stitches together, knit them as one stitch"],ssk:["slip, slip, knit","left-leaning decrease","turns 2 stitches into 1, so the stitch count decreases by 1","slip two stitches knitwise one at a time, return them to the left needle, then knit them together through the back loops"],yo:["yarn over","increase and eyelet","adds 1 stitch","bring the yarn over the needle before working the next stitch"],pm:["place marker","marker instruction","does not change stitch count","put a stitch marker on the needle at this point"]},
+      crochet:{sc:["single crochet","basic crochet stitch","usually keeps stitch count the same unless worked as an increase or decrease","insert hook, yarn over, pull up a loop, yarn over and pull through both loops"],dc:["double crochet","tall crochet stitch","usually keeps stitch count the same","yarn over, insert hook, pull up a loop, yarn over through two loops twice"],ch:["chain","foundation or spacer stitch","adds a chain; it may or may not count as a stitch depending on the pattern","yarn over and pull through the loop on your hook"],"sl st":["slip stitch","joining or moving stitch","usually keeps stitch count the same","insert hook, yarn over, pull through the stitch and the loop on your hook"],slst:["slip stitch","joining or moving stitch","usually keeps stitch count the same","insert hook, yarn over, pull through the stitch and the loop on your hook"]},
+      tunisian:{tss:["Tunisian simple stitch","basic Tunisian stitch","keeps one loop per stitch on the forward pass","insert hook under the front vertical bar, yarn over, pull up a loop"],tks:["Tunisian knit stitch","Tunisian stitch that looks knitted","keeps one loop per stitch on the forward pass","insert hook between the front and back vertical bars, yarn over, pull up a loop"],"return pass":["return pass","the pass that works loops off the hook","reduces loops on hook back to one working loop","yarn over and pull through one loop first, then yarn over and pull through two loops repeatedly"]}
+    };
+    const key=clean.replace(/\s+/g," ");
+    const hit=terms[craftType]?.[key]||terms[craftType]?.[key.replace(/\s/g,"")];
+    const label=abbreviation||"the abbreviation";
+    return {questionType:"abbreviation",quickAnswer:hit?`${label} means ${hit[0]}. It is a ${hit[1]} in ${assistantCraftLabel(craftType)}.`:`${label} is a ${assistantCraftLabel(craftType)} abbreviation, but this pattern's abbreviation list should confirm the exact meaning.`,whatToDoNow:hit?`Before you work it, note the stitch-count effect: it ${hit[2]}. Then work it once slowly and count the result.`:`Find the abbreviation list in the pattern, then check whether the term increases, decreases, or keeps the stitch count the same.`,steps:hit?[`Full name: ${hit[0]}.`,`Craft type: ${assistantCraftLabel(craftType)}.`,`Stitch-count effect: ${hit[2]}.`,`How to do it: ${hit[3]}.`,context.currentRow?`On Row ${context.currentRow}, count again after this abbreviation if the row also has repeats.`:"If it appears inside brackets, count it as part of each repeat."]:["Look for the pattern abbreviation list or designer notes.","Check whether the pattern uses US or UK crochet terms if this is crochet.","Read the whole row before making the stitch.","Count before and after the row if the abbreviation changes stitch count."],commonMistakes:["Mixing US and UK crochet terms.","Missing whether an abbreviation sits inside a repeated bracket.","Forgetting that decreases reduce stitch count and yarn overs or increases add stitches."],relatedTechniques:["abbreviations","stitch count changes","pattern reading"],libraryLinks:[{title:"Abbreviation Guide",target:"library:abbreviation-guide"},{title:"Reading Patterns",target:"library:reading-patterns"}]};
+  },
+  explainTechnique(technique="",craftType="knitting",skillLevel="beginner",context={}){
+    return buildTechniqueHelp({selectedTechnique:context.selectedTechnique||technique,craftType,context});
+  },
+  explainPatternLine(patternLine="",craftType="knitting",skillLevel="beginner",context={}){
+    const line=patternLine||context.rowInstruction||"";
+    return {questionType:context.currentRow?"rowInstruction":"patternReading",quickAnswer:line?`Read this row in pieces: first the stitches before any bracket, then the repeated section, then the stitches after the repeat.`:"I can help, but I need the exact row or pattern line to be precise.",whatToDoNow:line?`Mark the repeat section now. If you are on Row ${context.currentRow||"this row"}, work one repeat, count it, then repeat only the stated number of times.`:"Paste the row instruction or select the current row. For now, look for brackets, commas, repeat counts, and the final stitch count.",steps:[context.currentRow?`Read only Row ${context.currentRow} first; ignore the next row until this one is complete.`:"Read one instruction line at a time.","Circle or identify everything before the first bracket or asterisk.","Mark the repeated section and count how many stitches one repeat uses.","Work the bracketed section the required number of times.","Work any stitches after the repeat, then check the stitch count before continuing."],commonMistakes:["Repeating stitches that sit outside the brackets.","Missing an “at the same time” instruction.","Working a wrong-side row in the right-side direction.","Skipping the final stitches after a repeat."],relatedTechniques:["reading repeats","row tracking","stitch counts"],libraryLinks:[{title:"Reading Repeats",target:"library:reading-repeats"},{title:"Reading Patterns",target:"library:reading-patterns"}]};
+  }
+};
+const troubleshootingService={
+  troubleshootStitchCount(context={},skillLevel="beginner",craftType="knitting"){
+    const expected=context.expectedStitchCount?` Yarncha sees an expected count around ${context.expectedStitchCount}.`:" I need the pattern's expected stitch count to be exact.";
+    const terms={knitting:["needle","row","k2tog","ssk","yo","increase","decrease","stitch marker","tink back"],crochet:["hook","round","turning chain","skipped stitch","accidental increase","stitch marker","frog back"],tunisian:["hook","forward pass","return pass","vertical bars","edge stitch","loops on hook","frog back"]}[craftType]||[];
+    return {questionType:"stitchCountProblem",quickAnswer:`Your stitch count is usually off because a repeat was missed or doubled, or an increase/decrease was counted incorrectly.${expected}`,whatToDoNow:context.currentRow?`Stop at the end of Row ${context.currentRow} if possible. Count the stitches now, compare with the expected count, then check each repeat before moving to Row ${Number(context.currentRow)+1}.`:"Stop at the end of the current row or round if possible. Count your stitches now, then compare with the pattern's expected count.",steps:[`Keep the work on your ${terms[0]||"tool"} and count every stitch or loop without stretching the fabric.`,`Write down your current count and the expected count from the pattern.`,`Place ${terms.includes("stitch marker")?"stitch markers":"markers"} between repeats or every 10 stitches.`,`Check the row for ${craftType==="knitting"?"k2tog, ssk, yo, increases, and decreases":craftType==="crochet"?"turning chains, skipped stitches, accidental increases, and decreases":"forward-pass loops, return-pass decreases, vertical bars, and the edge stitch"}.`,`If one repeat is wrong, undo only that repeat or section if you can see it clearly.`,`If the whole row is wrong or the mistake is hidden, ${craftType==="knitting"?"tink back":"frog back"} slowly to the last correct count.`],commonMistakes:craftType==="knitting"?["Forgetting that k2tog and ssk each decrease by 1 stitch.","Forgetting that yo adds 1 stitch.","Missing the last stitch after a repeat.","Repeating a bracket section too many or too few times."]:craftType==="crochet"?["Counting the turning chain when the pattern says it does not count.","Skipping the first or last stitch of the row.","Adding two stitches into one space by accident.","Missing a decrease that should turn two stitches into one."]:["Missing the last edge stitch on the forward pass.","Dropping a loop before the return pass.","Counting return-pass chain loops as extra stitches.","Skipping a vertical bar inside a repeat."],relatedTechniques:["stitch count troubleshooting","increases and decreases","reading repeats"],libraryLinks:[{title:"Stitch Count Troubleshooting",target:"library:stitch-count-troubleshooting"},{title:"Increases and Decreases",target:"library:increases-decreases"},{title:"Reading Repeats",target:"library:reading-repeats"}]};
+  },
+  troubleshootDroppedStitch(context={},skillLevel="beginner",craftType="knitting"){
+    if(craftType==="crochet")return {questionType:"droppedStitch",quickAnswer:"Crochet usually does not drop stitches like knitting. The problem is more often a missed stitch, loose loop, undone stitch, or skipped stitch.",whatToDoNow:"Put a stitch marker in the loose loop, count the current row, and compare the stitch placement with the previous row before pulling anything out.",steps:["Find the loose loop or gap and secure it with a marker.","Count the stitches before and after the gap.","Check whether the turning chain counts as a stitch in this pattern.","If one stitch was missed, undo back to that point and rework it into the correct stitch or space.","If only the loop is loose, gently redistribute the extra yarn into nearby stitches."],commonMistakes:["Mistaking a skipped stitch for a dropped stitch.","Pulling the loose loop until nearby stitches tighten.","Forgetting whether the turning chain counts."],relatedTechniques:["crochet mistakes","missed stitches","turning chains"],libraryLinks:[{title:"Crochet Mistakes",target:"library:crochet-mistakes"},{title:"Fixing Mistakes",target:"library:fixing-mistakes"}]};
+    if(craftType==="tunisian")return {questionType:"droppedStitch",quickAnswer:"In Tunisian crochet, this is usually a missed loop on the forward pass or a loose vertical bar rather than a knitting-style dropped stitch.",whatToDoNow:"Secure the loose loop, check the vertical bars in that column, and decide whether the row can be repaired or needs to be frogged back.",steps:["Do not pull the fabric.","Catch the loose loop or vertical bar with a hook or marker.","Trace the column upward and check whether one forward-pass loop was missed.","If the loop can be lifted, pull the correct strand through and keep the edge stitch intact.","If the return pass locked the mistake in place, frog back to the missed loop and rework the forward pass."],commonMistakes:["Missing the edge stitch.","Confusing return-pass chains with forward-pass loops.","Pulling a vertical bar too tight after repair."],relatedTechniques:["Tunisian mistakes","vertical bars","forward pass"],libraryLinks:[{title:"Tunisian Mistakes",target:"library:tunisian-mistakes"},{title:"Fixing Mistakes",target:"library:fixing-mistakes"}]};
+    return {questionType:"droppedStitch",quickAnswer:"Do not pull the fabric. Secure the dropped stitch first, then ladder it back up one row at a time with a crochet hook.",whatToDoNow:"Put a locking stitch marker or crochet hook through the dropped loop right now so it cannot fall farther.",steps:["Do not stretch or tug the fabric.","Secure the dropped stitch with a stitch marker, safety pin, or crochet hook.","Find the horizontal ladder bars above the dropped stitch.","Use the crochet hook to pull the lowest ladder bar through the dropped stitch.","Repeat one ladder bar at a time, moving upward row by row.","Place the rescued stitch back on the needle facing the correct direction.","Knit slowly across that area and check that the stitch is not twisted."],commonMistakes:["Pulling the fabric and making the drop travel farther.","Skipping one ladder bar while repairing.","Putting the rescued stitch back on the needle twisted."],relatedTechniques:["fixing dropped stitches","knitting mistakes","stitch orientation"],libraryLinks:[{title:"Fixing Dropped Stitches",target:"library:fixing-dropped-stitches"},{title:"Knitting Mistakes",target:"library:knitting-mistakes"}]};
+  },
+  troubleshootGaugeIssue(context={},skillLevel="beginner"){
+    return {questionType:"gaugeProblem",quickAnswer:"Gauge problems usually come from stitch tension, row tension, yarn weight, fibre behaviour, hook or needle size, or blocking.",whatToDoNow:"Measure stitches and rows across 10 cm before changing the project. If stitch gauge is too wide, try a smaller tool; if too narrow, try a larger tool.",steps:["Lay the fabric flat without stretching it.","Count stitches across 10 cm or 4 in.","Count rows across 10 cm or 4 in.","Compare both numbers with the pattern gauge.","Check yarn weight, fibre content, and hook or needle size.","Block a swatch if the pattern gauge is measured after blocking."],commonMistakes:["Measuring across too few stitches.","Checking stitch gauge but ignoring row gauge.","Comparing unblocked fabric to blocked pattern measurements."],relatedTechniques:["gauge","swatching","blocking"],libraryLinks:[{title:"Gauge & Swatch Basics",target:"library:gauge-swatch-basics"},{title:"Blocking Guide",target:"library:blocking-guide"},{title:"Yarn Substitution",target:"library:yarn-substitution"}]};
+  },
+  troubleshootProjectLooksDifferent(context={},skillLevel="beginner"){
+    return {questionType:"projectLooksDifferent",quickAnswer:"A project can look different because of gauge, yarn weight, fibre, tool size, tension, blocking, stitch count, row count, or reading right-side/wrong-side rows incorrectly.",whatToDoNow:"Check gauge and counts before assuming the pattern is wrong. Measure 10 cm, count stitches and rows, then compare your yarn and tool size with the pattern.",steps:["Measure your stitch gauge across 10 cm.","Measure your row gauge across 10 cm.","Compare both with the pattern gauge.","Check yarn weight, fibre content, hook or needle size, and whether your yarn has similar drape.","Count stitches and rows in the section that looks wrong.","Check whether the pattern is asking for right side or wrong side, and whether increases or decreases are placed correctly.","Block or gently smooth a swatch before judging the final look."],commonMistakes:["Expecting the first few rows to look like the finished photo.","Using a yarn substitution with very different drape.","Missing increases or decreases that shape the project.","Reading wrong-side chart rows in the wrong direction."],relatedTechniques:["gauge","blocking","yarn substitution"],libraryLinks:[{title:"Gauge & Swatch Basics",target:"library:gauge-swatch-basics"},{title:"Blocking Guide",target:"library:blocking-guide"},{title:"Yarn Substitution",target:"library:yarn-substitution"}]};
+  }
+};
+const yarnchaAssistantService={
+  classifyQuestion(question=""){
+    const lower=String(question||"").toLowerCase();
+    if(/symbol|chart mark|legend|circle|slash|\/|what is this mark/.test(lower))return "symbolMeaning";
+    if(/dropped|drop(ped)? stitch|ladder|fell down|loose loop/.test(lower))return "droppedStitch";
+    if(/stitch count|row count|lost count|extra stitch|too many|too few|should have|have \d+ stitches|wrong count/.test(lower))return "stitchCountProblem";
+    if(/abbrev|abbreviation|what does\b|k2tog|ssk|yo\b|sc\b|dc\b|tss\b|pm\b|sl st|slst/.test(lower))return "abbreviation";
+    if(/gauge|swatch|too tight|too loose/.test(lower))return "gaugeProblem";
+    if(/look different|doesn.t look|too wide|too narrow|too big|too small|shape weird|different from the photo/.test(lower))return "projectLooksDifferent";
+    if(/read.*pattern|repeat|bracket|\*|row \d+|this row|instruction|pattern line|what should i do on row/.test(lower))return "patternReading";
+    if(/how do i|technique|stitch|make|work/.test(lower))return "stitchTechnique";
+    return "generalQuestion";
+  },
+  extractAbbreviation(question=""){
+    const lower=String(question||"").toLowerCase();
+    const match=lower.match(/\b(k2tog|ssk|yo|m1|pm|sc|dc|hdc|ch|sl\s?st|tss|tks|return pass)\b/);
+    if(match)return match[1].replace("slst","sl st");
+    return String(question||"").replace(/what does|mean|abbreviation|\?|in knitting|in crochet|in tunisian/gi,"").trim().split(/\s+/).slice(0,3).join(" ");
+  },
+  contextNote(projectContext={}){
+    const bits=[];
+    if(projectContext.projectName)bits.push(`Project: ${projectContext.projectName}`);
+    if(projectContext.craftType)bits.push(`Craft: ${assistantCraftLabel(projectContext.craftType)}`);
+    if(projectContext.currentRow)bits.push(`Current row: ${projectContext.currentRow}`);
+    if(projectContext.expectedStitchCount)bits.push(`Expected stitch count: ${projectContext.expectedStitchCount}`);
+    return bits.join(" · ");
+  },
+  async askYarnchaAssistant({question="",projectContext={},skillLevel="beginner",craftType="knitting"}={}){
+    const q=String(question||"").trim(),lower=q.toLowerCase();
+    learningMemoryService.saveFrequentQuestion(q);
+    const inferredTechnique=findTechniqueGuide(q,craftType)?.label||"";
+    const context={...projectContext,craftType,selectedTechnique:projectContext.selectedTechnique||inferredTechnique};
+    let questionType=this.classifyQuestion(q);
+    if(context.selectedTechnique&&(questionType==="generalQuestion"||questionType==="stitchTechnique"))questionType="stitchTechnique";
+    if(context.selectedTechnique&&/selected technique|technique help|help me with|how do i work|how do i do/i.test(q))questionType="stitchTechnique";
+    const base=questionType==="stitchCountProblem"?troubleshootingService.troubleshootStitchCount(context,skillLevel,craftType):questionType==="droppedStitch"?troubleshootingService.troubleshootDroppedStitch(context,skillLevel,craftType):questionType==="symbolMeaning"?teachingService.explainSymbol(context.currentSymbol||"this symbol",craftType,skillLevel,context):questionType==="abbreviation"?teachingService.explainAbbreviation(this.extractAbbreviation(q),craftType,skillLevel,context):questionType==="patternReading"||questionType==="rowInstruction"?teachingService.explainPatternLine(context.rowInstruction,craftType,skillLevel,context):questionType==="gaugeProblem"?troubleshootingService.troubleshootGaugeIssue(context,skillLevel):questionType==="projectLooksDifferent"?troubleshootingService.troubleshootProjectLooksDifferent(context,skillLevel):teachingService.explainTechnique(context.selectedTechnique,craftType,skillLevel,context);
+    const missing=!context.rowInstruction&&/(row|instruction|pattern line|repeat)/i.test(q)?"I need the exact pattern line to be exact. ":!context.expectedStitchCount&&/count|stitch/i.test(q)?"I need the pattern's expected stitch count to be exact. ":"";
+    const checkBeforeContinuing=base.checkBeforeContinuing||[context.expectedStitchCount?"Compare your current stitch count with the expected stitch count.":"Check the pattern notes for the expected stitch count or row count.",context.rowInstruction?"Read the current row instruction once more before moving on.":"Paste or select the exact row if you want Yarncha to be more precise.","If the fabric looks wrong, stop at the end of the row or round before undoing anything."];
+    return {...base,questionType,contextNote:this.contextNote(context),whatToDoNow:`${missing}${base.whatToDoNow||"Start by checking the exact stitch, row, or symbol involved, then compare it with the pattern notes."}`,checkBeforeContinuing,confidence:context.currentRow||context.rowInstruction||context.currentSymbol?"medium":"general",sourceType:"local-rule-based"};
+  }
+};
+function yarnchaAssistantAnswerHtml(answer){
+  if(!answer)return `<div class="empty-state">Ask Yarncha Assistant for stitch, symbol, pattern, or mistake help.</div>`;
+  const labels=techniqueHelpLabels.en;
+  const list=(title,items,extraClass="")=>items?.length?`<section class="${extraClass}"><h4>${title}</h4><ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`:"";
+  const related=answer.relatedTechniques?.length?`<section><h4>${labels.relatedTechniques}</h4><div class="assistant-library-links">${answer.relatedTechniques.map(label=>`<button class="chip" data-library-link="library:${escapeHtml(label)}">${escapeHtml(label)}</button>`).join("")}</div></section>`:"";
+  return `<article class="yarncha-assistant-answer">${answer.contextNote?`<section class="assistant-project-context"><h4>${labels.projectContext}</h4><p>${escapeHtml(answer.contextNote)}</p></section>`:""}${answer.techniqueName?`<section class="assistant-technique-card"><h4>${labels.technique}</h4><p>${escapeHtml(answer.techniqueName)}${answer.techniqueCategory?` · ${escapeHtml(titleCaseTechnique(answer.techniqueCategory))}`:""}</p></section>`:""}<section><h4>${labels.quickAnswer}</h4><p>${escapeHtml(answer.quickAnswer||"")}</p></section><section><h4>${labels.whatToDoNow}</h4><p>${escapeHtml(answer.whatToDoNow||"")}</p></section>${answer.steps?.length?`<details class="assistant-step-accordion" open><summary>${labels.stepByStep}</summary><ol>${answer.steps.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></details>`:""}${list(labels.checkBeforeContinuing,answer.checkBeforeContinuing,"assistant-count-check")}${list(labels.commonMistakes,answer.commonMistakes)}${related}<section><h4>Library links</h4><div class="assistant-library-links">${(answer.libraryLinks||[]).map(link=>`<button class="chip" data-library-link="${escapeHtml(link.target)}">${escapeHtml(link.title)}</button>`).join("")}</div></section><p class="assistant-source-note">${escapeHtml(answer.questionType||"generalQuestion")} · ${escapeHtml(answer.sourceType||"local-rule-based")} · confidence ${escapeHtml(answer.confidence||"general")}</p></article>`;
+}
+function yarnchaAssistantChartHtml(p){
+  const assistant=p.yarnchaAssistant||{},context=projectContextService.getCurrentProjectContext(),skill=normalizeAssistantSkill(assistant.skillLevel||context.skillLevel),craft=normalizeAssistantCraft(assistant.craftType||context.craftType),answer=assistant.lastAnswer;
+  const contextText=context.currentRow?`Using row ${context.currentRow} context`:(context.currentChart?"Using current chart":"No chart context available");
+  const selectedTechnique=assistant.selectedTechnique||"",techniqueOptions=techniqueOptionsForCraft(craft);
+  const suggestions=["My stitch count is wrong","Explain this symbol","Help me read this row","Fix a dropped stitch","What does this abbreviation mean?","Why does my project look different?"];
+  return `<section class="yarncha-assistant-panel card workspace-card">
+    <div class="section-heading compact-row"><div><p class="eyebrow">YARNCHA ASSISTANT</p><h2>Yarncha Assistant</h2><p>Ask for help with stitches, symbols, patterns, and mistakes.</p></div><span class="assistant-context-pill">${escapeHtml(contextText)}</span></div>
+    <div class="assistant-control-grid">
+      <label class="field">Craft type<select id="chart-assistant-craft">${["knitting","crochet","tunisian"].map(value=>`<option value="${value}" ${craft===value?"selected":""}>${assistantCraftLabel(value)}</option>`).join("")}</select></label>
+      <label class="field">Skill level<select id="chart-assistant-skill">${["beginner","intermediate","advanced"].map(value=>`<option value="${value}" ${skill===value?"selected":""}>${value[0].toUpperCase()+value.slice(1)}</option>`).join("")}</select></label>
+      <label class="field full">Technique Help<select id="chart-assistant-technique"><option value="">Choose a technique first</option>${techniqueOptions.map(item=>`<option value="${escapeHtml(item.label)}" ${selectedTechnique===item.label?"selected":""}>${escapeHtml(item.label)} · ${escapeHtml(titleCaseTechnique(item.category))}</option>`).join("")}</select></label>
+    </div>
+    <div class="assistant-suggestion-row">${suggestions.map(text=>`<button class="chip" data-assistant-suggestion="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div>
+    <div class="assistant-ask-row"><textarea id="chart-assistant-question" rows="3" placeholder="Ask about a stitch, symbol, row, mistake, or pattern line...">${escapeHtml(assistant.draftQuestion||"")}</textarea><button class="primary-button" id="ask-chart-assistant">Ask</button></div>
+    <div id="chart-assistant-answer" aria-live="polite">${yarnchaAssistantAnswerHtml(answer)}</div>
+    <div class="assistant-memory-actions"><button class="mini-button" data-assistant-memory="save-explanation">Save explanation</button><button class="mini-button" data-assistant-memory="add-notes">Add to project notes</button><button class="mini-button" data-assistant-memory="remember-correction">Remember correction</button><button class="mini-button" data-assistant-memory="verify-symbol">Mark symbol as verified</button></div>
+  </section>`;
 }
 
 function projectProjectHtml(p){
@@ -1151,7 +1587,7 @@ function openToolHistoryModal(id){
   document.getElementById("save-history-modal").onclick=()=>{item.notes=document.getElementById("history-modal-notes").value;saveProjectTouch(p);closeModal();renderProjectDetail();};
 }
 function projectAssistantTabHtml(p){
-  return `<div class="assistant-tab-grid">${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Automatic Flow Mode remains paused. The optional signed-in cloud chart reader produces an editable draft; Manual OG Chart Mode remains the reliable daily workflow.</p><p>The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.</p></div></div>`;
+  return `<div class="assistant-tab-grid">${yarnchaAssistantChartHtml(p)}${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Flow Mode stays focused on chart reading, row highlighting, progress tracking, and read-aloud row help. Yarncha Assistant is the separate teaching and troubleshooting space.</p><p>The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.</p></div></div>`;
 }
 function themeLabel(t){return themePresets.find(theme=>theme.id===normalizeThemeName(t))?.name||t;}
 function themeComparePreviewHtml(theme){
@@ -1320,12 +1756,207 @@ function toolkitToolsForProject(p){
   const type=normalizeProjectType(p.type);
   return toolkitToolDefs.filter(t=>t.id!=="budget" && (t.crafts.includes("all")||t.crafts.includes(type)));
 }
+const studioProjectTypes=["Scarf","Blanket","Sweater","Cardigan","Top","Bag","Hat / Beanie","Socks","Granny Square","Grid / Chart","Custom rectangle"];
+const studioPatternModes=["Stripe Mode","Grid Mode","Granny Square Mode","Checkerboard Mode","Gradient Mode","Random Mix Mode","Colour Pooling Mode"];
+const studioColourNameMap={cream:"#f5ead8",ivory:"#fff8e8",white:"#ffffff",black:"#2a2622",grey:"#8c8983",gray:"#8c8983",sage:"#718c72",green:"#6f8872",terracotta:"#b56d52",rust:"#a9573f",rose:"#d9a0a8",pink:"#e8a6b3",lavender:"#b9a7d8",purple:"#8a7895",blue:"#637f91",navy:"#354c63",yellow:"#d9b75f",gold:"#c19b5b",brown:"#7b5c48",beige:"#d8c1a6",red:"#b85d5a",orange:"#d9875a",teal:"#6f9fa8"};
+function studioModeFromTool(tool){return tool==="stripe"?"Stripe Mode":tool==="pooling"?"Colour Pooling Mode":"Grid Mode";}
+function normalizeStudioHex(value,fallback="#718c72"){
+  const text=String(value||"").trim();
+  if(/^#[0-9a-f]{6}$/i.test(text))return text.toLowerCase();
+  if(/^[0-9a-f]{6}$/i.test(text))return `#${text.toLowerCase()}`;
+  return studioColourNameMap[text.toLowerCase()]||fallback;
+}
+function contrastRatio(a,b){
+  const lum=hex=>{const c=normalizeStudioHex(hex).slice(1).match(/../g).map(x=>parseInt(x,16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2];};
+  const l1=lum(a),l2=lum(b),hi=Math.max(l1,l2),lo=Math.min(l1,l2);return (hi+.05)/(lo+.05);
+}
+function studioDefaultColours(){
+  const stash=(state.inventory||[]).filter(i=>i.category==="Yarn"&&validHex(yarnItemColor(i))).slice(0,3).map((i,index)=>({id:`studio-stash-${i.id}`,name:yarnItemDisplayName(i),hex:yarnItemColor(i),brand:i.brand||"Saved stash",line:i.yarnName||i.details||"",weight:index?2:3,locked:false,stashItemId:i.id,colourNumber:i.colourNumber||""}));
+  return stash.length?stash:[
+    {id:"studio-sage",name:"Sage merino",hex:"#718c72",brand:"",line:"",weight:3,locked:false},
+    {id:"studio-cream",name:"Warm cream",hex:"#f5ead8",brand:"",line:"",weight:2,locked:false},
+    {id:"studio-rust",name:"Soft rust",hex:"#b56d52",brand:"",line:"",weight:1,locked:false}
+  ];
+}
+function studioDefaultState(tool=currentProjectTool){
+  return {projectType:"Scarf",mode:studioModeFromTool(tool),activeColor:0,paintTool:"brush",version:"A",versions:{},colors:studioDefaultColours(),settings:{rows:36,rowWidth:48,rowsPerStripe:3,repeatCount:1,stripeWidthMode:"Equal width",customSequence:"1,2,3,2",mirrorRepeat:false,alternateRepeat:false,borderColor:"#f5ead8",lockOrder:false,columns:18,gridRows:14,cellSize:18,mirrorH:false,mirrorV:false,rounds:5,repeatRounds:true,numberSquares:1,gramsPerSquare:0,centreColor:0,borderIndex:1,blockSize:1,gradientSteps:6,gradientDirection:"Top to bottom",reverseGradient:false,sortLightDark:false,totalBlocks:80,minRepeat:1,maxRepeat:4,randomSeed:"yarncha",colourRepeatLength:60,stitchesPerRepeat:24,stitchesPerSegment:6,targetShift:1,totalGrams:0,stitchGauge:0,rowGauge:0},gridCells:[]};
+}
+function normalizeStudioState(p,tool=currentProjectTool){
+  p.projectTools=p.projectTools||{};
+  const base=studioDefaultState(tool),saved=p.projectTools.renderingStudio||{};
+  const studio={...base,...saved,settings:{...base.settings,...(saved.settings||{})},versions:{...(saved.versions||{})}};
+  if(!Array.isArray(studio.colors)||!studio.colors.length)studio.colors=base.colors;
+  studio.colors=studio.colors.map((c,i)=>({id:c.id||`studio-colour-${i}-${Date.now()}`,name:c.name||`Colour ${i+1}`,hex:normalizeStudioHex(c.hex||c.name,colors[i%colors.length]),brand:c.brand||"",line:c.line||"",weight:Math.max(1,Math.min(10,Number(c.weight)||1)),locked:!!c.locked,stashItemId:c.stashItemId||"",colourNumber:c.colourNumber||""}));
+  studio.activeColor=Math.max(0,Math.min(studio.colors.length-1,Number(studio.activeColor)||0));
+  if(!studioPatternModes.includes(studio.mode))studio.mode=studioModeFromTool(tool);
+  if(!studioProjectTypes.includes(studio.projectType))studio.projectType="Custom rectangle";
+  return studio;
+}
+function studioSequence(studio){
+  const order=studio.colors.map((_,i)=>i);
+  if(studio.settings.lockOrder)return order;
+  if(studio.mode==="Checkerboard Mode")return order.slice(0,2);
+  if(studio.mode==="Gradient Mode")return order;
+  if(studio.mode==="Random Mix Mode")return studio.colors.flatMap((c,i)=>Array(Math.max(1,Number(c.weight)||1)).fill(i));
+  if(studio.settings.stripeWidthMode==="Custom sequence"){
+    const custom=String(studio.settings.customSequence||"").split(/[,\s]+/).map(x=>Math.max(0,Number(x)-1)).filter(i=>studio.colors[i]);
+    if(custom.length)return custom;
+  }
+  return order;
+}
+function studioPaletteText(studio){return studio.colors.map(c=>c.hex).join(", ");}
+function studioColourFeedback(studio){
+  const colors=studio.colors,ratios=[];
+  for(let i=0;i<colors.length;i++)for(let j=i+1;j<colors.length;j++)ratios.push(contrastRatio(colors[i].hex,colors[j].hex));
+  const min=ratios.length?Math.min(...ratios):1,contrast=min>=4.5?"High":min>=2.4?"Medium":"Low";
+  const light=colors.filter(c=>contrastRatio(c.hex,"#000000")>7).length,dark=colors.filter(c=>contrastRatio(c.hex,"#ffffff")>4.5).length,medium=Math.max(0,colors.length-light-dark);
+  const main=[...colors].sort((a,b)=>b.weight-a.weight)[0]||colors[0],contrastColour=[...colors].sort((a,b)=>contrastRatio(main.hex,b.hex)-contrastRatio(main.hex,a.hex))[0]||colors[1]||main,border=[...colors].sort((a,b)=>contrastRatio(a.hex,"#ffffff")-contrastRatio(b.hex,"#ffffff"))[0]||main;
+  const tooSimilar=min<1.55;
+  const muted=colors.every(c=>contrastRatio(c.hex,"#777777")<3.2),pastel=colors.filter(c=>contrastRatio(c.hex,"#ffffff")<2.2).length>=Math.ceil(colors.length/2),earthy=colors.some(c=>/sage|rust|terracotta|brown|cream|beige/i.test(c.name)),bold=contrast==="High"&&colors.length>2,neutral=colors.every(c=>/cream|ivory|white|black|grey|gray|beige|brown/i.test(c.name));
+  const tags=[pastel&&"pastel",earthy&&"earthy",muted&&"soft",bold&&"bold",neutral&&"neutral",!pastel&&earthy&&"vintage"].filter(Boolean);
+  return {contrast,balance:`${light} light · ${medium} medium · ${dark} dark`,tooSimilar,main,contrastColour,border,tags:tags.length?tags:["balanced"]};
+}
+function studioFinishedSize(stitches,rows,studio){
+  const st=Number(studio.settings.stitchGauge)||0,row=Number(studio.settings.rowGauge)||0;
+  return {width:st?stitches/st*10:null,height:row?rows/row*10:null};
+}
+function studioUsageRows(usage,total,studio){
+  const grams=Number(studio.settings.totalGrams)||0;
+  return studio.colors.map((c,i)=>{
+    const amount=Number(usage[i])||0,percent=total?amount/total*100:0;
+    return {index:i,color:c,amount,percent,grams:grams?grams*percent/100:null};
+  }).filter(r=>r.amount>0||studio.colors.length<=3);
+}
+function studioSeededRandom(seed){
+  let h=2166136261;
+  String(seed||"yarncha").split("").forEach(ch=>{h^=ch.charCodeAt(0);h=Math.imul(h,16777619);});
+  return ()=>{h+=0x6D2B79F5;let t=h;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};
+}
+function studioHexToRgb(hex){const clean=normalizeStudioHex(hex).slice(1);return [0,2,4].map(i=>parseInt(clean.slice(i,i+2),16));}
+function studioRgbToHex(rgb){return `#${rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("")}`;}
+function studioInterpolateHex(a,b,t){const x=studioHexToRgb(a),y=studioHexToRgb(b);return studioRgbToHex(x.map((v,i)=>v+(y[i]-v)*t));}
+function studioCalculatedPlan(studio){
+  const s=studio.settings,mode=studio.mode,usage={},details=[],sequence=[],set=(i,n=1)=>usage[i]=(usage[i]||0)+n;
+  let total=0,size={width:null,height:null},unit="units";
+  if(mode==="Grid Mode"){
+    const cols=Math.max(2,Number(s.columns)||18),rows=Math.max(2,Number(s.gridRows)||14),cells=studio.gridCells||[];
+    total=cols*rows;unit="cells";for(let i=0;i<total;i++)set(cells[i]??((Math.floor(i/cols)+i)%studio.colors.length));
+    size=studioFinishedSize(cols,rows,studio);details.push(["Total cells",total],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }else if(mode==="Granny Square Mode"){
+    const rounds=Math.max(1,Number(s.rounds)||5),squares=Math.max(1,Number(s.numberSquares)||1),seq=studioSequence(studio),perSquare=Number(s.gramsPerSquare)||0;
+    total=0;unit="weighted round units";
+    for(let r=1;r<=rounds;r++){const weight=2*r-1,totalWeight=weight*squares,idx=r===1?Number(s.centreColor)||0:r===rounds?Number(s.borderIndex)||0:seq[(r-1)%seq.length]||0;set(idx,totalWeight);total+=totalWeight;sequence.push(`Round ${r}: ${studio.colors[idx]?.name||"Colour"} (${weight} weight units)`);}
+    if(perSquare&&!Number(s.totalGrams))s.totalGrams=perSquare*squares;
+    details.push(["Squares",squares],["Total weight units",total],["Weighted formula","Round weight = 2 x round number - 1"],["Estimated total grams",Number(s.totalGrams)?`${Number(s.totalGrams).toFixed(1)} g`:"Add total grams or grams per square"]);
+  }else if(mode==="Checkerboard Mode"){
+    const cols=Math.max(1,Number(s.columns)||18),rows=Math.max(1,Number(s.gridRows)||14),blocks=cols*rows,seq=studioSequence(studio);
+    total=blocks;unit="blocks";for(let i=0;i<blocks;i++)set(seq[(Math.floor(i/cols)+i)%seq.length]||0);
+    size=studioFinishedSize(cols*(Number(s.blockSize)||1),rows*(Number(s.blockSize)||1),studio);details.push(["Total blocks",blocks],["Block size",Number(s.blockSize)||1],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }else if(mode==="Gradient Mode"){
+    let gradientColors=[...studio.colors];if(s.sortLightDark)gradientColors.sort((a,b)=>contrastRatio(a.hex,"#000000")-contrastRatio(b.hex,"#000000"));if(s.reverseGradient)gradientColors.reverse();
+    const steps=Math.max(2,Number(s.gradientSteps)||gradientColors.length||2),rows=Math.max(steps,Number(s.rows)||steps),rowsPerStep=Math.max(1,Number(s.rowsPerStripe)||Math.ceil(rows/steps));
+    total=rows;unit="rows";for(let step=0;step<steps;step++){const t=steps===1?0:step/(steps-1),slot=t*(gradientColors.length-1),lo=Math.floor(slot),hi=Math.min(gradientColors.length-1,Math.ceil(slot)),hex=studioInterpolateHex(gradientColors[lo]?.hex,gradientColors[hi]?.hex,slot-lo),count=Math.round((step+1)*rows/steps)-Math.round(step*rows/steps);sequence.push(`Step ${step+1}: ${hex}`);set(Math.min(step,studio.colors.length-1),count);}
+    size=studioFinishedSize(Number(s.rowWidth)||48,rows,studio);details.push(["Steps",steps],["Rows per step",rowsPerStep],["Direction",s.gradientDirection||"Top to bottom"],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"],["Note","Digital gradient colours are visual references; match with closest yarn colours."]);
+  }else if(mode==="Random Mix Mode"){
+    const totalBlocks=Math.max(1,Number(s.totalBlocks)||Number(s.rows)||80),min=Math.max(1,Number(s.minRepeat)||1),max=Math.max(min,Number(s.maxRepeat)||4),rand=studioSeededRandom(s.randomSeed),weighted=studio.colors.flatMap((c,i)=>Array(Math.max(1,Number(c.weight)||1)).fill(i));
+    total=0;unit="rows / blocks";while(total<totalBlocks){const idx=weighted[Math.floor(rand()*weighted.length)]||0,run=Math.min(totalBlocks-total,min+Math.floor(rand()*(max-min+1)));set(idx,run);sequence.push(`${studio.colors[idx]?.name}: ${run}`);total+=run;}
+    size=studioFinishedSize(Number(s.rowWidth)||48,totalBlocks,studio);details.push(["Random seed",s.randomSeed||"yarncha"],["Total weight",studio.colors.reduce((sum,c)=>sum+(Number(c.weight)||1),0)],["Repeat range",`${min}-${max}`],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }else if(mode==="Colour Pooling Mode"){
+    const repeat=Math.max(1,Number(s.stitchesPerRepeat)||Number(s.colourRepeatLength)||24),rowWidth=Math.max(1,Number(s.rowWidth)||96),rows=Math.max(1,Number(s.rows)||36),shift=rowWidth%repeat,target=Number(s.targetShift)||1,seq=studioSequence(studio);
+    total=rowWidth*rows;unit="stitches";for(let r=0;r<rows;r++)for(let c=0;c<rowWidth;c++)set(seq[Math.floor(((c+r*shift)%repeat)/Math.max(1,Number(s.stitchesPerSegment)||6))%seq.length]||0);
+    const abs=Math.abs(shift),label=abs===0?"Stacking":abs<=2?"Gentle diagonal":abs<=repeat*.25?"Strong diagonal":abs<=repeat*.45?"Argyle-like":"Unstable / may not pool clearly";
+    size=studioFinishedSize(rowWidth,rows,studio);details.push(["Current shift per row",shift],["Pooling behaviour",label],["Suggested stacking width",repeat*Math.max(1,Math.round(rowWidth/repeat))],["Suggested target-shift width",repeat*Math.max(1,Math.floor(rowWidth/repeat))+target],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"],["Warning",label.startsWith("Unstable")?"Row width is unlikely to pool clearly.":"Swatch before starting the full project."]);
+  }else{
+    const rows=studioStripeRows(studio),rowWidth=Math.max(1,Number(s.rowWidth)||48),repeat=Math.max(1,Number(s.repeatCount)||1),expanded=Array.from({length:repeat},()=>rows).flat();
+    total=expanded.length;unit="rows";expanded.forEach((idx,i)=>{set(idx);sequence.push(`Row ${i+1}: ${studio.colors[idx]?.name||"Colour"}`);});
+    size=studioFinishedSize(rowWidth,total,studio);details.push(["Total rows",total],["Row width",`${rowWidth} stitches`],["Repeat count",repeat],["Finished width",size.width?`${size.width.toFixed(1)} cm`:"Add stitch gauge"],["Finished height",size.height?`${size.height.toFixed(1)} cm`:"Add row gauge"]);
+  }
+  return {mode,total,unit,usageRows:studioUsageRows(usage,total,studio),details,sequence:sequence.slice(0,80),estimateNote:"Yarn calculations are estimates only. Gauge, tension, fibre, stitch pattern and blocking can change real usage."};
+}
+function studioCalculatedResultsHtml(studio){
+  const plan=studioCalculatedPlan(studio);
+  return `<section class="studio-calculation-panel"><div class="section-heading compact-row"><div><p class="eyebrow">PLANNING CALCULATIONS</p><h3>${escapeHtml(plan.mode)} usage</h3><p>${escapeHtml(plan.estimateNote)}</p></div><strong>${plan.total} ${escapeHtml(plan.unit)}</strong></div><div class="studio-calc-grid">${plan.details.map(([k,v])=>`<article><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v)}</span></article>`).join("")}</div><div class="studio-usage-table"><table><thead><tr><th>Colour</th><th>Usage</th><th>Percent</th><th>Estimated grams</th></tr></thead><tbody>${plan.usageRows.map(r=>`<tr><td><span class="studio-table-swatch" style="background:${r.color.hex}"></span>${escapeHtml(r.color.name)}<small>${escapeHtml(r.color.hex)}</small></td><td>${Number(r.amount).toFixed(r.amount%1?1:0)}</td><td>${r.percent.toFixed(1)}%</td><td>${r.grams===null?"Add total grams":`${r.grams.toFixed(1)} g`}</td></tr>`).join("")}</tbody></table></div>${plan.sequence.length?`<details class="studio-sequence-list" open><summary>${studio.mode==="Stripe Mode"?"Row-by-row colour sequence":studio.mode==="Colour Pooling Mode"?"Colour segment placement preview":"Generated sequence"}</summary><ol>${plan.sequence.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></details>`:""}</section>`;
+}
+function studioSwatchOptions(studio){return studio.colors.map((c,i)=>`<option value="${i}" ${studio.activeColor===i?"selected":""}>${escapeHtml(c.name)}</option>`).join("");}
+function studioSharedPlanningHtml(studio){
+  const s=studio.settings;
+  return `<div class="studio-shared-inputs"><h4>Gauge and yarn estimate</h4><div class="form-grid"><div class="field"><label>Stitch gauge per 10 cm</label><input data-studio-setting="stitchGauge" type="number" min="0" step=".1" value="${s.stitchGauge||""}" placeholder="Optional"></div><div class="field"><label>Row gauge per 10 cm</label><input data-studio-setting="rowGauge" type="number" min="0" step=".1" value="${s.rowGauge||""}" placeholder="Optional"></div><div class="field"><label>Estimated total yarn grams</label><input data-studio-setting="totalGrams" type="number" min="0" step=".1" value="${s.totalGrams||""}" placeholder="Optional"></div></div></div>`;
+}
+function studioSettingsHtml(studio){
+  const s=studio.settings;
+  const shared=studioSharedPlanningHtml(studio);
+  if(studio.mode==="Grid Mode")return `<div class="studio-settings-panel"><div class="studio-form-grid"><div class="field"><label>Number of columns</label><input id="studio-columns" data-studio-setting="columns" type="number" min="2" value="${s.columns}"></div><div class="field"><label>Number of rows</label><input id="studio-grid-rows" data-studio-setting="gridRows" type="number" min="2" value="${s.gridRows}"></div><div class="field"><label>Cell size</label><input id="studio-cell-size" data-studio-setting="cellSize" type="number" min="10" max="34" value="${s.cellSize}"></div><div class="field"><label>Paint colour</label><select id="studio-active-colour">${studioSwatchOptions(studio)}</select></div></div><div class="studio-toolbar" aria-label="Grid Mode tools"><button class="mini-button ${studio.paintTool==="brush"?"active":""}" data-studio-paint-tool="brush">Click cell to change colour</button><button class="mini-button ${studio.paintTool==="bucket"?"active":""}" data-studio-paint-tool="bucket">Fill bucket</button><button class="mini-button ${studio.paintTool==="eraser"?"active":""}" data-studio-paint-tool="eraser">Eraser</button><button class="mini-button" data-studio-action="replace-colour">Replace colour</button><button class="mini-button" data-studio-action="export-grid">Export chart</button><button class="mini-button" data-studio-action="save-grid">Save grid to project</button><label><input type="checkbox" data-studio-check="mirrorH" ${s.mirrorH?"checked":""}> Mirror horizontally</label><label><input type="checkbox" data-studio-check="mirrorV" ${s.mirrorV?"checked":""}> Mirror vertically</label></div>${shared}</div>`;
+  if(studio.mode==="Granny Square Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Centre colour</label><select data-studio-setting="centreColor">${studio.colors.map((c,i)=>`<option value="${i}" ${Number(s.centreColor)===i?"selected":""}>${escapeHtml(c.name)}</option>`).join("")}</select></div><div class="field"><label>Border colour</label><select data-studio-setting="borderIndex">${studio.colors.map((c,i)=>`<option value="${i}" ${Number(s.borderIndex)===i?"selected":""}>${escapeHtml(c.name)}</option>`).join("")}</select></div><div class="field"><label>Number of rounds</label><input data-studio-setting="rounds" type="number" min="1" max="12" value="${s.rounds}"></div><div class="field"><label>Number of squares</label><input data-studio-setting="numberSquares" type="number" min="1" value="${s.numberSquares}"></div><div class="field"><label>Yarn grams per square</label><input data-studio-setting="gramsPerSquare" type="number" min="0" step=".1" value="${s.gramsPerSquare||""}" placeholder="Optional"></div><label class="check-row"><input type="checkbox" data-studio-check="repeatRounds" ${s.repeatRounds?"checked":""}><span>Repeat colour sequence</span></label></div><p class="muted-copy">Outer rounds use more yarn, so usage uses weighted round units.</p>${shared}</div>`;
+  if(studio.mode==="Checkerboard Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Number of columns</label><input data-studio-setting="columns" type="number" min="1" value="${s.columns}"></div><div class="field"><label>Number of rows</label><input data-studio-setting="gridRows" type="number" min="1" value="${s.gridRows}"></div><div class="field"><label>Block size</label><input data-studio-setting="blockSize" type="number" min="1" value="${s.blockSize}"></div></div><p class="muted-copy">Uses the first two colours as Colour A and Colour B; extra colours can join the alternating order.</p>${shared}</div>`;
+  if(studio.mode==="Gradient Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Number of steps</label><input data-studio-setting="gradientSteps" type="number" min="2" value="${s.gradientSteps}"></div><div class="field"><label>Total rows</label><input data-studio-setting="rows" type="number" min="2" value="${s.rows}"></div><div class="field"><label>Rows per step</label><input data-studio-setting="rowsPerStripe" type="number" min="1" value="${s.rowsPerStripe}"></div><div class="field"><label>Gradient direction</label><select data-studio-setting="gradientDirection">${["Top to bottom","Left to right","Centre out"].map(v=>`<option ${s.gradientDirection===v?"selected":""}>${v}</option>`).join("")}</select></div></div><div class="studio-toggle-row"><label><input type="checkbox" data-studio-check="sortLightDark" ${s.sortLightDark?"checked":""}> Sort yarn colours light to dark</label><label><input type="checkbox" data-studio-check="reverseGradient" ${s.reverseGradient?"checked":""}> Reverse gradient</label></div>${shared}</div>`;
+  if(studio.mode==="Random Mix Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Total rows or blocks</label><input data-studio-setting="totalBlocks" type="number" min="1" value="${s.totalBlocks}"></div><div class="field"><label>Minimum repeat</label><input data-studio-setting="minRepeat" type="number" min="1" value="${s.minRepeat}"></div><div class="field"><label>Maximum repeat</label><input data-studio-setting="maxRepeat" type="number" min="1" value="${s.maxRepeat}"></div><div class="field"><label>Random seed</label><input data-studio-setting="randomSeed" value="${escapeHtml(s.randomSeed)}"></div></div><p class="muted-copy">Colour card weights set the random chance. Locked colours keep their card details while the seed regenerates the same mix.</p>${shared}</div>`;
+  if(studio.mode==="Colour Pooling Mode")return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Colour repeat length</label><input data-studio-setting="colourRepeatLength" type="number" min="1" value="${s.colourRepeatLength}"></div><div class="field"><label>Stitches per colour repeat</label><input data-studio-setting="stitchesPerRepeat" type="number" min="1" value="${s.stitchesPerRepeat}"></div><div class="field"><label>Row width in stitches</label><input data-studio-setting="rowWidth" type="number" min="1" value="${s.rowWidth}"></div><div class="field"><label>Number of rows</label><input data-studio-setting="rows" type="number" min="1" value="${s.rows}"></div><div class="field"><label>Stitches per colour segment</label><input data-studio-setting="stitchesPerSegment" type="number" min="1" value="${s.stitchesPerSegment}"></div><div class="field"><label>Target shift per row</label><input data-studio-setting="targetShift" type="number" value="${s.targetShift}"></div></div><p class="muted-copy">Colour pooling is highly sensitive to tension and yarn repeat length. Swatch before starting the full project.</p>${shared}</div>`;
+  return `<div class="studio-settings-panel"><div class="form-grid"><div class="field"><label>Number of rows</label><input data-studio-setting="rows" type="number" min="2" value="${s.rows}"></div><div class="field"><label>Row width / stitches</label><input data-studio-setting="rowWidth" type="number" min="4" value="${s.rowWidth}"></div><div class="field"><label>Rows per stripe</label><input data-studio-setting="rowsPerStripe" type="number" min="1" value="${s.rowsPerStripe}"></div><div class="field"><label>Repeat count</label><input data-studio-setting="repeatCount" type="number" min="1" value="${s.repeatCount}"></div><div class="field"><label>Stripe width</label><select data-studio-setting="stripeWidthMode">${["Equal width","Random weighted width","Custom sequence"].map(v=>`<option ${s.stripeWidthMode===v?"selected":""}>${v}</option>`).join("")}</select></div><div class="field"><label>Stripe sequence</label><input data-studio-setting="customSequence" value="${escapeHtml(s.customSequence)}" placeholder="1,2,3,2"></div><div class="field"><label>Border colour</label><input data-studio-setting="borderColor" value="${escapeHtml(s.borderColor)}" placeholder="#f5ead8 or cream"></div></div><div class="studio-toggle-row"><label><input type="checkbox" data-studio-check="mirrorRepeat" ${s.mirrorRepeat?"checked":""}> Mirror repeat</label><label><input type="checkbox" data-studio-check="alternateRepeat" ${s.alternateRepeat?"checked":""}> Alternate repeat</label><label><input type="checkbox" data-studio-check="lockOrder" ${s.lockOrder?"checked":""}> Lock colour order</label></div>${shared}</div>`;
+}
+function studioStripeRows(studio){
+  const s=studio.settings,total=Math.max(2,Number(s.rows)||36),seq=studioSequence(studio),rows=[];
+  for(let i=0;i<total;){
+    let idx=seq[rows.length%seq.length]||0,width=Math.max(1,Number(s.rowsPerStripe)||2);
+    if(s.stripeWidthMode==="Random weighted width")width=Math.max(1,Math.round((studio.colors[idx]?.weight||1)*1.5));
+    if(studio.mode==="Checkerboard Mode")width=1;
+    if(studio.mode==="Gradient Mode")idx=Math.min(studio.colors.length-1,Math.floor((i/total)*studio.colors.length));
+    rows.push({idx,rows:Math.min(width,total-i)});i+=width;
+  }
+  const expanded=rows.flatMap(r=>Array(r.rows).fill(r.idx));
+  return s.mirrorRepeat?[...expanded,...expanded.slice().reverse()]:expanded;
+}
+function studioPreviewHtml(studio,{mini=false}={}){
+  if(studio.mode==="Grid Mode")return studioGridPreviewHtml(studio,mini);
+  if(studio.mode==="Granny Square Mode")return studioGrannyPreviewHtml(studio,mini);
+  return studioStripePreviewHtml(studio,mini);
+}
+function studioStripePreviewHtml(studio,mini=false){
+  const s=studio.settings,shape=studio.projectType.toLowerCase().replace(/[^a-z]+/g,"-"),border=normalizeStudioHex(s.borderColor,studio.colors[0]?.hex);
+  let rows=studioStripeRows(studio).map(idx=>studio.colors[idx%studio.colors.length]?.hex||"#ccc");
+  if(studio.mode==="Gradient Mode"){
+    let gradientColors=[...studio.colors];if(s.sortLightDark)gradientColors.sort((a,b)=>contrastRatio(a.hex,"#000000")-contrastRatio(b.hex,"#000000"));if(s.reverseGradient)gradientColors.reverse();
+    const count=Math.max(2,Number(s.rows)||36);
+    rows=Array.from({length:count},(_,i)=>{const t=count===1?0:i/(count-1),slot=t*(gradientColors.length-1),lo=Math.floor(slot),hi=Math.min(gradientColors.length-1,Math.ceil(slot));return studioInterpolateHex(gradientColors[lo]?.hex,gradientColors[hi]?.hex,slot-lo);});
+  }
+  if(studio.mode==="Random Mix Mode"){
+    const rand=studioSeededRandom(s.randomSeed),weighted=studio.colors.flatMap((c,i)=>Array(Math.max(1,Number(c.weight)||1)).fill(i)),total=Math.max(1,Number(s.totalBlocks)||80),min=Math.max(1,Number(s.minRepeat)||1),max=Math.max(min,Number(s.maxRepeat)||4);
+    rows=[];while(rows.length<total){const idx=weighted[Math.floor(rand()*weighted.length)]||0,run=Math.min(total-rows.length,min+Math.floor(rand()*(max-min+1)));rows.push(...Array(run).fill(studio.colors[idx]?.hex||"#ccc"));}
+  }
+  return `<div class="studio-project-frame studio-shape-${shape} ${mini?"mini":""}" style="--studio-border:${border}">${rows.map((hex,i)=>`<span style="background:${hex}" title="Row ${i+1}"></span>`).join("")}</div>`;
+}
+function studioGridPreviewHtml(studio,mini=false){
+  const s=studio.settings,cols=Math.max(2,Number(s.columns)||18),rows=Math.max(2,Number(s.gridRows)||14),cells=studio.gridCells||[],size=mini?10:Math.max(10,Math.min(24,Number(s.cellSize)||18));
+  return `<div class="studio-grid-preview ${mini?"mini":""}" style="grid-template-columns:repeat(${cols},${size}px)">${Array.from({length:cols*rows},(_,i)=>{const color=studio.colors[cells[i]??((Math.floor(i/cols)+i)%studio.colors.length)]?.hex||"#eee";return `<button ${mini?"":`data-studio-cell="${i}"`} style="width:${size}px;height:${size}px;background:${color}" aria-label="Grid cell ${i+1}"></button>`;}).join("")}</div>`;
+}
+function studioGrannyPreviewHtml(studio,mini=false){
+  const s=studio.settings,rounds=Math.max(1,Number(s.rounds)||5),seq=studioSequence(studio),centre=studio.colors[Number(s.centreColor)||0]?.hex||studio.colors[0]?.hex,border=studio.colors[Number(s.borderIndex)||1]?.hex||studio.colors.at(-1)?.hex;
+  return `<div class="studio-granny-preview ${mini?"mini":""}" style="--centre:${centre};--border:${border}">${Array.from({length:rounds},(_,i)=>`<span style="--round:${i};background:${studio.colors[seq[i%seq.length]||0]?.hex||centre}"></span>`).join("")}<i></i></div>`;
+}
+function renderingStudioContent(p,tool=currentProjectTool){
+  const studio=normalizeStudioState(p,tool),feedback=studioColourFeedback(studio),stash=(state.inventory||[]).filter(i=>i.category==="Yarn");
+  const colourCards=studio.colors.map((c,i)=>{
+    const meta=[c.hex,c.brand||"Manual",c.line,c.colourNumber?`Colour no. ${c.colourNumber}`:"",`Qty ${c.weight}`].filter(Boolean).map(escapeHtml).join(" · ");
+    return `<article class="studio-colour-card ${i===studio.activeColor?"active":""}" draggable="true" data-studio-colour="${i}"><span class="studio-card-swatch" style="background:${c.hex}"></span><div class="studio-card-summary"><strong>${escapeHtml(c.name)}</strong><span>${meta}</span></div><div class="studio-card-actions"><button class="mini-button" data-studio-lock="${i}">${c.locked?"Unlock":"Lock"}</button><details class="studio-card-more"><summary>More</summary><div class="studio-card-fields"><input data-colour-field="name" value="${escapeHtml(c.name)}" aria-label="Colour name"><input data-colour-field="hex" value="${escapeHtml(c.hex)}" aria-label="Hex code"><input data-colour-field="brand" value="${escapeHtml(c.brand)}" placeholder="Brand" aria-label="Yarn brand"><input data-colour-field="line" value="${escapeHtml(c.line)}" placeholder="Line" aria-label="Yarn line"><label>Qty <input data-colour-field="weight" type="number" min="1" max="10" value="${c.weight}"></label></div><div class="studio-card-secondary-actions"><button class="mini-button" data-studio-duplicate="${i}">Duplicate</button>${c.stashItemId?`<button class="mini-button" data-studio-update-stash="${i}">Update stash colour</button>`:""}<button class="mini-button danger-button" data-studio-delete="${i}">Delete</button></div></details></div></article>`;
+  }).join("");
+  return `<section class="rendering-studio" data-studio-version="${escapeHtml(studio.version)}">
+    <div class="studio-hero"><div><p class="eyebrow">VISUAL PLANNING STUDIO</p><h2>Preview the fabric before you make it</h2><p class="muted-copy">Build a palette from hex codes, colour names, yarn names, and stash colours. The full-width preview updates as you plan.</p></div><div class="studio-version-tabs">${["A","B","C"].map(v=>`<button class="pill-tab ${studio.version===v?"active":""}" data-studio-version="${v}">Version ${v}</button>`).join("")}</div></div>
+    <div class="studio-input-grid">
+      <div class="studio-panel studio-project-panel"><h3>Project and pattern</h3><div class="studio-form-grid"><div class="field"><label>Project type</label><select id="studio-project-type">${studioProjectTypes.map(t=>`<option ${studio.projectType===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="field"><label>Preview mode</label><select id="studio-pattern-mode">${studioPatternModes.map(m=>`<option ${studio.mode===m?"selected":""}>${m}</option>`).join("")}</select></div></div>${studioSettingsHtml(studio)}</div>
+    </div>
+    <section class="studio-panel studio-add-panel"><div class="section-heading compact-row"><div><p class="eyebrow">COLOUR PLANNING</p><h3>Add colour</h3><p class="muted-copy">Add yarn colours by name, hex, stash source, or scan, then manage the colours used in the preview.</p></div></div><div class="studio-add-grid"><div class="field"><label>Colour / yarn colour name</label><input id="studio-new-name" value="" placeholder="Sage, oat, dye colourway"></div><div class="field"><label>Hex code</label><input id="studio-new-hex" value="" placeholder="#718c72"></div><div class="field"><label>Source / stash note</label><input id="studio-new-brand" value="" placeholder="Brand or source"></div><div class="field"><label>Yarn weight / ball info</label><input id="studio-new-line" value="" placeholder="DK, 100 g, merino..."></div><div class="field"><label>Ball count / weight count</label><input id="studio-new-weight" type="number" min="1" max="10" value="1"></div><div class="field full"><label>Use colour from Yarn Stash</label><select id="studio-stash-colour" multiple size="4">${stash.length?stash.map(i=>`<option value="${i.id}">${escapeHtml(yarnItemDisplayName(i))}${i.colourNumber?` · ${escapeHtml(i.colourNumber)}`:""}${validHex(yarnItemColor(i))?"":" · needs colour"}</option>`).join(""):`<option disabled>No yarn saved yet</option>`}</select><small>Select one or more saved yarns. If a yarn has no colour yet, capture or choose its colour first.</small></div></div><div class="studio-button-row"><button class="secondary-button" id="studio-add-colour">Add colour</button><button class="mini-button" id="studio-open-scan-yarn">Scan Yarn</button></div><div class="studio-current-colours"><div class="section-heading compact-row"><div><p class="eyebrow">CURRENT COLOURS</p><h3>Added colours</h3></div><span>${studio.colors.length} colour${studio.colors.length===1?"":"s"}</span></div><div class="studio-colour-board">${colourCards}</div></div></section>
+    <section class="studio-preview-section"><div class="studio-preview-head"><div><p class="eyebrow">LIVE PREVIEW</p><h2>${escapeHtml(studio.projectType)} · ${escapeHtml(studio.mode)}</h2><p>${escapeHtml(studioPaletteText(studio))}</p></div><div class="studio-preview-actions"><button class="primary-button" data-studio-action="save-project">Save to Project</button><button class="secondary-button" data-studio-action="export-image">Export preview as image</button></div></div><div class="studio-preview-panel"><div class="studio-preview-stage">${studioPreviewHtml(studio)}</div></div>${studioCalculatedResultsHtml(studio)}</section>
+    <section class="studio-feedback-grid"><article><strong>Contrast level</strong><span>${feedback.contrast}</span>${feedback.tooSimilar?`<p class="calc-warning">Some colours are very similar. Add a lighter or darker contrast colour before committing.</p>`:""}</article><article><strong>Light / medium / dark balance</strong><span>${feedback.balance}</span></article><article><strong>Suggested main colour</strong><span>${escapeHtml(feedback.main.name)}</span></article><article><strong>Suggested contrast colour</strong><span>${escapeHtml(feedback.contrastColour.name)}</span></article><article><strong>Suggested border colour</strong><span>${escapeHtml(feedback.border.name)}</span></article><article><strong>Mood tags</strong><span>${feedback.tags.map(escapeHtml).join(" · ")}</span></article></section>
+    <div class="studio-action-bar"><button class="secondary-button" data-studio-action="save-notes">Save to Project Notes</button><button class="secondary-button" data-studio-action="save-idea">Save as Idea</button><button class="secondary-button" data-studio-action="buy-list">Add colours to Buy List</button><button class="secondary-button" data-studio-action="copy-sequence">Copy colour sequence</button><button class="secondary-button" data-studio-action="copy-hex">Copy hex palette</button></div>
+    <section class="studio-versions"><div class="section-heading compact-row"><div><p class="eyebrow">SAVED VERSIONS</p><h3>Compare before choosing</h3></div><button class="mini-button" data-studio-action="save-version">Save current version</button></div><div class="studio-version-grid">${["A","B","C"].map(v=>{const version=studio.versions?.[v]||null,preview=version?studioPreviewHtml({...studio,...version,settings:{...studio.settings,...version.settings},colors:version.colors||studio.colors},{mini:true}):`<div class="empty-state">Version ${v} is empty.</div>`;return `<article><h4>Version ${v}</h4>${preview}</article>`;}).join("")}</div></section>
+  </section>`;
+}
 function projectToolContent(p, tool) {
   const saved = p.projectTools[tool] || {};
   const def=toolkitToolDefs.find(t=>t.id===tool)||toolkitToolDefs[0];
   const result=saved.result||"Your result will appear here.";
   const resultHtml=saved.calculator?calculatorResultHtml(saved.calculator):`<p>${escapeHtml(result)}</p>`;
   const card=(fields,button="Calculate")=>`<div class="toolkit-tool"><p class="tool-description">${escapeHtml(def.desc)}</p><p class="unit-preference-note">Preferred units: ${escapeHtml(unitSystemLabel())}</p>${fields}<p class="muted-copy estimate-disclaimer">${escapeHtml(estimateDisclaimer())}</p><div class="toolkit-actions"><button class="secondary-button" id="project-calculate">${button}</button><button class="mini-button" id="reset-tool-form">Reset</button><button class="mini-button" id="copy-calc-result">Copy result</button><button class="mini-button" id="save-tool-result">Save to Project Notes</button></div><div class="result-box" id="project-tool-result">${resultHtml}</div></div>`;
+  if(["grid","stripe","pooling"].includes(tool))return renderingStudioContent(p,tool);
   if(tool==="basic")return `<div class="basic-calculator" data-display="${escapeHtml(saved.expression||"0")}"><div class="calc-display" id="calc-display">${escapeHtml(saved.expression||"0")}</div><div class="calc-grid">${["C","Back","%","/","7","8","9","x","4","5","6","-","1","2","3","+","Clear","0",".","="].map(k=>`<button class="${k==="="?"equals":""}" data-calc-key="${k}">${k}</button>`).join("")}</div><div class="toolkit-actions"><button class="mini-button" id="reset-tool-form">Reset</button><button class="mini-button" id="copy-calc-result">Copy result</button><button class="mini-button" id="save-tool-result">Save to Project Notes</button></div><div class="result-box" id="project-tool-result"><p>${escapeHtml(result)}</p></div></div>`;
   if(tool==="swatch")return card(`<div class="form-grid"><div class="field"><label>Pattern gauge stitches</label><input id="g-pattern-st" type="number" value="${saved.patternSt||20}" placeholder="e.g. 20"></div><div class="field"><label>Pattern gauge rows</label><input id="g-pattern-row" type="number" value="${saved.patternRows||28}" placeholder="e.g. 28"></div><div class="field"><label>What you got: stitches</label><input id="g-user-st" type="number" value="${saved.userSt||22}" placeholder="e.g. 22"></div><div class="field"><label>What you got: rows</label><input id="g-user-row" type="number" value="${saved.userRows||30}" placeholder="e.g. 30"></div><div class="field"><label>Original stitch count</label><input id="g-original-st" type="number" value="${saved.originalSt||100}" placeholder="e.g. 100"></div><div class="field"><label>Original row count</label><input id="g-original-row" type="number" value="${saved.originalRows||80}" placeholder="e.g. 80"></div></div>`);
   if(tool==="shaping")return card(`<div class="form-grid"><div class="field"><label>How many stitches now?</label><input id="shape-current" type="number" value="${saved.current||84}" placeholder="e.g. 84"></div><div class="field"><label>How many stitches do you need?</label><input id="shape-desired" type="number" value="${saved.desired||96}" placeholder="e.g. 96"></div><div class="field"><label>Where are you applying this?</label><input id="shape-row" type="number" value="${saved.row||p.row}" placeholder="Current row"></div></div>`, "Plan shaping");
@@ -1355,6 +1986,218 @@ function projectToolContent(p, tool) {
   if(tool==="yarn-weight")return card(`<div class="form-grid"><div class="field"><label>Ball weight (${preferredUnit("weight")})</label><input id="tw-grams" type="number" value="${saved.grams||(state.unitSystem==="imperial"?3.5:100)}"></div><div class="field"><label>Length (${preferredUnit("yarnLength")})</label><input id="tw-yards" type="number" value="${saved.yards||(state.unitSystem==="imperial"?220:200)}"></div><div class="field"><label>Wraps per inch</label><input id="tw-wpi" type="number" value="${saved.wpi||""}" placeholder="optional"></div></div>`, "Find yarn category");
   return card(`<div class="form-grid"><div class="field"><label>Input value</label><input id="unit-amount" type="number" value="${saved.amount||100}"></div><div class="field"><label>From unit</label><select id="unit-from">${["cm","mm","m","in","yd","g","oz"].map(u=>`<option ${((saved.from||preferredUnit("length"))===u)?"selected":""}>${u}</option>`).join("")}</select></div><div class="field"><label>To unit</label><select id="unit-to">${["cm","mm","m","in","yd","g","oz"].map(u=>`<option ${((saved.to||(state.unitSystem==="imperial"?"yd":"m"))===u)?"selected":""}>${u}</option>`).join("")}</select></div></div>`, "Convert");
 }
+function activeStudioProject(){return getProject();}
+function readStudio(){
+  const p=activeStudioProject();
+  p.projectTools=p.projectTools||{};
+  return normalizeStudioState(p,currentProjectTool);
+}
+function saveStudio(studio,{render=true,toastMessage=""}={}){
+  const p=activeStudioProject();
+  p.projectTools=p.projectTools||{};
+  const plan=studioCalculatedPlan(studio);
+  p.projectTools.renderingStudio=studio;
+  p.projectTools[currentProjectTool]={result:studioSummaryText(studio),inputs:studio,outputs:{palette:studioPaletteText(studio),mode:studio.mode,projectType:studio.projectType,total:plan.total,unit:plan.unit,usage:plan.usageRows.map(r=>({name:r.color.name,hex:r.color.hex,amount:r.amount,percent:r.percent,grams:r.grams}))}};
+  p.projectTools.selectedTool=currentProjectTool;
+  saveProjectTouch(p);
+  if(toastMessage)toast(toastMessage);
+  if(render){
+    if(document.getElementById("tools-view")?.classList.contains("active"))renderTool("rendering-studio");
+    else renderProjectDetail();
+  }else refreshStudioLive(studio);
+}
+function studioSummaryText(studio){
+  const feedback=studioColourFeedback(studio);
+  return `${studio.projectType} ${studio.mode}: ${studio.colors.map(c=>`${c.name} ${c.hex}${c.brand?` (${c.brand}${c.line?` ${c.line}`:""})`:""}`).join(" / ")}. Contrast ${feedback.contrast}; mood ${feedback.tags.join(", ")}.`;
+}
+function refreshStudioLive(studio){
+  const root=document.querySelector(".rendering-studio");
+  if(!root)return;
+  const stage=root.querySelector(".studio-preview-stage"),calc=root.querySelector(".studio-calculation-panel"),heading=root.querySelector(".studio-preview-head h2"),palette=root.querySelector(".studio-preview-head p:not(.eyebrow)");
+  if(stage){stage.innerHTML=studioPreviewHtml(studio);bindStudioPreviewCells(root);}
+  if(calc)calc.outerHTML=studioCalculatedResultsHtml(studio);
+  if(heading)heading.textContent=`${studio.projectType} · ${studio.mode}`;
+  if(palette)palette.textContent=studioPaletteText(studio);
+}
+function bindStudioPreviewCells(root=document){
+  root.querySelectorAll("[data-studio-cell]").forEach(cell=>cell.onclick=()=>{const studio=readStudio();
+    const index=Number(cell.dataset.studioCell),cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14),paint=studio.paintTool||"brush";
+    studio.gridCells=Array.from({length:cols*rows},(_,i)=>studio.gridCells?.[i]??null);
+    const value=paint==="eraser"?null:studio.activeColor;
+    if(paint==="bucket")studio.gridCells=studio.gridCells.map(()=>value);
+    else {
+      studio.gridCells[index]=value;
+      const r=Math.floor(index/cols),c=index%cols;
+      if(studio.settings.mirrorH)studio.gridCells[r*cols+(cols-1-c)]=value;
+      if(studio.settings.mirrorV)studio.gridCells[(rows-1-r)*cols+c]=value;
+      if(studio.settings.mirrorH&&studio.settings.mirrorV)studio.gridCells[(rows-1-r)*cols+(cols-1-c)]=value;
+    }
+    saveStudio(studio,{render:false});
+  });
+}
+function bindRenderingStudio(){
+  const root=document.querySelector(".rendering-studio");
+  if(!root)return;
+  const update=(mutate,{render=true}={})=>{const studio=readStudio();mutate(studio);saveStudio(studio,{render});};
+  document.getElementById("studio-project-type")?.addEventListener("change",e=>update(s=>{s.projectType=e.target.value;}));
+  document.getElementById("studio-pattern-mode")?.addEventListener("change",e=>update(s=>{s.mode=e.target.value;}));
+  document.getElementById("studio-active-colour")?.addEventListener("change",e=>update(s=>{s.activeColor=Number(e.target.value)||0;}));
+  root.querySelectorAll("[data-studio-setting]").forEach(input=>input.addEventListener("input",e=>update(s=>{
+    const key=e.target.dataset.studioSetting,value=e.target.type==="number"?Number(e.target.value)||0:e.target.value;
+    s.settings[key]=key==="borderColor"?normalizeStudioHex(value,value):value;
+  },{render:e.target.tagName==="SELECT"})));
+  root.querySelectorAll("select[data-studio-setting]").forEach(input=>input.addEventListener("change",e=>update(s=>{s.settings[e.target.dataset.studioSetting]=Number.isFinite(Number(e.target.value))&&e.target.value!==""?Number(e.target.value):e.target.value;})));
+  root.querySelectorAll("[data-studio-check]").forEach(input=>input.addEventListener("change",e=>update(s=>{s.settings[e.target.dataset.studioCheck]=e.target.checked;})));
+  document.getElementById("studio-add-colour")?.addEventListener("click",()=>update(s=>{
+    const selected=Array.from(document.getElementById("studio-stash-colour")?.selectedOptions||[]).map(option=>option.value).filter(Boolean),stashItems=selected.map(id=>(state.inventory||[]).find(i=>i.id===id)).filter(Boolean);
+    if(stashItems.some(item=>!validHex(yarnItemColor(item))))return toast("One selected yarn needs a saved colour first. Scan or choose its colour in Yarn Stash.");
+    if(stashItems.length){
+      stashItems.forEach(stash=>s.colors.push({id:`studio-colour-${Date.now()}${Math.random().toString(16).slice(2)}`,name:yarnItemDisplayName(stash),hex:yarnItemColor(stash),brand:stash.brand||"Saved stash",line:stash.yarnName||stash.details||"",weight:1,locked:false,stashItemId:stash.id,colourNumber:stash.colourNumber||""}));
+      s.activeColor=s.colors.length-1;return;
+    }
+    const name=(document.getElementById("studio-new-name")?.value||"New colour").trim();
+    const hex=normalizeStudioHex(document.getElementById("studio-new-hex")?.value||name,"#718c72");
+    s.colors.push({id:`studio-colour-${Date.now()}`,name,hex,brand:document.getElementById("studio-new-brand")?.value.trim()||"",line:document.getElementById("studio-new-line")?.value.trim()||"",weight:Math.max(1,Math.min(10,Number(document.getElementById("studio-new-weight")?.value)||1)),locked:false,stashItemId:"",colourNumber:""});
+    s.activeColor=s.colors.length-1;
+  },{render:true}));
+  document.getElementById("studio-open-scan-yarn")?.addEventListener("click",()=>openYarnScanModal());
+  root.querySelectorAll("[data-colour-field]").forEach(input=>input.addEventListener("change",e=>update(s=>{
+    const card=e.target.closest("[data-studio-colour]"),i=Number(card?.dataset.studioColour),field=e.target.dataset.colourField;
+    if(!s.colors[i]||s.colors[i].locked)return toast("Unlock this colour before editing.");
+    s.colors[i][field]=field==="hex"?normalizeStudioHex(e.target.value,s.colors[i].hex):field==="weight"?Math.max(1,Math.min(10,Number(e.target.value)||1)):e.target.value;
+  })));
+  root.querySelectorAll("[data-studio-lock]").forEach(button=>button.onclick=()=>update(s=>{const c=s.colors[Number(button.dataset.studioLock)];if(c)c.locked=!c.locked;}));
+  root.querySelectorAll("[data-studio-duplicate]").forEach(button=>button.onclick=()=>update(s=>{const c=s.colors[Number(button.dataset.studioDuplicate)];if(c)s.colors.splice(Number(button.dataset.studioDuplicate)+1,0,{...c,id:`studio-colour-${Date.now()}`,name:`${c.name} copy`,locked:false});}));
+  root.querySelectorAll("[data-studio-update-stash]").forEach(button=>button.onclick=()=>{const studio=readStudio(),c=studio.colors[Number(button.dataset.studioUpdateStash)],item=(state.inventory||[]).find(i=>i.id===c?.stashItemId);if(!item)return toast("Original stash yarn was not found.");item.colourHex=c.hex;item.color=c.hex;item.colourSource="manual";item.colourConfidence=100;saveState();toast("Stash colour updated.");});
+  root.querySelectorAll("[data-studio-delete]").forEach(button=>button.onclick=()=>update(s=>{if(s.colors.length<=1)return toast("Keep at least one colour.");s.colors.splice(Number(button.dataset.studioDelete),1);s.activeColor=Math.min(s.activeColor,s.colors.length-1);}));
+  let dragIndex=null;
+  root.querySelectorAll("[data-studio-colour]").forEach(card=>{
+    card.addEventListener("dragstart",e=>{dragIndex=Number(card.dataset.studioColour);e.dataTransfer.effectAllowed="move";});
+    card.addEventListener("dragover",e=>e.preventDefault());
+    card.addEventListener("drop",e=>{e.preventDefault();const target=Number(card.dataset.studioColour);if(dragIndex===null||dragIndex===target)return;update(s=>{const [item]=s.colors.splice(dragIndex,1);s.colors.splice(target,0,item);s.activeColor=target;});dragIndex=null;});
+  });
+  root.querySelectorAll("[data-studio-paint-tool]").forEach(button=>button.onclick=()=>update(s=>{s.paintTool=button.dataset.studioPaintTool;}));
+  bindStudioPreviewCells(root);
+  root.querySelectorAll("[data-studio-version]").forEach(button=>button.onclick=()=>update(s=>{s.version=button.dataset.studioVersion;}));
+  root.querySelectorAll("[data-studio-action]").forEach(button=>button.onclick=()=>handleStudioAction(button.dataset.studioAction));
+}
+function handleStudioAction(action){
+  const studio=readStudio(),p=activeStudioProject(),text=studioSummaryText(studio);
+  if(action==="save-project"){saveStudio(studio,{render:false,toastMessage:"Design saved to project."});return;}
+  if(action==="replace-colour"){const from=studio.activeColor,to=(from+1)%studio.colors.length,cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14);studio.gridCells=Array.from({length:cols*rows},(_,i)=>studio.gridCells?.[i]??null).map(value=>value===from?to:value);studio.activeColor=to;saveStudio(studio,{toastMessage:`Replaced ${studio.colors[from]?.name||"colour"} with ${studio.colors[to]?.name||"next colour"}.`});return;}
+  if(action==="save-notes"){p.notes=`${p.notes||""}${p.notes?"\n\n":""}[Project Rendering Studio]\n${text}`;saveStudio(studio,{render:false,toastMessage:"Saved to project notes."});return;}
+  if(action==="save-grid"||action==="export-grid"){saveStudio(studio,{render:false,toastMessage:action==="save-grid"?"Grid saved to project.":"Grid preview ready to export."});if(action==="export-grid")exportStudioImage(studio);return;}
+  if(action==="save-version"){studio.versions=studio.versions||{};studio.versions[studio.version]={projectType:studio.projectType,mode:studio.mode,colors:structuredClone(studio.colors),settings:structuredClone(studio.settings),gridCells:structuredClone(studio.gridCells||[])};saveStudio(studio,{toastMessage:`Version ${studio.version} saved.`});return;}
+  if(action==="save-idea"){const idea=normalizeProjectIdea({id:`idea${Date.now()}`,title:`${studio.projectType} colour idea`,craftType:p.type||"Mixed / Other",projectKind:studio.projectType,inspirationNotes:text,description:text,sourcePlatform:"Project Rendering Studio",sourceTool:"Project Rendering Studio",calculatorValues:{outputs:{result:text},inputs:studio},savedCalculatorResults:[{toolName:"Project Rendering Studio",outputs:{result:text},inputs:studio}],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),archived:false});state.projectIdeas=[idea,...(state.projectIdeas||[])];saveStudio(studio,{render:false,toastMessage:"Saved as idea."});return;}
+  if(action==="buy-list"){p.buyList=[...(p.buyList||[]),...studio.colors.map(c=>({id:`buy${Date.now()}${Math.random().toString(16).slice(2)}`,name:c.brand?`${c.brand} ${c.line||c.name}`:c.name,category:"Yarn",quantity:Math.max(1,Number(c.weight)||1),price:0,notes:`Colour ${c.name} ${c.hex} from Project Rendering Studio`}))];saveStudio(studio,{render:false,toastMessage:"Colours added to Buy List."});return;}
+  if(action==="copy-sequence")return copyStudioText(studio.colors.map(c=>c.name).join(" -> "),"Colour sequence copied.");
+  if(action==="copy-hex")return copyStudioText(studioPaletteText(studio),"Hex palette copied.");
+  if(action==="export-image")return exportStudioImage(studio);
+}
+function copyStudioText(text,message){navigator.clipboard?.writeText(text).then(()=>toast(message)).catch(()=>toast("Copy is blocked in this browser."));}
+function exportStudioImage(studio){
+  const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d"),w=1200,h=760;
+  canvas.width=w;canvas.height=h;ctx.fillStyle="#fff9f0";ctx.fillRect(0,0,w,h);ctx.fillStyle="#5a4632";ctx.font="700 34px system-ui";ctx.fillText(`${studio.projectType} - ${studio.mode}`,48,70);ctx.font="18px system-ui";ctx.fillText(studioPaletteText(studio),48,108);
+  const x=80,y=150,pw=1040,ph=520;
+  if(studio.mode==="Grid Mode"){
+    const cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14),cell=Math.min(pw/cols,ph/rows);
+    for(let i=0;i<cols*rows;i++){ctx.fillStyle=studio.colors[studio.gridCells?.[i]??((Math.floor(i/cols)+i)%studio.colors.length)]?.hex||"#eee";ctx.fillRect(x+(i%cols)*cell,y+Math.floor(i/cols)*cell,cell,cell);}
+  }else if(studio.mode==="Granny Square Mode"){
+    const rounds=Math.max(1,Number(studio.settings.rounds)||5),seq=studioSequence(studio),cx=w/2,cy=y+ph/2,max=480;
+    for(let i=rounds-1;i>=0;i--){ctx.fillStyle=studio.colors[seq[i%seq.length]||0]?.hex||"#ccc";const size=max*((i+1)/rounds);ctx.fillRect(cx-size/2,cy-size/2,size,size);}
+  }else{
+    const rows=studioStripeRows(studio),rh=ph/rows.length;
+    rows.forEach((idx,i)=>{ctx.fillStyle=studio.colors[idx%studio.colors.length]?.hex||"#ccc";ctx.fillRect(x,y+i*rh,pw,rh+1);});
+  }
+  const link=document.createElement("a");link.download=`yarncha-${studio.projectType.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-preview.png`;link.href=canvas.toDataURL("image/png");link.click();toast("Preview exported as image.");
+}
+function yarnItemColor(item={}){return validHex(item.colourHex)?item.colourHex:validHex(item.color)?item.color:"";}
+function yarnItemDisplayName(item={}){return [item.brand,item.yarnName||item.name,item.colourName].filter(Boolean).join(" · ")||item.name||"Saved yarn";}
+function yarnItemDetails(item={}){
+  return [item.colourNumber&&`Colour ${item.colourNumber}`,item.dyeLot&&`Lot ${item.dyeLot}`,item.weight,item.fibreContent,item.grams&&`${item.grams} g`,item.metres&&`${item.metres} m`,item.yards&&`${item.yards} yd`,item.hookSize&&`Hook ${item.hookSize}`,item.needleSize&&`Needle ${item.needleSize}`].filter(Boolean).join(" · ")||item.details||"Saved yarn";
+}
+function normalizeYarnStashItem(values={}){
+  const name=values.name||[values.brand,values.yarnName,values.colourName].filter(Boolean).join(" ")||"Scanned yarn";
+  const colourHex=normalizeStudioHex(values.colourHex||values.color||"",validHex(values.colourHex||values.color)?values.colourHex||values.color:"#718c72");
+  return {id:values.id||`inv${Date.now()}${Math.random().toString(16).slice(2)}`,name,category:"Yarn",quantity:Math.max(0,Number(values.quantity)||1),unit:values.unit||"balls",color:colourHex,details:values.details||"",brand:values.brand||"",yarnName:values.yarnName||name,barcode:values.barcode||"",colourName:values.colourName||"",colourNumber:values.colourNumber||"",dyeLot:values.dyeLot||"",colourHex,colourSource:values.colourSource||"manual",colourConfidence:Number(values.colourConfidence)||0,weight:values.weight||"",fibreContent:values.fibreContent||"",grams:Number(values.grams)||0,metres:Number(values.metres)||0,yards:Number(values.yards)||0,hookSize:values.hookSize||"",needleSize:values.needleSize||"",notes:values.notes||"",photoBlobId:values.photoBlobId||"",labelPhotoBlobId:values.labelPhotoBlobId||""};
+}
+function extractYarnLabelFields(text=""){
+  const clean=String(text||""),pick=regex=>clean.match(regex)?.[1]?.trim()||"";
+  return {
+    colourNumber:pick(/(?:colou?r|shade)\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i),
+    colourName:pick(/(?:colou?r|shade)\s*(?:name)?\s*[:\-]\s*([A-Za-z][A-Za-z\s\-]{2,30})/i),
+    dyeLot:pick(/(?:dye\s*)?lot\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i),
+    weight:pick(/(?:weight|category)\s*[:\-]?\s*([A-Za-z0-9\s#\/-]{2,24})/i),
+    fibreContent:pick(/((?:\d{1,3}%\s*)?(?:wool|cotton|acrylic|alpaca|merino|nylon|polyester|cashmere|silk|linen|bamboo)[A-Za-z0-9%,\s]*)/i),
+    grams:pick(/(\d{2,4})\s*g(?:rams?)?/i),
+    metres:pick(/(\d{2,5})\s*m(?:etres?|eters?)?/i),
+    yards:pick(/(\d{2,5})\s*y(?:ards?|ds?)?/i),
+    hookSize:pick(/(?:hook|crochet)\s*(?:size)?\s*[:\-]?\s*([0-9.]+\s*mm|[A-Z]\-?[0-9]?)/i),
+    needleSize:pick(/(?:needle|knitting)\s*(?:size)?\s*[:\-]?\s*([0-9.]+\s*mm|US\s*[0-9]+)/i)
+  };
+}
+function imageFileToElement(file){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=URL.createObjectURL(file);});}
+async function estimateImageColour(file){
+  const img=await imageFileToElement(file),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d"),size=80;
+  canvas.width=size;canvas.height=size;ctx.drawImage(img,0,0,size,size);
+  const data=ctx.getImageData(20,20,40,40).data,total=[0,0,0];let count=0;
+  for(let i=0;i<data.length;i+=4){if(data[i+3]<128)continue;total[0]+=data[i];total[1]+=data[i+1];total[2]+=data[i+2];count++;}
+  const rgb=total.map(v=>Math.round(v/Math.max(1,count))),hex=studioRgbToHex(rgb);
+  return {hex,confidence:72,swatches:[hex,studioInterpolateHex(hex,"#ffffff",.18),studioInterpolateHex(hex,"#000000",.12)]};
+}
+async function scanBarcodeFromFile(file){
+  if(!("BarcodeDetector" in window))return {barcode:"",message:"Barcode scanning is not supported in this browser yet. You can type the barcode or scan the label."};
+  try{
+    const detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","qr_code"]}),bitmap=await createImageBitmap(file),codes=await detector.detect(bitmap),barcode=codes[0]?.rawValue||"";
+    return barcode?{barcode,message:"We found the barcode, but cannot identify this yarn yet. You can scan the label or add details manually."}:{barcode:"",message:"No barcode was found. Try a clearer photo or add the number manually."};
+  }catch{return {barcode:"",message:"Barcode scanning did not work in this browser. You can continue manually."};}
+}
+function openYarnScanModal(initial={}){
+  openModal(`<p class="eyebrow">YARN STASH</p><h2>Scan Yarn</h2><p class="muted-copy">Use your camera where supported, or upload a photo. Barcode and OCR results are only starting points; review everything before saving.</p>
+    <div class="scan-yarn-actions"><button class="secondary-button" id="scan-barcode">Scan barcode</button><button class="secondary-button" id="scan-label">Scan yarn label text</button><button class="secondary-button" id="scan-colour">Take yarn colour photo</button><button class="secondary-button" id="scan-manual">Add manually</button></div>
+    <div class="privacy-note">Estimated colour from your photo. You can adjust it to match your yarn. Lighting, camera, monitor screen, and dye lot affect colour.</div>
+    <input id="scan-barcode-file" type="file" accept="image/*" capture="environment" hidden>
+    <input id="scan-label-file" type="file" accept="image/*" capture="environment" hidden>
+    <input id="scan-colour-file" type="file" accept="image/*" capture="environment" hidden>`);
+  const draft={...initial};
+  document.getElementById("scan-barcode").onclick=()=>document.getElementById("scan-barcode-file").click();
+  document.getElementById("scan-label").onclick=()=>document.getElementById("scan-label-file").click();
+  document.getElementById("scan-colour").onclick=()=>document.getElementById("scan-colour-file").click();
+  document.getElementById("scan-manual").onclick=()=>openYarnScanReviewModal(draft);
+  document.getElementById("scan-barcode-file").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;const scan=await scanBarcodeFromFile(file);draft.barcode=scan.barcode;draft.colourSource=draft.colourSource||"barcode";toast(scan.message);openYarnScanReviewModal(draft);};
+  document.getElementById("scan-label-file").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;const assetId=`yarn-label-${Date.now()}`;await putAsset(assetId,file);toast("Reading label text...");const scan=await ocrFile(file);Object.assign(draft,extractYarnLabelFields(scan.text),{labelPhotoBlobId:assetId,colourSource:draft.colourSource||"label-ocr",notes:[draft.notes,scan.text&&`Scanned label text:\n${scan.text.slice(0,1200)}`].filter(Boolean).join("\n\n")});openYarnScanReviewModal(draft);};
+  document.getElementById("scan-colour-file").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;const assetId=`yarn-photo-${Date.now()}`;await putAsset(assetId,file);const colour=await estimateImageColour(file);Object.assign(draft,{photoBlobId:assetId,colourHex:colour.hex,colourConfidence:colour.confidence,colourSource:"photo-scan",swatches:colour.swatches});openYarnScanReviewModal(draft);};
+}
+function openYarnScanReviewModal(draft={}){
+  const swatches=(draft.swatches||[draft.colourHex]).filter(validHex);
+  openModal(`<p class="eyebrow">REVIEW SCANNED YARN</p><h2>Save to Yarn Stash</h2><p class="muted-copy">Correct anything that looks off before saving. Barcode does not guarantee exact shade or dye lot.</p>
+    <div class="form-grid">
+      <div class="field"><label>Brand</label><input id="scan-brand" value="${escapeHtml(draft.brand||"")}"></div><div class="field"><label>Yarn name</label><input id="scan-yarn-name" value="${escapeHtml(draft.yarnName||draft.name||"")}"></div>
+      <div class="field"><label>Barcode</label><input id="scan-barcode-value" value="${escapeHtml(draft.barcode||"")}"></div><div class="field"><label>Colour name</label><input id="scan-colour-name" value="${escapeHtml(draft.colourName||"")}"></div>
+      <div class="field"><label>Colour number</label><input id="scan-colour-number" value="${escapeHtml(draft.colourNumber||"")}"></div><div class="field"><label>Dye lot</label><input id="scan-dye-lot" value="${escapeHtml(draft.dyeLot||"")}"></div>
+      <div class="field"><label>Colour HEX</label><input id="scan-colour-hex" type="color" value="${validHex(draft.colourHex)?draft.colourHex:"#718c72"}"></div><div class="field"><label>Colour source</label><select id="scan-colour-source">${["barcode","label-ocr","photo-scan","manual"].map(v=>`<option value="${v}" ${(draft.colourSource||"manual")===v?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="field"><label>Weight</label><input id="scan-weight" value="${escapeHtml(draft.weight||"")}"></div><div class="field"><label>Fibre content</label><input id="scan-fibre" value="${escapeHtml(draft.fibreContent||"")}"></div>
+      <div class="field"><label>Grams</label><input id="scan-grams" type="number" value="${draft.grams||""}"></div><div class="field"><label>Metres</label><input id="scan-metres" type="number" value="${draft.metres||""}"></div>
+      <div class="field"><label>Yards</label><input id="scan-yards" type="number" value="${draft.yards||""}"></div><div class="field"><label>Quantity</label><input id="scan-quantity" type="number" min="0" value="${draft.quantity||1}"></div>
+      <div class="field"><label>Hook suggestion</label><input id="scan-hook" value="${escapeHtml(draft.hookSize||"")}"></div><div class="field"><label>Needle suggestion</label><input id="scan-needle" value="${escapeHtml(draft.needleSize||"")}"></div>
+      <div class="field full"><label>Notes</label><textarea id="scan-notes" rows="4">${escapeHtml(draft.notes||"")}</textarea></div>
+    </div>${swatches.length?`<div class="scan-swatch-row">${swatches.map(hex=>`<button style="background:${hex}" data-scan-swatch="${hex}" aria-label="Use ${hex}"></button>`).join("")}</div>`:""}
+    <p class="privacy-note">Estimated colour from your photo. You can adjust it to match your yarn.</p>
+    <div class="modal-actions"><button class="secondary-button" id="scan-more">Scan another part</button><button class="primary-button" id="save-scanned-yarn">Save yarn</button></div>`);
+  document.querySelectorAll("[data-scan-swatch]").forEach(b=>b.onclick=()=>{document.getElementById("scan-colour-hex").value=b.dataset.scanSwatch;});
+  document.getElementById("scan-more").onclick=()=>openYarnScanModal(readYarnScanReview(draft));
+  document.getElementById("save-scanned-yarn").onclick=()=>saveScannedYarn(readYarnScanReview(draft));
+}
+function readYarnScanReview(draft={}){
+  return {...draft,brand:valueOf("scan-brand"),yarnName:valueOf("scan-yarn-name"),barcode:valueOf("scan-barcode-value"),colourName:valueOf("scan-colour-name"),colourNumber:valueOf("scan-colour-number"),dyeLot:valueOf("scan-dye-lot"),colourHex:valueOf("scan-colour-hex"),colourSource:valueOf("scan-colour-source")||"manual",weight:valueOf("scan-weight"),fibreContent:valueOf("scan-fibre"),grams:Number(valueOf("scan-grams"))||0,metres:Number(valueOf("scan-metres"))||0,yards:Number(valueOf("scan-yards"))||0,quantity:Number(valueOf("scan-quantity"))||1,hookSize:valueOf("scan-hook"),needleSize:valueOf("scan-needle"),notes:valueOf("scan-notes"),colourConfidence:draft.colourConfidence||((valueOf("scan-colour-source")==="manual")?100:60)};
+}
+function saveScannedYarn(values){
+  const item=normalizeYarnStashItem(values);
+  const existing=state.inventory.find(i=>i.id===item.id)||(item.barcode?state.inventory.find(i=>i.barcode&&i.barcode===item.barcode&&i.colourNumber===item.colourNumber):null);
+  if(existing)Object.assign(existing,item,{id:existing.id,quantity:item.id===existing.id?item.quantity:(Number(existing.quantity)||0)+(Number(item.quantity)||1)});
+  else state.inventory.push(item);
+  saveState();closeModal();renderMarket();toast("Yarn saved to Yarn Stash.");
+}
 function bindProjectDetail() {
   const p = getProject();
   document.querySelectorAll("[data-project-tab]").forEach(b => b.onclick = () => { p.activeTab=b.dataset.projectTab; p.readingMode=false; saveProjectTouch(p); renderProjectDetail(); });
@@ -1381,6 +2224,7 @@ function bindProjectDetail() {
   document.querySelectorAll("#voice-project").forEach(b=>b.onclick = startVoice);
   document.getElementById("toggle-reading")?.addEventListener("click",()=>{p.readingMode=!p.readingMode;p.activeTab="chart";saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-chart-mode]").forEach(b=>b.onclick=()=>{p.chartMode=b.dataset.chartMode;if(p.chartMode==="flow")toast("Flow Mode stays inside this project chart. Review every AI suggestion before using it.");saveProjectTouch(p);renderProjectDetail();});
+  bindYarnchaAssistant(p);
   document.getElementById("flow-toggle")?.addEventListener("click",()=>{p.flowMode=!p.flowMode;saveProjectTouch(p);renderProjectDetail();});
   document.getElementById("edit-chart-legend")?.addEventListener("click",openChartLegendModal);
   document.getElementById("add-analysis-row")?.addEventListener("click",()=>openChartRowModal());
@@ -1422,6 +2266,7 @@ function bindProjectDetail() {
   document.querySelectorAll("[data-rendering-tab]").forEach(b=>b.onclick=()=>{p.projectTools.view="category";p.projectTools.category="rendering";p.projectTools.selectedTool=b.dataset.renderingTab;currentProjectTool=b.dataset.renderingTab;saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-toolkit-back]").forEach(b=>b.onclick=()=>{const target=b.dataset.toolkitBack;if(target==="home"){p.projectTools.view="home";}else{p.projectTools.view="category";p.projectTools.category=target;}saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-pattern-mode]").forEach(b=>b.onclick=()=>{p.patternPlan.mode=b.dataset.patternMode;saveState();renderProjectDetail();});
+  bindRenderingStudio();
   document.getElementById("link-project-tools")?.addEventListener("change", e => { p.projectTools.linked=e.target.checked; saveProjectTouch(p); });
   document.getElementById("project-calculate")?.addEventListener("click", calculateProjectTool);
   document.getElementById("reset-tool-form")?.addEventListener("click",resetCurrentToolForm);
@@ -1467,6 +2312,56 @@ function bindProjectDetail() {
   document.getElementById("clear-annotations")?.addEventListener("click",()=>{pushAnnotationHistory(p);p.annotations=[];p.annotationRedo=[];saveProjectTouch(p);renderProjectDetail();});
   ["project-yarn","project-needles","project-gauge","project-sizing"].forEach(id=>document.getElementById(id)?.addEventListener("input",e=>{const key={ "project-yarn":"yarn","project-needles":"needles","project-gauge":"gauge","project-sizing":"sizingNotes"}[id];p[key]=e.target.value;saveProjectTouch(p);}));
 }
+function bindYarnchaAssistant(p=getProject()){
+  if(!document.querySelector(".yarncha-assistant-panel"))return;
+  p.yarnchaAssistant=p.yarnchaAssistant||{};
+  const savePrefs=()=>{
+    p.yarnchaAssistant.skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
+    p.yarnchaAssistant.craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
+    p.yarnchaAssistant.selectedTechnique=document.getElementById("chart-assistant-technique")?.value||"";
+    p.yarnchaAssistant.draftQuestion=document.getElementById("chart-assistant-question")?.value||"";
+    saveProjectTouch(p);
+  };
+  document.getElementById("chart-assistant-skill")?.addEventListener("change",()=>{savePrefs();renderProjectDetail();});
+  document.getElementById("chart-assistant-craft")?.addEventListener("change",()=>{const technique=document.getElementById("chart-assistant-technique");if(technique)technique.value="";p.yarnchaAssistant.selectedTechnique="";savePrefs();renderProjectDetail();});
+  document.getElementById("chart-assistant-technique")?.addEventListener("change",()=>{savePrefs();});
+  document.getElementById("chart-assistant-question")?.addEventListener("input",()=>{p.yarnchaAssistant.draftQuestion=document.getElementById("chart-assistant-question").value;saveStateSoon();});
+  const suggestionPrompts={
+    "My stitch count is wrong":"My stitch count is wrong on this row. Help me check what I should do next.",
+    "Explain this symbol":"Explain this chart symbol and tell me how to check it against the legend.",
+    "Help me read this row":"Help me read this row. Break down the repeats and tell me what to do first.",
+    "Fix a dropped stitch":"I dropped a stitch. Help me fix it step by step.",
+    "What does this abbreviation mean?":"What does this abbreviation mean, and does it change my stitch count?",
+    "Why does my project look different?":"Why does my project look different from the pattern photo? Help me check gauge, yarn, and stitch count."
+  };
+  document.querySelectorAll("[data-assistant-suggestion]").forEach(button=>button.onclick=()=>{const box=document.getElementById("chart-assistant-question");if(box){box.value=suggestionPrompts[button.dataset.assistantSuggestion]||button.dataset.assistantSuggestion;box.focus();p.yarnchaAssistant.draftQuestion=box.value;saveStateSoon();}});
+  document.getElementById("ask-chart-assistant")?.addEventListener("click",()=>askChartYarnchaAssistant(p));
+  document.querySelectorAll("[data-assistant-memory]").forEach(button=>button.onclick=()=>handleAssistantMemoryAction(button.dataset.assistantMemory,p));
+  document.querySelectorAll("[data-library-link]").forEach(button=>button.onclick=()=>toast(button.textContent.trim()+" is saved in Yarncha Library references."));
+}
+async function askChartYarnchaAssistant(p=getProject()){
+  p.yarnchaAssistant=p.yarnchaAssistant||{};
+  const question=document.getElementById("chart-assistant-question")?.value.trim();
+  if(!question)return toast("Ask Yarncha Assistant a question first.");
+  const skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
+  const craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
+  const selectedTechnique=document.getElementById("chart-assistant-technique")?.value||p.yarnchaAssistant.selectedTechnique||"";
+  const projectContext={...projectContextService.getCurrentProjectContext(),skillLevel,craftType,selectedTechnique};
+  const answer=await yarnchaAssistantService.askYarnchaAssistant({question,projectContext,skillLevel,craftType});
+  p.yarnchaAssistant={...p.yarnchaAssistant,skillLevel,craftType,selectedTechnique,lastQuestion:question,draftQuestion:"",lastAnswer:answer,recentQuestions:[question,...(p.yarnchaAssistant.recentQuestions||[])].slice(0,8)};
+  saveProjectTouch(p);
+  renderProjectDetail();
+}
+function handleAssistantMemoryAction(action,p=getProject()){
+  const assistant=p.yarnchaAssistant||{},answer=assistant.lastAnswer,context=projectContextService.getCurrentProjectContext();
+  if(!answer)return toast("Ask Yarncha Assistant first.");
+  const summary=answer.quickAnswer||assistant.lastQuestion||"Yarncha Assistant explanation";
+  if(action==="save-explanation"){learningMemoryService.saveProjectNote(p.id,summary);toast("Explanation saved to local learning memory.");}
+  if(action==="add-notes"){p.notes=`${p.notes||""}${p.notes?"\n\n":""}Yarncha Assistant: ${summary}`;saveProjectTouch(p);toast("Added to project notes.");}
+  if(action==="remember-correction"){learningMemoryService.saveUserCorrection({projectId:p.id,question:assistant.lastQuestion,correction:summary,craftType:assistant.craftType});toast("Correction remembered locally.");}
+  if(action==="verify-symbol"){learningMemoryService.saveVerifiedSymbol(p.id,{symbol:context.currentSymbol||assistant.lastQuestion,meaning:summary,question:assistant.lastQuestion});toast("Symbol marked as verified locally.");}
+  renderProjectDetail();
+}
 function saveProjectFitCheck(){
   const p=getProject();
   const value=id=>document.getElementById(id)?.value?.trim()||"";
@@ -1501,9 +2396,28 @@ function bindFlowModeReader(p){
     projectType:value("flow-project-type")||p.projectSetup?.projectType||"Other",
     patternGauge:value("flow-pattern-gauge"),
     patternToolSize:value("flow-pattern-tool"),
+    patternToolSizeMm:value("flow-pattern-tool"),
     patternYarnWeight:value("flow-pattern-yarn-weight"),
     userToolSize:value("flow-user-tool"),
+    userToolSizeMm:value("flow-user-tool"),
     userYarnWeight:value("flow-user-yarn-weight"),
+    patternGaugeStitches:value("flow-pattern-gauge-stitches"),
+    patternGaugeRows:value("flow-pattern-gauge-rows"),
+    userGaugeStitches:value("flow-user-gauge-stitches"),
+    userGaugeRows:value("flow-user-gauge-rows"),
+    gaugeWidthCm:value("flow-gauge-width")||10,
+    gaugeHeightCm:value("flow-gauge-height")||10,
+    stitchRepeatMultiple:value("flow-repeat-multiple"),
+    edgeStitches:value("flow-edge-stitches"),
+    swatchWidthCm:value("flow-swatch-width"),
+    swatchHeightCm:value("flow-swatch-height"),
+    swatchWeightGrams:value("flow-swatch-weight"),
+    patternYarnGrams:value("flow-pattern-yarn-grams"),
+    patternAreaCm2:value("flow-pattern-area"),
+    originalPatternStitches:value("flow-original-stitches"),
+    originalPatternRows:value("flow-original-rows"),
+    patternWidthCm:value("flow-pattern-width"),
+    patternLengthCm:value("flow-pattern-length"),
     desiredSize:value("flow-desired-size")||p.projectSetup?.desiredSize||"M",
     customSize:value("flow-custom-size")||p.projectSetup?.customSize||"",
     patternLanguage:value("flow-pattern-language")||p.projectSetup?.patternLanguage||"abbreviations",
@@ -1519,13 +2433,7 @@ function bindFlowModeReader(p){
   },p);
   const saveFlowSetup=({render=true}={})=>{
     const setup=setupForm();
-    const simpleSetup={
-      craft:setup.craft,
-      patternGauge:setup.patternGauge,
-      updatedAt:new Date().toISOString()
-    };
     p.projectSetup=setup;
-    p.setup=simpleSetup;
     p.type=setup.craft;
     p.projectKind=setup.projectType;
     p.gauge=setup.patternGauge;
@@ -1534,6 +2442,19 @@ function bindFlowModeReader(p){
     p.size=isGarmentProject(setup.projectType)?(setup.desiredSize==="Custom"?(setup.customSize||"Custom"):setup.desiredSize):setup.projectType;
     p.sizingNotes=isGarmentProject(setup.projectType)?(setup.customSize||p.size||""):`${setup.projectType} setup saved`;
     p.projectCalculations=calculateFlowProjectPlan(p,setup);
+    const simpleSetup={
+      craft:setup.craft,
+      patternGauge:setup.patternGauge,
+      stitchCount:p.projectCalculations.stitchCount,
+      rowCount:p.projectCalculations.rowCount,
+      width:p.projectCalculations.widthCm,
+      length:p.projectCalculations.lengthCm,
+      sleeveLength:p.projectCalculations.sleeveLengthCm,
+      bodyLength:p.projectCalculations.bodyLengthCm,
+      yarnEstimate:p.projectCalculations.estimatedYarnGrams,
+      updatedAt:new Date().toISOString()
+    };
+    p.setup=simpleSetup;
     if(p.projectCalculations?.rowCount){p.chartRows=p.chartRows||p.projectCalculations.rowCount;p.totalRows=p.totalRows||p.projectCalculations.rowCount;}
     saveProjectTouch(p);
     if(render)renderProjectDetail();
@@ -1585,9 +2506,10 @@ function bindFlowModeReader(p){
   ["flow-setup-craft","flow-project-type","flow-recipient","flow-scarf-style","flow-sock-type","flow-sock-sizing-mode","flow-bag-type","flow-blanket-type","flow-amigurumi-type","flow-safety-recipient","flow-shawl-shape","flow-shawl-fit"].forEach(id=>{
     document.getElementById(id)?.addEventListener("change",()=>{saveFlowSetup();toast("Project setup updated.");});
   });
-  ["flow-pattern-gauge","flow-pattern-tool","flow-pattern-yarn-weight","flow-user-tool","flow-user-yarn-weight","flow-custom-size","flow-body-chest","flow-body-waist","flow-body-hip","flow-body-sleeve","flow-body-body"].forEach(id=>{
+  ["flow-pattern-gauge","flow-pattern-tool","flow-pattern-yarn-weight","flow-user-tool","flow-user-yarn-weight","flow-pattern-gauge-stitches","flow-pattern-gauge-rows","flow-user-gauge-stitches","flow-user-gauge-rows","flow-gauge-width","flow-gauge-height","flow-repeat-multiple","flow-edge-stitches","flow-swatch-width","flow-swatch-height","flow-swatch-weight","flow-pattern-yarn-grams","flow-pattern-area","flow-original-stitches","flow-original-rows","flow-pattern-width","flow-pattern-length","flow-custom-size","flow-body-chest","flow-body-waist","flow-body-hip","flow-body-sleeve","flow-body-body","flow-item-width","flow-item-height","flow-item-length","flow-item-depth","flow-strap-length","flow-strap-width","flow-border-width","flow-square-size","flow-block-width","flow-block-height","flow-finished-height","flow-finished-width","flow-original-height","flow-original-width","flow-target-height","flow-original-yarn","flow-original-stuffing","flow-original-eye","flow-wingspan","flow-upper-arm","flow-wrist","flow-armhole-depth","flow-button-band","flow-skirt-length"].forEach(id=>{
     document.getElementById(id)?.addEventListener("input",markFlowSetupUnsaved);
   });
+  document.getElementById("start-flow-mode")?.addEventListener("click",()=>{saveFlowSetup({render:false});document.getElementById("flow-current-row")?.scrollIntoView({behavior:"smooth",block:"center"});toast("Flow Mode is ready.");});
   document.getElementById("run-flow-recognition")?.addEventListener("click",()=>{
     chartImageService.prepare(p,chartSetup());
     gridDetectionService.saveManual(p,gridSetup());
@@ -1995,7 +2917,7 @@ function inferRowSide(p,reader){
 }
 function sequenceToSpokenInstructions(sequence="",reader=normalizeChartReaderConfig(getProject().chartReader,getProject()),craft="Knitting"){
   const mode=reader.readAloud.mode;
-  return String(sequence).split(/[\s,;]+/).filter(Boolean).map(token=>spokenSymbolPhrase(token,{mode,craft})).join(", ") || "No checked written instruction is saved for this row.";
+  return instructionSteps(sequence).map(token=>spokenSymbolPhrase(token,{mode,craft})).join(", ") || "No checked written instruction is saved for this row.";
 }
 function spokenSymbolPhrase(token,{mode="teaching",craft="Knitting"}={}){
   const clean=String(token||"").trim(),lower=clean.toLowerCase(),match=matchSymbolKnowledge({guess:clean,craft});
@@ -3562,16 +4484,18 @@ function renderMarket(){
     <div class="market-summary"><div class="summary-card card"><small>Yarn in stash</small><strong>${yarnCount}</strong></div><div class="summary-card card"><small>Cart items</small><strong>${state.cart.length}</strong></div><div class="summary-card card"><small>Likely needs</small><strong>${needs}</strong></div><div class="summary-card card"><small>Cart / budget</small><strong id="cart-budget-summary">AUD $${cartTotal.toFixed(2)} / $${budget.toFixed(0)}</strong></div></div>
     <div class="budget-alert ${remaining<0?"over":"ok"}" id="cart-budget-alert">${remaining<0?`Over budget by AUD $${Math.abs(remaining).toFixed(2)}. Remove or postpone items before adding more.`:`AUD $${remaining.toFixed(2)} remains in this ${state.budgetSettings.period} budget.`}</div>
     <div class="market-layout"><div class="market-panel card"><div class="market-panel-head"><div><p class="eyebrow">CURRENT STASH</p><h2>Inventory</h2></div></div>
-      <button class="secondary-button section-add" id="add-inventory">+ Add inventory</button><div class="inventory-grid">${state.inventory.length?state.inventory.map(i=>`<div class="inventory-item"><span class="inventory-swatch" style="background:${validHex(i.color)?i.color:"#a8afa8"}"></span><div><h3>${escapeHtml(i.name)}</h3><p>${escapeHtml(i.category)} · ${i.quantity} ${escapeHtml(i.unit)}${i.details?` · ${escapeHtml(i.details)}`:""}</p></div><div class="row-actions"><button class="mini-button" data-edit-inventory="${i.id}">Edit</button><button class="mini-button danger-button" data-delete-inventory="${i.id}">Delete</button></div></div>`).join(""):`<div class="empty-state">Add yarn and tools you already own.</div>`}</div></div>
+      <div class="button-row"><button class="primary-button section-add" id="scan-yarn">Scan Yarn</button><button class="secondary-button section-add" id="add-inventory">+ Add inventory</button></div><div class="inventory-grid">${state.inventory.length?state.inventory.map(i=>`<div class="inventory-item"><span class="inventory-swatch" style="background:${validHex(yarnItemColor(i))?yarnItemColor(i):"#a8afa8"}"></span><div><h3>${escapeHtml(yarnItemDisplayName(i))}</h3><p>${escapeHtml(i.category)} · ${i.quantity} ${escapeHtml(i.unit)}${i.category==="Yarn"?` · ${escapeHtml(yarnItemDetails(i))}`:i.details?` · ${escapeHtml(i.details)}`:""}</p>${i.category==="Yarn"&&i.colourSource?`<small class="stash-source-note">Colour source: ${escapeHtml(i.colourSource)}${i.colourConfidence?` · confidence ${Math.round(i.colourConfidence)}%`:""}${i.barcode?` · barcode ${escapeHtml(i.barcode)}`:""}</small>`:""}</div><div class="row-actions"><button class="mini-button" data-edit-inventory="${i.id}">Edit</button>${i.category==="Yarn"?`<button class="mini-button" data-rescan-yarn="${i.id}">Scan colour/details</button>`:""}<button class="mini-button danger-button" data-delete-inventory="${i.id}">Delete</button></div></div>`).join(""):`<div class="empty-state">Add yarn and tools you already own.</div>`}</div></div>
       <div class="market-panel card"><div class="market-panel-head"><div><p class="eyebrow">DECISION CART</p><h2>Shopping cart</h2></div></div>
       <div class="cart-budget-line"><div><button class="mini-button" id="edit-budget">Budget ${state.budgetSettings.currency} ${state.budgetSettings.amount}</button><button class="mini-button" id="refresh-rates">Refresh rates</button><small>Daily reference rates: ${escapeHtml(fxDate)}</small></div><strong id="cart-total-line">Cart ≈ AUD $${cartTotal.toFixed(2)}</strong></div>
       <button class="primary-button section-add" id="add-cart-item">+ Add shopping item</button><div class="cart-list">${state.cart.length?state.cart.map(i=>cartItemHtml(i)).join(""):`<div class="empty-state">Your cart is clear. Add an item when something catches your eye.</div>`}</div></div></div>`;
   document.getElementById("add-inventory").onclick=()=>openInventoryModal();
+  document.getElementById("scan-yarn").onclick=()=>openYarnScanModal();
   document.getElementById("add-cart-item").onclick=()=>openCartItemModal();
   document.getElementById("edit-budget").onclick=openBudgetModal;
   document.getElementById("refresh-rates").onclick=()=>refreshFxRates(true);
   document.querySelectorAll("[data-edit-inventory]").forEach(b=>b.onclick=()=>openInventoryModal(b.dataset.editInventory));
-  document.querySelectorAll("[data-delete-inventory]").forEach(b=>b.onclick=()=>{state.inventory=state.inventory.filter(i=>i.id!==b.dataset.deleteInventory);saveState();renderMarket();});
+  document.querySelectorAll("[data-rescan-yarn]").forEach(b=>b.onclick=()=>openYarnScanModal(state.inventory.find(i=>i.id===b.dataset.rescanYarn)||{}));
+  document.querySelectorAll("[data-delete-inventory]").forEach(b=>b.onclick=async()=>{const item=state.inventory.find(i=>i.id===b.dataset.deleteInventory);await Promise.allSettled([item?.photoBlobId,item?.labelPhotoBlobId].filter(Boolean).map(deleteAsset));state.inventory=state.inventory.filter(i=>i.id!==b.dataset.deleteInventory);saveState();renderMarket();});
   document.querySelectorAll("[data-edit-cart]").forEach(b=>b.onclick=()=>openCartItemModal(b.dataset.editCart));
   document.querySelectorAll("[data-delete-cart]").forEach(b=>b.onclick=()=>{state.cart=state.cart.filter(i=>i.id!==b.dataset.deleteCart);saveState();renderMarket();});
   document.querySelectorAll("[data-buy-cart]").forEach(b=>b.onclick=()=>purchaseCartItem(b.dataset.buyCart));
@@ -3714,6 +4638,7 @@ function renderTool(tool=currentProjectTool) {
   document.getElementById("project-calculate")?.addEventListener("click",calculateProjectTool);
   document.getElementById("reset-tool-form")?.addEventListener("click",resetCurrentToolForm);
   document.querySelectorAll("[data-calc-key]").forEach(b=>b.onclick=()=>pressBasicCalculator(b.dataset.calcKey));
+  bindRenderingStudio();
   bindToolResultActions();
   queueMicrotask(applyLanguage);
 }
@@ -3951,7 +4876,7 @@ function openProjectModal() {
     const name = document.getElementById("new-name").value.trim();
     if (!name) return toast("Give your project a name.");
     const files=document.getElementById("new-chart").files;
-    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,patternSource:normalizePatternSource(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
+    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,patternSource:normalizePatternSource(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
     state.projects.push(p); saveState(); closeModal(); openProject(p.id); if(files.length)handleChartFiles(files);
   };
 }
@@ -4096,7 +5021,7 @@ function openCartItemModal(itemId=null){
   };
 }
 function openBudgetModal(){const b=state.budgetSettings;openModal(`<p class="eyebrow">SHOPPING BOUNDARY</p><h2>Set cart budget</h2><div class="form-grid"><div class="field"><label>Budget amount</label><input id="market-budget" type="number" min="0" step="1" value="${b.amount}"></div><div class="field"><label>Budget currency</label><select id="budget-currency">${["AUD","HKD","USD","CNY","JPY","EUR"].map(c=>`<option ${c===b.currency?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Reset period</label><select id="budget-period"><option value="weekly" ${b.period==="weekly"?"selected":""}>Every week</option><option value="monthly" ${b.period==="monthly"?"selected":""}>Every month</option><option value="yearly" ${b.period==="yearly"?"selected":""}>Every year</option><option value="never" ${b.period==="never"?"selected":""}>Never</option></select></div><div class="field"><label>Current period started</label><input id="budget-start" type="date" value="${b.periodStart}"></div></div><div class="modal-actions"><button class="secondary-button" id="reset-budget-now">Reset spent now</button><button class="primary-button" id="save-budget">Save</button></div>`);document.getElementById("reset-budget-now").onclick=()=>{b.spent=0;b.periodStart=new Date().toISOString().slice(0,10);saveState();closeModal();renderMarket();};document.getElementById("save-budget").onclick=()=>{b.amount=Math.max(0,+document.getElementById("market-budget").value||0);b.currency=document.getElementById("budget-currency").value;b.period=document.getElementById("budget-period").value;b.periodStart=document.getElementById("budget-start").value||new Date().toISOString().slice(0,10);saveState();closeModal();renderMarket();};}
-function purchaseCartItem(itemId){const item=state.cart.find(i=>i.id===itemId);if(!item)return;const cost=toAud(item.quantity*item.price,item.currency||"AUD");if(state.budgetSettings.spent+cost>budgetAmountAud())return toast("Purchase blocked: this exceeds the active budget.");const owned=state.inventory.find(i=>i.name.toLowerCase()===item.name.toLowerCase());if(owned)owned.quantity+=item.quantity;else state.inventory.push({id:`inv${Date.now()}`,name:item.name,category:item.category,quantity:item.quantity,unit:item.category==="Yarn"?"balls":"items",color:"#718c72",details:"Added from shopping cart"});state.budgetSettings.spent+=cost;state.purchaseHistory.push({...item,boughtAt:new Date().toISOString(),audCost:cost});if(item.category==="DIY kit"&&item.createProject){const p={id:`p${Date.now()}`,name:item.name,type:"Other",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"Created from a purchased DIY kit.",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,linkedKit:item.name};state.projects.push(p);item.projectId=p.id;}state.cart=state.cart.filter(i=>i.id!==itemId);saveState();renderMarket();toast("Purchase moved into inventory");}
+function purchaseCartItem(itemId){const item=state.cart.find(i=>i.id===itemId);if(!item)return;const cost=toAud(item.quantity*item.price,item.currency||"AUD");if(state.budgetSettings.spent+cost>budgetAmountAud())return toast("Purchase blocked: this exceeds the active budget.");const owned=state.inventory.find(i=>i.name.toLowerCase()===item.name.toLowerCase());if(owned)owned.quantity+=item.quantity;else state.inventory.push({id:`inv${Date.now()}`,name:item.name,category:item.category,quantity:item.quantity,unit:item.category==="Yarn"?"balls":"items",color:"#718c72",details:"Added from shopping cart"});state.budgetSettings.spent+=cost;state.purchaseHistory.push({...item,boughtAt:new Date().toISOString(),audCost:cost});if(item.category==="DIY kit"&&item.createProject){const p={id:`p${Date.now()}`,name:item.name,type:"Other",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"Created from a purchased DIY kit.",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,linkedKit:item.name};state.projects.push(p);item.projectId=p.id;}state.cart=state.cart.filter(i=>i.id!==itemId);saveState();renderMarket();toast("Purchase moved into inventory");}
 function openLibrarySpaceModal(editId=null){const section=state.librarySections.find(s=>s.id===editId);openModal(`<p class="eyebrow">LIBRARY SPACE</p><h2>${section?"Rename space":"New custom space"}</h2><div class="form-grid"><div class="field full"><label>Name</label><input id="space-name" value="${escapeHtml(section?.name||"")}" placeholder="e.g. Embroidery references"></div><div class="field full"><label>Description</label><input id="space-description" value="${escapeHtml(section?.description||"")}" placeholder="What belongs here?"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-space">Save</button></div>`);document.getElementById("save-space").onclick=()=>{const name=document.getElementById("space-name").value.trim();if(!name)return toast("Name this space.");if(section){section.name=name;section.description=document.getElementById("space-description").value;}else state.librarySections.push({id:`lib${Date.now()}`,name,description:document.getElementById("space-description").value,icon:"□",items:[]});saveState();closeModal();renderLibrary();};}
 async function deleteLibraryItem(sectionId,item){
   if(!item)return;
