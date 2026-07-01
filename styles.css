@@ -461,6 +461,12 @@ blockquote { font: 600 24px/1.35 "Fraunces", serif; margin: 28px 0 16px; }.daily
 .yarncha-assistant-answer h4 { margin:0; color:var(--text-primary); }
 .yarncha-assistant-answer p,.yarncha-assistant-answer ul { margin:0; color:var(--text-secondary); line-height:1.55; }
 .yarncha-assistant-answer ul { padding-left:20px; }
+.assistant-project-context,.assistant-technique-card,.assistant-count-check { padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.assistant-technique-card p { color:var(--text-primary); font-weight:900; }
+.assistant-count-check { border-color:color-mix(in srgb,var(--warning) 36%,var(--border)); background:color-mix(in srgb,var(--warning) 9%,var(--surface)); }
+.assistant-step-accordion { padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.assistant-step-accordion summary { cursor:pointer; color:var(--text-primary); font-weight:900; }
+.assistant-step-accordion ol { margin:10px 0 0; padding-left:22px; color:var(--text-secondary); line-height:1.55; }
 .assistant-source-note { color:var(--text-secondary); font-size:12px; }
 .ai-beta-safe { border:1px solid var(--line); background:var(--paper); border-radius:15px; }
 .beta-checks { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }

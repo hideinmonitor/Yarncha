@@ -44,8 +44,8 @@ Paused / deprecated:
 
 Current inspected branch during this update:
 
-- `docs/update-development-latest`
-- It points at the same commit as `main`, `origin/main`, and `origin/HEAD` at the time of inspection.
+- `feature/assistant`
+- The branch currently contains uncommitted Yarncha Assistant, Project Rendering Studio, service-worker/cache-version, style, and assistant contract test updates. Do not discard these changes.
 
 Recent branch history:
 
@@ -204,6 +204,12 @@ Row counter behavior:
 - Linked sub-counters do not go below zero or their configured start value.
 - Voice commands and Flow Mode row controls should call central row helpers rather than mutating `p.row` directly.
 
+Assistant tab:
+
+- `projectAssistantTabHtml(p)` renders Yarncha Assistant first, then the older project assistant / ChatGPT handoff card, then beta safety notes.
+- Yarncha Assistant belongs in Project -> Assistant only. It is not a Chart mode and should not be added to global navigation.
+- The Chart tab copy may point users to the Assistant section, but Chart mode should remain OG Mode / Flow Mode only.
+
 Known project edge cases:
 
 - Preserve local data fields during migrations.
@@ -309,6 +315,95 @@ Limitations and risks:
 - OCR can be wrong and must be user-editable.
 - Read aloud only gives row instructions when the row is checked/high confidence; otherwise it asks the user to check the row first.
 - Server-side AI chart transcription is private-beta infrastructure and not required for local Flow Mode.
+
+## Yarncha Assistant And Technique Help
+
+Yarncha Assistant lives inside Project -> Assistant.
+
+Purpose:
+
+- Give specific, practical, beginner-safe craft help using local project context.
+- Use the selected project, craft, current row, expected stitch count, row instruction, and selected technique when available.
+- Keep Flow Mode focused on chart reading; do not merge Flow Mode logic into Yarncha Assistant.
+
+Main functions and services:
+
+- `projectAssistantTabHtml(p)`
+- `yarnchaAssistantChartHtml(p)`
+- `bindYarnchaAssistant(p)`
+- `askChartYarnchaAssistant(p)`
+- `yarnchaAssistantAnswerHtml(answer)`
+- `projectContextService`
+- `learningMemoryService`
+- `teachingService`
+- `troubleshootingService`
+- `yarnchaAssistantService`
+
+Technique Help:
+
+- `techniqueGuideDatabase` is the structured local technique library.
+- `buildTechniqueHelp()` builds technique-specific answers.
+- `findTechniqueGuide()` matches selected technique labels, ids, and aliases.
+- `techniqueStitchCountMessage()` handles `no-change`, `increase`, `decrease`, `depends`, and `unknown` stitch-count copy.
+- `techniqueOptionsForCraft()` drives the Technique Help selector.
+- `techniqueHelpLabels` keeps answer section labels grouped for future localization.
+
+Supported helper context fields:
+
+- `projectName`
+- `craftType`
+- `currentRow`
+- `expectedStitchCount`
+- `rowInstruction`
+- `selectedTechnique`
+- `selectedStitch`
+- `techniqueCategory`
+- `workingLocation`
+- `stitchCountBefore`
+- `stitchCountAfter`
+- `language`
+
+Current Technique Help content:
+
+- Crochet has specific records for Merge New Yarn, Work Into Chain Space, Back Loop Only, Front Loop Only, Post Stitch, Turning Chain, Increase, and Decrease.
+- Knitting has records for Yarn Over, Knit Two Together, Slip Slip Knit, Make One Left, Make One Right, Knit Through Back Loop, Join New Yarn, Bind Off, Cable Cross, Pick Up Stitches, and Cast On.
+- Tunisian crochet has records for Forward Pass, Return Pass, Tunisian Simple Stitch, Tunisian Knit Stitch, Tunisian Purl Stitch, Edge Stitch, Tunisian Increase, Tunisian Decrease, and Tunisian Bind Off.
+
+Answer format:
+
+- Project context
+- Technique
+- Quick answer
+- What to do now
+- Step-by-step
+- Check before continuing
+- Common mistakes
+- Related techniques
+- Library links
+
+Wording rules:
+
+- Never answer with vague copy like "this Crochet technique" or "this Knitting technique" when a selected technique exists.
+- If selected technique is missing, say: "Choose a technique first so Yarncha can give specific help."
+- If the technique is unknown, say that Yarncha does not have a full guide yet and give safe craft-specific help.
+- Crochet advice should mention hook placement, stitch top, chain space, front/back loop, post, turning chain, and stitch count where relevant.
+- Knitting advice should mention needle insertion direction, stitch mount, front/back leg, yarn position, row tension, and stitch count where relevant.
+- Tunisian advice should mention Forward Pass, Return Pass, loops on hook, vertical bars, edge stitch, and row/pass counting where relevant.
+- Related techniques should use polished labels such as Weave In Ends, Standing Stitch, Colour Change, Edge Stitch Placement, Crochet Stitch Anatomy, Practice Swatch, and Tension Control.
+- Library links are local/reference targets only; the current MVP does not require an external AI/backend for Yarncha Assistant.
+
+UI notes:
+
+- The Technique Help selector is inside the Yarncha Assistant controls.
+- Answer sections render as card-like blocks; step-by-step uses an accordion/details element.
+- Count checks use `.assistant-count-check` so stitch-count warnings are visible but not scary.
+- The assistant panel uses mobile-friendly grid behavior through `.assistant-control-grid` and related responsive styles.
+
+Testing:
+
+- `tests/yarncha-assistant-contract.test.mjs` guards Assistant placement, no Chart-mode merge, local-rule-based service behavior, practical suggestion chips, Technique Help database presence, named technique guidance, stitch-count logic, and mobile-readable assistant styles.
+- Run `node tests/yarncha-assistant-contract.test.mjs` after changing Yarncha Assistant or Technique Help.
+- Also run `npm run test:flow-mode` and `npm run test:navigation` after Assistant placement or Project tab changes.
 
 ## Project Setup Calculation Engine
 
@@ -727,10 +822,10 @@ PWA files:
 
 Important cache notes:
 
-- Root `index.html` currently references classic assets and shared calculation assets with `v=75-shared-calculations`.
-- `scripts/copy-static.mjs` injects classic scripts with asset version `75-shared-calculations` if missing after Vite build. If stale production behavior appears, check this version path carefully.
-- `service-worker.js` uses cache name `yarncha-shell-v61`.
-- `public/service-worker.js` uses cache name `yarncha-shell-v46` and older asset urls. Treat this as legacy unless deliberately updated.
+- Root `index.html` currently references classic assets and shared calculation assets with `v=89-technique-help-classifier`.
+- `scripts/copy-static.mjs` injects classic scripts with asset version `89-technique-help-classifier` if missing after Vite build. If stale production behavior appears, check this version path carefully.
+- `service-worker.js` uses cache name `yarncha-shell-v89-technique-help-classifier`.
+- `public/service-worker.js` also uses cache name `yarncha-shell-v89-technique-help-classifier` and matching asset urls.
 - Cache issues should be verified before assuming code regression, but do not overfocus on cache when incognito and versioned URLs reproduce a render bug.
 
 ## Tests And NPM Scripts
@@ -788,6 +883,9 @@ Current scripts from `package.json`:
 - `npm run test:navigation`
   - Checks global page ids, mobile/desktop nav, project card opening, project tabs, and stable internal nav behavior.
   - Use after any navigation, layout overlay, project card, route, or tab change.
+- `node tests/yarncha-assistant-contract.test.mjs`
+  - Checks Yarncha Assistant placement, Technique Help database contracts, specific answer quality, no Chart-mode merge, local-rule-based behavior, and assistant styling.
+  - Use after changing Yarncha Assistant, Technique Help, Project Assistant tab layout, assistant answer format, or assistant cache-busting.
 - `npm run test:settings`
   - Checks Settings grouping, Danger Zone, account deletion wording, footer, and modal self-healing.
   - Use after settings or account/sync changes.
@@ -812,6 +910,7 @@ npm run test:themes
 npm run test:flow-mode
 npm run test:voice
 npm run test:navigation
+node tests/yarncha-assistant-contract.test.mjs
 npm run test:settings
 npm run test:library
 npm run build
@@ -894,6 +993,9 @@ Desktop:
 - Chart tab shows OG/Flow selector inside the Project Chart card.
 - OG Mode upload, attachment chip preview, annotation toolbar, row mask, zoom, row counter, and voice button are usable.
 - Flow Mode shows Project Setup, Reading Progress, Voice Assistant, and Advanced tools in one aligned workflow.
+- Assistant tab shows Yarncha Assistant, Technique Help selector, practical suggestion chips, project context, and the older project assistant handoff card.
+- Selecting a technique, such as Join New Yarn, returns a named technique answer with Quick answer, What to do now, Step-by-step, Check before continuing, Common mistakes, and Related techniques.
+- Technique Help count checks mention the expected row stitch count when available.
 - Library loads, Symbol Database opens, symbol edit modal fits.
 - Tools loads and calculator result actions work.
 - Settings loads, theme gallery cards select by click and keyboard, Danger Zone is separated.
@@ -909,6 +1011,7 @@ Mobile, especially 390 px:
 - Attachment chip filename truncates without overflow and remove button remains tappable.
 - Annotation toolbar scrolls horizontally and tool selection works without re-rendering the project.
 - Flow Mode project setup form is one column and save status is visible.
+- Assistant Technique Help controls stack cleanly, answer cards are readable, and count-check cards do not overflow.
 - Theme cards have equal visual rhythm and active state is obvious.
 
 ## Known Limitations And Risks
@@ -930,6 +1033,13 @@ Flow Mode:
 - Current project setup calculations are planning estimates.
 - OCR and scanned row text must be reviewed by the user.
 - Read aloud should not speak uncertain rows as instructions.
+
+Yarncha Assistant:
+
+- Technique Help is a local structured helper, not a complete craft encyclopedia.
+- Unknown techniques intentionally use a safe fallback rather than pretending to have a full guide.
+- Saved assistant learning memory is local to the browser/device.
+- Assistant answer quality depends on selected technique and available project context; ask the user to choose a technique or paste the exact row when context is missing.
 
 PWA/cache:
 
@@ -973,7 +1083,12 @@ Recent major work represented in the current codebase:
 - Theme gallery was simplified into clickable visual cards; Sky Blessing replaced Morning Orchard.
 - Dark/light theme contrast and danger button contrast are covered by theme tests.
 - Project Setup calculation behavior is covered by both `test:flow-mode` and `test:project-setup-calculations`.
+- Yarncha Assistant now lives in Project -> Assistant rather than Chart mode. Chart mode remains OG Mode / Flow Mode only.
+- Yarncha Assistant answer quality was improved with question classification, "What to do now", craft-specific troubleshooting, and answer-specific library links.
+- Technique Help was refactored into a structured local technique guide database with selected-technique answers, stitch-count logic, polished related-technique labels, and mobile-friendly answer cards.
+- `tests/yarncha-assistant-contract.test.mjs` covers Assistant placement, Technique Help contracts, answer-quality guardrails, and local-rule-based behavior.
+- Current asset/cache version is `89-technique-help-classifier`.
 
 Documentation-only update:
 
-- This `DEVELOPMENT.md` was refreshed on 2026-07-01 after inspecting branch status, recent git history, package scripts, app/runtime files, tests, scripts, config, cloud, OCR, Symbol Database, PWA, and supporting audit docs.
+- This `DEVELOPMENT.md` was refreshed on 2026-07-01 after inspecting branch status, package scripts, app/runtime files, tests, scripts, cache versions, Yarncha Assistant, Technique Help, Flow Mode, OCR, Symbol Database, PWA, and supporting audit docs.

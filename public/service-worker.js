@@ -1,5 +1,5 @@
-const CACHE_NAME = "yarncha-shell-v87-assistant-answer-quality";
-const APP_SHELL = ["/", "/index.html", "/styles.css?v=87-assistant-answer-quality", "/calculator-engine.js?v=87-assistant-answer-quality", "/symbol-database.js?v=87-assistant-answer-quality", "/app.js?v=87-assistant-answer-quality", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE_NAME = "yarncha-shell-v89-technique-help-classifier";
+const APP_SHELL = ["/", "/index.html", "/styles.css?v=89-technique-help-classifier", "/calculator-engine.js?v=89-technique-help-classifier", "/symbol-database.js?v=89-technique-help-classifier", "/app.js?v=89-technique-help-classifier", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));

@@ -24,6 +24,8 @@ assert.match(source, /Ask about a stitch, symbol, row, mistake, or pattern line\
 assert.match(source, /Using row \$\{context\.currentRow\} context/, "Assistant can show row context");
 assert.match(source, /No chart context available/, "Assistant handles missing chart context");
 assert.match(source, /classifyQuestion\(question/, "Assistant classifies the user question first");
+assert.match(source, /const techniqueGuideDatabase=\[/, "Technique Help uses a structured guide database");
+assert.match(source, /function buildTechniqueHelp/, "Technique Help has a dedicated response builder");
 assert.match(source, /questionType:"stitchCountProblem"/, "Stitch count answers are typed");
 assert.match(source, /questionType:"droppedStitch"/, "Dropped stitch answers are typed");
 assert.match(source, /questionType:"symbolMeaning"/, "Symbol answers are typed");
@@ -34,7 +36,7 @@ for (const copy of [
   "Quick answer",
   "What to do now",
   "Step-by-step",
-  "Check this before continuing",
+  "Check before continuing",
   "Common mistakes",
   "Related techniques",
   "Library links",
@@ -43,7 +45,13 @@ for (const copy of [
   "Help me read this row",
   "Fix a dropped stitch",
   "What does this abbreviation mean?",
-  "Why does my project look different?"
+  "Why does my project look different?",
+  "Technique Help",
+  "Choose a technique first",
+  "Merge New Yarn",
+  "Back Loop Only",
+  "Work Into Chain Space",
+  "Post Stitch"
 ]) {
   assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${copy} is present`);
 }
@@ -56,13 +64,25 @@ for (const practicalCopy of [
   "stitch-count effect",
   "Measure your stitch gauge across 10 cm",
   "Yarn Substitution",
-  "Stitch Count Troubleshooting"
+  "Stitch Count Troubleshooting",
+  "should not change your stitch count",
+  "You should still have ${expected} stitches",
+  "insert under only the loop farthest from you",
+  "insert the hook into the open space",
+  "the hook goes around the post",
+  "adds stitches",
+  "removes stitches",
+  "Forward Pass",
+  "Return Pass",
+  "needle insertion direction"
 ]) {
   assert.match(source, new RegExp(practicalCopy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${practicalCopy} guidance is present`);
 }
 
 for (const vagueCopy of [
   "This is a Knitting technique question",
+  "this Crochet technique",
+  "this Knitting technique",
   "Work it slowly once",
   "Compare it with the next repeat",
   "Pause, count, and check one small section at a time",
@@ -84,5 +104,7 @@ const assistantServiceSource = source.slice(source.indexOf("const yarnchaAssista
 assert.doesNotMatch(assistantServiceSource, /fetch\(|supabase|OpenAI|api\/|analyzeChart/i, "Assistant MVP service does not require external AI/backend");
 assert.match(styles, /\.yarncha-assistant-panel/, "Assistant has dedicated mobile-friendly styling");
 assert.match(styles, /\.assistant-control-grid/, "Assistant controls are structured");
+assert.match(styles, /\.assistant-count-check/, "Technique count checks have a dedicated card style");
+assert.match(styles, /\.assistant-step-accordion/, "Technique steps are readable on mobile");
 
 console.log("Yarncha Assistant contract passed");

@@ -1,11 +1,11 @@
-const CACHE_NAME = "yarncha-shell-v87-assistant-answer-quality";
+const CACHE_NAME = "yarncha-shell-v89-technique-help-classifier";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=87-assistant-answer-quality",
-  "/calculator-engine.js?v=87-assistant-answer-quality",
-  "/symbol-database.js?v=87-assistant-answer-quality",
-  "/app.js?v=87-assistant-answer-quality",
+  "/styles.css?v=89-technique-help-classifier",
+  "/calculator-engine.js?v=89-technique-help-classifier",
+  "/symbol-database.js?v=89-technique-help-classifier",
+  "/app.js?v=89-technique-help-classifier",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

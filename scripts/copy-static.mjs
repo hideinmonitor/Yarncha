@@ -30,7 +30,7 @@ for (const file of rootAssets) {
 }
 
 const indexFile = resolve(distDir, "index.html");
-const assetVersion = "87-assistant-answer-quality";
+const assetVersion = "89-technique-help-classifier";
 const classicScripts = [
   `<script src="src/data/sizeReference.js?v=${assetVersion}"></script>`,
   `<script src="src/calculations/core.js?v=${assetVersion}"></script>`,
