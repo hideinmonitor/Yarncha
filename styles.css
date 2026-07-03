@@ -961,6 +961,11 @@ input,select,textarea,.search,.field input,.field select,.field textarea,.langua
 .backup-actions { display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin:14px 0; }
 .backup-actions select { min-height:44px; min-width:min(260px,100%); border:1px solid var(--border); border-radius:10px; padding:0 10px; background:var(--surface-elevated); color:var(--text-primary); }
 .backup-mode { display:grid; gap:8px; margin-top:10px; }
+.settings-backup-layout,.settings-backup-main,.settings-backup-actions { min-width:0; }
+.settings-backup-layout { display:grid; gap:18px; }
+.settings-backup-main,.settings-backup-actions { display:grid; align-content:start; gap:14px; }
+.settings-backup-actions { padding:16px; border:1px solid var(--border); border-radius:var(--radius-card); background:var(--surface-elevated); }
+.settings-backup-actions p { margin:4px 0 0; color:var(--text-secondary); font-size:13px; line-height:1.45; }
 .cart-inline-editor { display:grid; grid-template-columns:1.4fr .6fr .8fr .8fr .8fr; gap:8px; margin:12px 0; }
 .cart-inline-editor label { display:grid; gap:4px; color:var(--text-secondary); font-size:11px; font-weight:800; }
 .cart-inline-editor input,.cart-inline-editor select { width:100%; min-height:44px; border:1px solid var(--border); border-radius:10px; padding:8px 10px; background:var(--surface-elevated); color:var(--text-primary); }
@@ -1630,13 +1635,14 @@ input,select,textarea,.language-select { border-radius:var(--radius-input); }
 .toolbox-detail-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; }
 .toolbox-detail-head h2 { margin:0; }
 .toolbox-detail-head p { margin:8px 0 0; }
-.tools-detail-content .toolkit-tool { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,.8fr); gap:18px; align-items:start; }
-.tools-detail-content .tool-description,.tools-detail-content .unit-preference-note,.tools-detail-content .estimate-disclaimer,.tools-detail-content .toolkit-actions { grid-column:1/-1; }
-.tools-detail-content .form-grid { grid-column:1; }
-.tools-detail-content .result-box { grid-column:2; grid-row:4 / span 2; margin:0; min-height:170px; align-self:stretch; }
-.tools-detail-content .basic-calculator { max-width:none; grid-template-columns:minmax(0,1fr) minmax(300px,.8fr); align-items:start; }
-.tools-detail-content .basic-calculator .calc-display,.tools-detail-content .basic-calculator .calc-grid,.tools-detail-content .basic-calculator .toolkit-actions { grid-column:1; }
-.tools-detail-content .basic-calculator .result-box { grid-column:2; grid-row:1 / span 3; margin:0; min-height:260px; }
+.tools-detail-content,#project-tool-content { width:100%; max-width:none; min-width:0; }
+.tools-detail-content .toolkit-tool,#project-tool-content .toolkit-tool { width:100%; display:grid; grid-template-columns:minmax(0,1fr); gap:18px; align-items:stretch; }
+.tools-detail-content .tool-description,.tools-detail-content .unit-preference-note,.tools-detail-content .estimate-disclaimer,.tools-detail-content .toolkit-actions,#project-tool-content .tool-description,#project-tool-content .unit-preference-note,#project-tool-content .estimate-disclaimer,#project-tool-content .toolkit-actions { grid-column:1/-1; }
+.tools-detail-content .form-grid,#project-tool-content .form-grid { width:100%; grid-column:1/-1; }
+.tools-detail-content .result-box,#project-tool-content .result-box { width:100%; grid-column:1/-1; grid-row:auto; margin:0; min-height:220px; align-self:stretch; display:grid; gap:14px; align-content:start; }
+.tools-detail-content .basic-calculator,#project-tool-content .basic-calculator { width:100%; max-width:none; display:grid; grid-template-columns:minmax(0,1fr); gap:18px; align-items:stretch; }
+.tools-detail-content .basic-calculator .calc-display,.tools-detail-content .basic-calculator .calc-grid,.tools-detail-content .basic-calculator .toolkit-actions,.tools-detail-content .basic-calculator .result-box,#project-tool-content .basic-calculator .calc-display,#project-tool-content .basic-calculator .calc-grid,#project-tool-content .basic-calculator .toolkit-actions,#project-tool-content .basic-calculator .result-box { grid-column:1/-1; }
+.tools-detail-content .basic-calculator .result-box,#project-tool-content .basic-calculator .result-box { min-height:220px; }
 .tools-detail-content .calc-result-card details { border-top:1px solid var(--border); padding-top:10px; }
 .tools-detail-content .calc-result-card summary { min-height:40px; display:flex; align-items:center; font-weight:900; cursor:pointer; }
 .tools-detail-content .rendering-studio { grid-column:1/-1; }
@@ -1735,8 +1741,8 @@ input,select,textarea,.language-select { border-radius:var(--radius-input); }
 }
 @media (max-width:1100px){
   .toolbox-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .tools-detail-content .toolkit-tool,.tools-detail-content .basic-calculator { grid-template-columns:1fr; }
-  .tools-detail-content .form-grid,.tools-detail-content .result-box,.tools-detail-content .basic-calculator .result-box { grid-column:1; grid-row:auto; }
+  .tools-detail-content .toolkit-tool,.tools-detail-content .basic-calculator,#project-tool-content .toolkit-tool,#project-tool-content .basic-calculator { grid-template-columns:1fr; }
+  .tools-detail-content .form-grid,.tools-detail-content .result-box,.tools-detail-content .basic-calculator .result-box,#project-tool-content .form-grid,#project-tool-content .result-box,#project-tool-content .basic-calculator .result-box { grid-column:1; grid-row:auto; }
   .studio-feedback-grid,.studio-calc-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .studio-card-fields { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
@@ -1806,6 +1812,21 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 .row-actions,.modal-actions,.detail-actions,.chart-mode-actions,.analysis-actions,.tool-result-actions,.toolkit-actions,.backup-actions,.cover-actions,.button-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .modal-actions { justify-content:flex-end; }
 .row-actions > button,.modal-actions > button,.detail-actions > button,.chart-mode-actions > button,.tool-result-actions > button,.toolkit-actions > button { flex:0 1 auto; }
+.settings-page-shell,#settings-content { width:100%; max-width:none; min-width:0; }
+.settings-panel,.settings-preferences-card,.settings-backup-card { width:100%; }
+.settings-section-heading p,.settings-form-row p,.settings-backup-actions p,.privacy-note { max-width:72ch; }
+@media (min-width:1024px) {
+  :root { --page-padding:clamp(24px,2.5vw,40px); }
+  .view,.topbar-inner { max-width:none; margin-inline:0; }
+  .settings-page-shell { grid-template-columns:minmax(0,1fr); gap:24px; }
+  .settings-panel-wide,.settings-group-title { grid-column:1/-1; }
+  .settings-preferences-card .settings-form-row-stack { grid-template-columns:minmax(220px,.38fr) minmax(0,1fr); align-items:center; }
+  .settings-backup-layout { grid-template-columns:minmax(0,1fr) minmax(300px,360px); gap:32px; align-items:stretch; }
+  .settings-backup-actions { padding:20px; }
+  .storage-status-panel { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
+  .backup-actions { display:grid; grid-template-columns:1fr; align-items:stretch; margin:0; }
+  .backup-actions > button,.backup-actions > select { width:100%; }
+}
 .project-grid,.library-grid,.tool-grid,.market-summary,.settings-grid,.toolbox-grid,.appearance-grid,.manual-grid,.idea-grid { align-items:stretch; }
 .project-grid > *,.library-grid > *,.tool-grid > *,.market-summary > *,.settings-grid > *,.toolbox-grid > *,.appearance-grid > * { min-width:0; }
 .tools-layout { display:block; }
@@ -4092,4 +4113,360 @@ button[title*="microphone" i] svg {
   border-color:var(--primary) !important;
   background:color-mix(in srgb,var(--primary) 12%,var(--paper)) !important;
   box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent) !important;
+}
+/* Design system consistency audit */
+:root {
+  --font-title:"Fraunces", Georgia, serif;
+  --font-heading:"Fraunces", Georgia, serif;
+  --font-body:"DM Sans", Inter, system-ui, sans-serif;
+  --font-small:12px;
+  --line-heading:1.12;
+  --line-body:1.55;
+  --spacing-2xs:4px;
+  --spacing-xs:8px;
+  --spacing-sm:12px;
+  --spacing-md:16px;
+  --spacing-lg:24px;
+  --spacing-xl:32px;
+  --radius-sm:10px;
+  --radius-md:14px;
+  --radius-lg:20px;
+  --button-height:46px;
+  --button-height-sm:44px;
+  --chip-height:32px;
+  --icon-size:20px;
+  --icon-size-sm:18px;
+  --control-height:var(--button-height);
+  --radius-button:var(--radius-md);
+  --radius-input:var(--radius-sm);
+  --radius-card:var(--radius-lg);
+  --card-padding:clamp(16px,2vw,24px);
+  --section-gap:var(--spacing-lg);
+}
+
+body,
+input,
+select,
+textarea,
+button {
+  font-family:var(--font-body);
+  line-height:var(--line-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family:var(--font-heading);
+  line-height:var(--line-heading);
+  letter-spacing:0;
+}
+
+h1 { font-size:clamp(34px,3vw,48px); }
+h2 { font-size:clamp(24px,2.2vw,32px); }
+h3 { font-size:clamp(18px,1.6vw,22px); }
+
+p,
+li,
+dd,
+.muted-copy,
+.tool-description,
+.assistant-helper,
+.settings-form-row p,
+.settings-section-heading p,
+.section-heading p {
+  line-height:var(--line-body);
+}
+
+.eyebrow,
+.section-label,
+.tool-category-label,
+.settings-section-heading .eyebrow {
+  font-size:11px;
+  line-height:1.2;
+  font-weight:850;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+small,
+.caption,
+.helper-text,
+.field small,
+.unit-preference-note,
+.estimate-disclaimer,
+.symbol-result-count {
+  font-size:var(--font-small);
+  line-height:1.45;
+}
+
+button,
+.primary-button,
+.secondary-button,
+.mini-button,
+.text-button,
+.danger-button,
+.project-action-button,
+.pill-tab,
+.theme-choice,
+.converter-tabs button,
+.project-tool-tabs button,
+.pattern-switch button,
+.tool-tabs button,
+.chart-toolbar button,
+.annotation-toolbar button,
+.zoom-tools button,
+.reading-counter button,
+.counter-controls button,
+.sub-counter-controls button {
+  min-height:var(--button-height-sm);
+  border-radius:var(--radius-button);
+  font-weight:800;
+  line-height:1.15;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button,
+.project-action-button {
+  min-height:var(--button-height);
+  padding-inline:var(--spacing-md);
+}
+
+.primary-button,
+.secondary-button,
+.mini-button,
+.text-button,
+.danger-button,
+.project-action-button,
+.converter-tabs button,
+.project-tool-tabs button,
+.pattern-switch button,
+.tool-tabs button,
+.chart-toolbar button,
+.annotation-toolbar button,
+.zoom-tools button,
+.reading-counter button,
+.counter-controls button,
+.sub-counter-controls button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:var(--spacing-xs);
+  text-align:center;
+}
+
+.mini-button {
+  min-height:var(--button-height-sm);
+  padding-inline:var(--spacing-sm);
+  font-size:13px;
+}
+
+.icon-button,
+.mobile-menu,
+.modal-close,
+.minimal-icon-button,
+.symbol-card-edit {
+  width:44px;
+  min-width:44px;
+  height:44px;
+  min-height:44px;
+  padding:0;
+  display:inline-grid;
+  place-items:center;
+}
+
+.ui-icon,
+.button-icon,
+.annotation-button-icon,
+.toolbox-card-icon,
+.library-card-icon,
+.nav-icon svg,
+.tool-symbol svg,
+.mobile-menu svg,
+.modal-close svg {
+  width:var(--icon-size);
+  height:var(--icon-size);
+  flex:0 0 auto;
+  vertical-align:middle;
+}
+
+.button-icon,
+.minimal-icon-button .ui-icon,
+.symbol-card-edit .ui-icon {
+  width:var(--icon-size-sm);
+  height:var(--icon-size-sm);
+}
+
+.card,
+.mobile-card,
+.calculator-card,
+.market-panel,
+.summary-card,
+.settings-panel,
+.assistant-card,
+.chart-reader,
+.reading-counter,
+.annotation-toolbar,
+.chart-mode-toolbar,
+.chart-mode-switch,
+.notion-row,
+.cart-item,
+.inventory-item,
+.material-card,
+.idea-card,
+.toolbox-card,
+.toolbox-browser,
+.toolbox-detail,
+.manual-card,
+.theory-level,
+.daily-note {
+  border-radius:var(--radius-card);
+}
+
+.mobile-card,
+.calculator-card,
+.project-tools,
+.buy-list-card,
+.settings-panel,
+.market-panel,
+.toolbox-browser,
+.toolbox-detail,
+.manual-card,
+.theory-level,
+.daily-note,
+.assistant-card,
+.symbol-database-intro,
+.symbol-admin-toolbar,
+.symbol-filter-bar {
+  padding:var(--card-padding);
+}
+
+.section-heading,
+.page-title,
+.toolbox-detail-head,
+.settings-section-heading,
+.market-panel-head,
+.appearance-heading,
+.card-header {
+  gap:var(--spacing-md);
+  align-items:center;
+}
+
+.field {
+  display:grid;
+  gap:7px;
+}
+
+.field label,
+.toolkit-picker,
+.symbol-filter-bar label,
+.settings-form-row label {
+  margin:0;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.25;
+  color:var(--text-secondary);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+select,
+textarea,
+.search,
+.toolbox-search {
+  min-height:var(--control-height);
+  border-radius:var(--radius-input);
+  padding-inline:var(--spacing-md);
+}
+
+textarea {
+  padding-block:var(--spacing-sm);
+}
+
+.form-grid,
+.inline-fields,
+.toolkit-selector-panel,
+.settings-form-row,
+.settings-grid,
+.backup-detail-grid,
+.saved-work-grid {
+  gap:var(--spacing-md);
+}
+
+.chip,
+.pill-tab,
+.craft-pill,
+.confidence-pill,
+.symbol-region-badge,
+.symbol-verification-badge,
+.theme-active-badge,
+.tool-category-pill {
+  min-height:var(--chip-height);
+  border-radius:999px;
+  padding-inline:var(--spacing-sm);
+  display:inline-flex;
+  align-items:center;
+  gap:var(--spacing-xs);
+  font-size:12px;
+  font-weight:800;
+  line-height:1.15;
+}
+
+.notion-list,
+.cart-list,
+.inventory-grid,
+.project-selector-list,
+.symbol-source-list,
+.assistant-messages,
+.limitations-list,
+.theory-levels,
+.tool-result-grid {
+  gap:var(--spacing-sm);
+}
+
+.notion-row,
+.cart-item,
+.inventory-item,
+.marker-line,
+.symbol-learning-card {
+  padding:var(--spacing-md);
+}
+
+.repeat-counter-actions .counter-options-button {
+  flex:1 1 130px;
+}
+
+@media (max-width:760px) {
+  :root {
+    --card-padding:16px;
+    --section-gap:16px;
+    --button-height:46px;
+    --control-height:46px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .mini-button,
+  .danger-button,
+  .project-action-button,
+  .pill-tab,
+  .chip,
+  .theme-choice,
+  .converter-tabs button,
+  .project-tool-tabs button,
+  .pattern-switch button,
+  .tool-tabs button,
+  .chart-toolbar button,
+  .annotation-toolbar button,
+  .zoom-tools button {
+    min-height:44px;
+  }
+
+  .section-heading,
+  .split-title,
+  .market-panel-head,
+  .toolbox-detail-head,
+  .appearance-heading,
+  .card-header {
+    gap:var(--spacing-sm);
+  }
 }
