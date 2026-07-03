@@ -108,6 +108,55 @@ create table if not exists public.user_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.yarncha_sync_records (
+  id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  record_type text not null,
+  local_id text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  device_id text not null,
+  sync_version integer not null default 1,
+  deleted boolean not null default false,
+  last_synced_at timestamptz,
+  primary key (user_id, id)
+);
+
+create table if not exists public.yarncha_sync_devices (
+  id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null default 'Yarncha device',
+  user_agent text not null default '',
+  created_at timestamptz not null default now(),
+  last_active_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
+create table if not exists public.yarncha_project_versions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  project_local_id text not null,
+  device_id text not null,
+  label text not null default 'Project version',
+  project_data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.yarncha_sync_conflicts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  record_id text not null,
+  record_type text not null,
+  local_payload jsonb not null default '{}'::jsonb,
+  cloud_payload jsonb not null default '{}'::jsonb,
+  local_updated_at timestamptz,
+  cloud_updated_at timestamptz,
+  status text not null default 'open',
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+
 create index if not exists knitting_projects_user_id_idx on public.knitting_projects(user_id);
 create index if not exists chart_uploads_user_id_idx on public.chart_uploads(user_id);
 create index if not exists chart_uploads_project_id_idx on public.chart_uploads(project_id);
@@ -115,6 +164,11 @@ create index if not exists chart_cells_upload_id_idx on public.chart_cells(uploa
 create index if not exists generated_patterns_user_id_idx on public.generated_patterns(user_id);
 create index if not exists chart_analyses_user_id_idx on public.chart_analyses(user_id);
 create index if not exists tool_results_user_id_idx on public.tool_results(user_id);
+create index if not exists yarncha_sync_records_user_updated_idx on public.yarncha_sync_records(user_id, updated_at);
+create index if not exists yarncha_sync_records_user_type_idx on public.yarncha_sync_records(user_id, record_type);
+create index if not exists yarncha_sync_devices_user_active_idx on public.yarncha_sync_devices(user_id, last_active_at desc);
+create index if not exists yarncha_project_versions_user_project_idx on public.yarncha_project_versions(user_id, project_local_id, created_at desc);
+create index if not exists yarncha_sync_conflicts_user_status_idx on public.yarncha_sync_conflicts(user_id, status, created_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
@@ -132,6 +186,9 @@ create trigger projects_set_updated_at before update on public.knitting_projects
 for each row execute function public.set_updated_at();
 drop trigger if exists settings_set_updated_at on public.user_settings;
 create trigger settings_set_updated_at before update on public.user_settings
+for each row execute function public.set_updated_at();
+drop trigger if exists yarncha_sync_records_set_updated_at on public.yarncha_sync_records;
+create trigger yarncha_sync_records_set_updated_at before update on public.yarncha_sync_records
 for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_user()
@@ -160,6 +217,10 @@ alter table public.generated_patterns enable row level security;
 alter table public.chart_analyses enable row level security;
 alter table public.tool_results enable row level security;
 alter table public.user_settings enable row level security;
+alter table public.yarncha_sync_records enable row level security;
+alter table public.yarncha_sync_devices enable row level security;
+alter table public.yarncha_project_versions enable row level security;
+alter table public.yarncha_sync_conflicts enable row level security;
 
 -- Direct ownership policies.
 do $$
@@ -172,6 +233,21 @@ begin
     execute format('drop policy if exists "own_delete" on public.%I', table_name);
     execute format('create policy "own_select" on public.%I for select to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id)', table_name);
     execute format('create policy "own_insert" on public.%I for insert to authenticated with check ((select auth.uid()) is not null and (select auth.uid()) = user_id)', table_name);
+    execute format('create policy "own_update" on public.%I for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)', table_name);
+    execute format('create policy "own_delete" on public.%I for delete to authenticated using ((select auth.uid()) = user_id)', table_name);
+  end loop;
+end $$;
+
+do $$
+declare table_name text;
+begin
+  foreach table_name in array array['yarncha_sync_records','yarncha_sync_devices','yarncha_project_versions','yarncha_sync_conflicts'] loop
+    execute format('drop policy if exists "own_select" on public.%I', table_name);
+    execute format('drop policy if exists "own_insert" on public.%I', table_name);
+    execute format('drop policy if exists "own_update" on public.%I', table_name);
+    execute format('drop policy if exists "own_delete" on public.%I', table_name);
+    execute format('create policy "own_select" on public.%I for select to authenticated using ((select auth.uid()) = user_id)', table_name);
+    execute format('create policy "own_insert" on public.%I for insert to authenticated with check ((select auth.uid()) = user_id)', table_name);
     execute format('create policy "own_update" on public.%I for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)', table_name);
     execute format('create policy "own_delete" on public.%I for delete to authenticated using ((select auth.uid()) = user_id)', table_name);
   end loop;
@@ -287,5 +363,6 @@ create or replace view public.charts with (security_invoker = true) as
 select * from public.chart_uploads;
 
 grant select, insert, update, delete on public.profiles, public.knitting_projects, public.chart_uploads,
-  public.chart_cells, public.generated_patterns, public.chart_analyses, public.tool_results, public.user_settings to authenticated;
+  public.chart_cells, public.generated_patterns, public.chart_analyses, public.tool_results, public.user_settings,
+  public.yarncha_sync_records, public.yarncha_sync_devices, public.yarncha_project_versions, public.yarncha_sync_conflicts to authenticated;
 grant select on public.users, public.projects, public.charts to authenticated;

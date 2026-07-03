@@ -43,6 +43,29 @@ export interface ChartCell {
   is_user_corrected: boolean;
 }
 
+export interface SyncRecord {
+  id: string;
+  user_id: string;
+  record_type: string;
+  local_id: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  device_id: string;
+  sync_version: number;
+  deleted: boolean;
+  last_synced_at: string | null;
+}
+
+export interface SyncDevice {
+  id: string;
+  user_id: string;
+  name: string;
+  user_agent: string;
+  last_active_at: string;
+  created_at: string;
+}
+
 let clientPromise: Promise<SupabaseClient | null> | null = null;
 
 async function readRuntimeConfig() {
@@ -92,6 +115,17 @@ export async function signInWithEmail(email: string, password: string) {
   const client = await getSupabase();
   if (!client) throw new Error("Cloud sync is not configured yet.");
   const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function signInWithProvider(provider: "apple" | "google") {
+  const client = await getSupabase();
+  if (!client) throw new Error("Cloud sync is not configured yet.");
+  const { data, error } = await client.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: window.location.origin }
+  });
   if (error) throw error;
   return data;
 }
@@ -189,6 +223,87 @@ export async function loadUserSettings() {
   const { data, error } = await client.from("user_settings").select("settings").eq("user_id", user.id).maybeSingle();
   if (error) throw error;
   return data?.settings || null;
+}
+
+export async function upsertSyncRecords(records: Array<Omit<SyncRecord, "user_id" | "last_synced_at"> & { user_id?: string; last_synced_at?: string | null }>) {
+  if (!records.length) return [];
+  const { client, user } = await requireUser();
+  const now = new Date().toISOString();
+  const rows = records.map(record => ({
+    ...record,
+    user_id: user.id,
+    last_synced_at: now
+  }));
+  const { data, error } = await client.from("yarncha_sync_records")
+    .upsert(rows, { onConflict: "user_id,id" }).select("*");
+  if (error) throw error;
+  return (data || []) as SyncRecord[];
+}
+
+export async function listSyncRecords(since?: string | null): Promise<SyncRecord[]> {
+  const { client, user } = await requireUser();
+  let query = client.from("yarncha_sync_records").select("*").eq("user_id", user.id).order("updated_at", { ascending: true });
+  if (since) query = query.gt("updated_at", since);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as SyncRecord[];
+}
+
+export async function registerSyncDevice(device: { id: string; name: string; user_agent?: string }) {
+  const { client, user } = await requireUser();
+  const { data, error } = await client.from("yarncha_sync_devices").upsert({
+    id: device.id,
+    user_id: user.id,
+    name: device.name,
+    user_agent: device.user_agent || navigator.userAgent || "",
+    last_active_at: new Date().toISOString()
+  }, { onConflict: "user_id,id" }).select("*").single();
+  if (error) throw error;
+  return data as SyncDevice;
+}
+
+export async function listSyncDevices(): Promise<SyncDevice[]> {
+  const { client, user } = await requireUser();
+  const { data, error } = await client.from("yarncha_sync_devices").select("*").eq("user_id", user.id).order("last_active_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as SyncDevice[];
+}
+
+export async function renameSyncDevice(deviceId: string, name: string) {
+  const { client, user } = await requireUser();
+  const { error } = await client.from("yarncha_sync_devices").update({ name, last_active_at: new Date().toISOString() }).eq("user_id", user.id).eq("id", deviceId);
+  if (error) throw error;
+}
+
+export async function removeSyncDevice(deviceId: string) {
+  const { client, user } = await requireUser();
+  const { error } = await client.from("yarncha_sync_devices").delete().eq("user_id", user.id).eq("id", deviceId);
+  if (error) throw error;
+}
+
+export async function saveProjectVersion(project: Record<string, any>, deviceId: string) {
+  if (!project?.id) return null;
+  const { client, user } = await requireUser();
+  const { data, error } = await client.from("yarncha_project_versions").insert({
+    user_id: user.id,
+    project_local_id: String(project.id),
+    device_id: deviceId,
+    project_data: cloudSafeProject(project),
+    label: String(project.name || "Project version")
+  }).select("*").single();
+  if (error) throw error;
+  return data;
+}
+
+export async function subscribeToSyncRecords(onPayload: (payload: unknown) => void) {
+  const { client, user } = await requireUser();
+  const channel = client.channel(`yarncha-sync-${user.id}`).on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "yarncha_sync_records", filter: `user_id=eq.${user.id}` },
+    onPayload
+  );
+  const status = await channel.subscribe();
+  return { channel, status, unsubscribe: () => client.removeChannel(channel) };
 }
 
 function safeFilename(name: string) {

@@ -3,6 +3,7 @@ import {
   currentUser,
   signUpWithEmail,
   signInWithEmail,
+  signInWithProvider,
   signOut,
   upsertProject,
   listProjects,
@@ -17,8 +18,23 @@ import {
   listChartCells,
   updateChartCell,
   saveGeneratedPattern,
+  upsertSyncRecords,
+  listSyncRecords,
+  registerSyncDevice,
+  listSyncDevices,
+  renameSyncDevice,
+  removeSyncDevice,
+  saveProjectVersion,
+  subscribeToSyncRecords,
   deleteAccountAndData
 } from "./supabase-client.ts";
+
+const QUEUE_KEY = "yarncha.cloud.pendingRecords.v1";
+const META_KEY = "yarncha.cloud.meta.v1";
+const HISTORY_KEY = "yarncha.cloud.history.v1";
+const CONFLICT_KEY = "yarncha.cloud.conflicts.v1";
+const DEVICE_KEY = "yarncha.cloud.device.v1";
+const SYNC_VERSION = 1;
 
 const cloud = {
   configured: false,
@@ -27,7 +43,9 @@ const cloud = {
   lastError: "",
   syncTimer: null,
   activeUploadId: null,
-  activeCells: []
+  activeCells: [],
+  realtime: null,
+  pendingDownloads: 0
 };
 
 function local() {
@@ -54,6 +72,293 @@ function setCloudStatus(text, tone = "") {
   }
 }
 
+function readJson(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; }
+  catch { return fallback; }
+}
+
+function writeJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function deviceProfile() {
+  const existing = readJson(DEVICE_KEY, null);
+  if (existing?.id) return existing;
+  const platform = navigator.platform || "browser";
+  const profile = {
+    id: `device-${crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
+    name: `Yarncha on ${platform}`,
+    createdAt: new Date().toISOString()
+  };
+  writeJson(DEVICE_KEY, profile);
+  return profile;
+}
+
+function syncMeta() {
+  return {
+    lastSyncAt: null,
+    lastPullAt: null,
+    lastPushAt: null,
+    health: "Waiting to sync",
+    ...readJson(META_KEY, {})
+  };
+}
+
+function setSyncMeta(update = {}) {
+  const next = { ...syncMeta(), ...update };
+  writeJson(META_KEY, next);
+  return next;
+}
+
+function addHistory(entry) {
+  const history = readJson(HISTORY_KEY, []);
+  history.unshift({ id: `sync-history-${Date.now()}`, at: new Date().toISOString(), ...entry });
+  writeJson(HISTORY_KEY, history.slice(0, 80));
+}
+
+function pendingQueue() {
+  return readJson(QUEUE_KEY, []);
+}
+
+function writeQueue(records) {
+  writeJson(QUEUE_KEY, records);
+}
+
+function conflicts() {
+  return readJson(CONFLICT_KEY, []);
+}
+
+function writeConflicts(items) {
+  writeJson(CONFLICT_KEY, items);
+}
+
+function stableRecordId(type, localId) {
+  return `${type}:${String(localId).replace(/\s+/g, "-")}`;
+}
+
+function cloudSafeValue(value) {
+  const copy = structuredClone(value ?? null);
+  if (copy?.projects) {
+    copy.projects = copy.projects.map(project => cloudSafeProjectState(project));
+  }
+  return copy;
+}
+
+function cloudSafeProjectState(project = {}) {
+  const copy = structuredClone(project);
+  if (copy.chart?.data) copy.chart.data = null;
+  copy.annotationHistory = [];
+  copy.annotationRedo = [];
+  return copy;
+}
+
+function recordUpdatedAt(payload = {}, fallback = new Date().toISOString()) {
+  return payload.updatedAt || payload.updated_at || payload.lastSavedAt || payload.createdAt || fallback;
+}
+
+function makeRecord(type, localId, payload, fallbackUpdatedAt) {
+  const device = deviceProfile();
+  const updatedAt = recordUpdatedAt(payload, fallbackUpdatedAt);
+  return {
+    id: stableRecordId(type, localId),
+    record_type: type,
+    local_id: String(localId),
+    payload: cloudSafeValue(payload),
+    created_at: payload?.createdAt || updatedAt,
+    updated_at: updatedAt,
+    device_id: device.id,
+    sync_version: SYNC_VERSION,
+    deleted: false
+  };
+}
+
+function buildSyncRecords(state = local().getState()) {
+  const now = state.lastSavedAt || new Date().toISOString();
+  const projects = (state.projects || []).map(project => makeRecord("project", project.id, project, now));
+  const projectToolRecords = (state.projects || []).flatMap(project => (project.toolHistory || []).map(item => makeRecord("tool-result", `${project.id}:${item.id || item.toolName || Date.now()}`, { ...item, projectId: project.id }, now)));
+  return [
+    ...projects,
+    ...projectToolRecords,
+    makeRecord("settings", "app", {
+      theme: state.theme,
+      language: state.language,
+      unitSystem: state.unitSystem,
+      appPreferences: state.appPreferences,
+      account: state.account,
+      updatedAt: now
+    }, now),
+    makeRecord("yarn-stash", "inventory", { items: state.inventory || [], updatedAt: now }, now),
+    makeRecord("buy-list", "cart", { items: state.cart || [], budgetSettings: state.budgetSettings, marketBudget: state.marketBudget, purchaseHistory: state.purchaseHistory || [], updatedAt: now }, now),
+    makeRecord("library", "spaces", { librarySections: state.librarySections || [], yarnMaterials: state.yarnMaterials || [], techniqueKnowledge: state.techniqueKnowledge || [], updatedAt: now }, now),
+    makeRecord("symbols", "learning", {
+      symbolFavorites: state.symbolFavorites || [],
+      userTechniqueReferences: state.userTechniqueReferences || {},
+      userSymbolsOverride: state.userSymbolsOverride || {},
+      symbolLearningLibrary: state.symbolLearningLibrary || [],
+      updatedAt: now
+    }, now),
+    makeRecord("project-ideas", "ideas", { projectIdeas: state.projectIdeas || [], ideaFilters: state.ideaFilters || {}, updatedAt: now }, now)
+  ];
+}
+
+function queueStateForCloud(reason = "local-save") {
+  if (!cloud.user) return;
+  const byId = new Map(pendingQueue().map(record => [record.id, record]));
+  buildSyncRecords().forEach(record => byId.set(record.id, record));
+  writeQueue([...byId.values()]);
+  setSyncMeta({ health: navigator.onLine === false ? "Waiting to sync" : "Pending sync" });
+  addHistory({ status: "queued", reason, count: byId.size });
+}
+
+function mergeById(localItems = [], cloudItems = []) {
+  const map = new Map((localItems || []).map(item => [String(item.id || `${item.row}-${item.color}-${item.label}`), item]));
+  for (const item of cloudItems || []) map.set(String(item.id || `${item.row}-${item.color}-${item.label}`), item);
+  return [...map.values()];
+}
+
+function mergeNotes(localText = "", cloudText = "") {
+  if (!localText) return cloudText || "";
+  if (!cloudText || localText === cloudText) return localText;
+  if (localText.includes(cloudText)) return localText;
+  if (cloudText.includes(localText)) return cloudText;
+  return `${localText}\n\n--- Cloud note ---\n${cloudText}`;
+}
+
+function mergeProject(localProject = {}, cloudProject = {}) {
+  const localTime = Date.parse(recordUpdatedAt(localProject, 0)) || 0;
+  const cloudTime = Date.parse(recordUpdatedAt(cloudProject, 0)) || 0;
+  const base = cloudTime >= localTime ? { ...localProject, ...cloudProject } : { ...cloudProject, ...localProject };
+  base.notes = mergeNotes(localProject.notes, cloudProject.notes);
+  base.markers = mergeById(localProject.markers, cloudProject.markers).sort((a, b) => (Number(a.row) || 0) - (Number(b.row) || 0));
+  base.buyList = mergeById(localProject.buyList, cloudProject.buyList);
+  base.attachments = mergeById(localProject.attachments, cloudProject.attachments);
+  base.subCounters = cloudTime >= localTime ? (cloudProject.subCounters || localProject.subCounters || []) : (localProject.subCounters || cloudProject.subCounters || []);
+  base.rowReminders = mergeById(localProject.rowReminders, cloudProject.rowReminders);
+  base.updatedAt = new Date(Math.max(localTime, cloudTime, Date.now())).toISOString();
+  return base;
+}
+
+function applyRemoteRecords(records = []) {
+  if (!records.length) return { changed: false, conflicts: [] };
+  const api = local();
+  const current = structuredClone(api.getState());
+  const localMeta = syncMeta();
+  const nextConflicts = conflicts();
+  let changed = false;
+  const projectMap = new Map((current.projects || []).map(project => [String(project.id), project]));
+
+  for (const record of records) {
+    if (record.device_id === deviceProfile().id) continue;
+    if (record.deleted) continue;
+    const payload = record.payload || {};
+    if (record.record_type === "project") {
+      const existing = projectMap.get(String(record.local_id));
+      if (existing && Date.parse(record.updated_at) > Date.parse(localMeta.lastPullAt || 0) && Date.parse(existing.updatedAt || existing.lastSavedAt || 0) > Date.parse(localMeta.lastPullAt || 0)) {
+        nextConflicts.unshift({
+          id: `conflict-${record.id}-${Date.now()}`,
+          recordId: record.id,
+          projectName: payload.name || existing.name || "Project",
+          localPayload: existing,
+          cloudPayload: payload,
+          localUpdatedAt: existing.updatedAt || current.lastSavedAt,
+          cloudUpdatedAt: record.updated_at,
+          status: "open"
+        });
+        projectMap.set(String(record.local_id), mergeProject(existing, payload));
+      } else {
+        projectMap.set(String(record.local_id), mergeProject(existing, payload));
+      }
+      changed = true;
+    } else if (record.record_type === "settings") {
+      Object.assign(current, {
+        ...(payload.theme ? { theme: payload.theme } : {}),
+        ...(payload.language ? { language: payload.language } : {}),
+        ...(payload.unitSystem ? { unitSystem: payload.unitSystem } : {}),
+        ...(payload.appPreferences ? { appPreferences: payload.appPreferences } : {})
+      });
+      changed = true;
+    } else if (record.record_type === "yarn-stash") {
+      current.inventory = mergeById(current.inventory, payload.items || []);
+      changed = true;
+    } else if (record.record_type === "buy-list") {
+      current.cart = mergeById(current.cart, payload.items || []);
+      if (payload.budgetSettings) current.budgetSettings = payload.budgetSettings;
+      if (payload.purchaseHistory) current.purchaseHistory = mergeById(current.purchaseHistory, payload.purchaseHistory);
+      changed = true;
+    } else if (record.record_type === "library") {
+      current.librarySections = api.mergeLibrarySections ? api.mergeLibrarySections(current.librarySections, payload.librarySections || []) : (payload.librarySections || current.librarySections);
+      current.yarnMaterials = mergeById(current.yarnMaterials, payload.yarnMaterials || []);
+      current.techniqueKnowledge = mergeById(current.techniqueKnowledge, payload.techniqueKnowledge || []);
+      changed = true;
+    } else if (record.record_type === "symbols") {
+      current.symbolFavorites = [...new Set([...(current.symbolFavorites || []), ...(payload.symbolFavorites || [])])];
+      current.userTechniqueReferences = { ...(current.userTechniqueReferences || {}), ...(payload.userTechniqueReferences || {}) };
+      current.userSymbolsOverride = { ...(current.userSymbolsOverride || {}), ...(payload.userSymbolsOverride || {}) };
+      current.symbolLearningLibrary = mergeById(current.symbolLearningLibrary, payload.symbolLearningLibrary || []);
+      changed = true;
+    } else if (record.record_type === "project-ideas") {
+      current.projectIdeas = mergeById(current.projectIdeas, payload.projectIdeas || []);
+      changed = true;
+    }
+  }
+
+  current.projects = [...projectMap.values()];
+  if (!current.projects.some(project => String(project.id) === String(current.activeProjectId))) current.activeProjectId = current.projects[0]?.id || null;
+  writeConflicts(nextConflicts.slice(0, 30));
+  if (changed) api.replaceState(current);
+  return { changed, conflicts: nextConflicts };
+}
+
+async function runFullSync(reason = "manual") {
+  if (!cloud.user) return openAccountModal();
+  if (cloud.syncing) return;
+  cloud.syncing = true;
+  const started = new Date().toISOString();
+  try {
+    if (navigator.onLine === false) {
+      setCloudStatus("Waiting to sync", "pending");
+      setSyncMeta({ health: "Waiting to sync" });
+      return;
+    }
+    setCloudStatus("Syncing Yarncha…");
+    const device = deviceProfile();
+    await registerSyncDevice({ ...device, user_agent: navigator.userAgent || "" });
+    queueStateForCloud(reason);
+    const queue = pendingQueue();
+    if (queue.length) {
+      await upsertSyncRecords(queue);
+      for (const project of local().getState().projects || []) {
+        if (project.updatedAt && Date.parse(project.updatedAt) >= Date.parse(started) - 60000) {
+          await saveProjectVersion(project, device.id).catch(() => {});
+        }
+      }
+      writeQueue([]);
+    }
+    const meta = syncMeta();
+    const remote = await listSyncRecords(meta.lastPullAt);
+    cloud.pendingDownloads = remote.filter(record => record.device_id !== device.id).length;
+    const result = applyRemoteRecords(remote);
+    const now = new Date().toISOString();
+    setSyncMeta({ lastSyncAt: now, lastPullAt: now, lastPushAt: now, health: result.conflicts?.length ? "Needs review" : "Healthy" });
+    addHistory({ status: "synced", reason, uploaded: queue.length, downloaded: remote.length, conflicts: result.conflicts?.length || 0 });
+    setCloudStatus(result.conflicts?.length ? "Synced · review conflicts" : "✓ Synced to cloud", result.conflicts?.length ? "warning" : "success");
+    local().rerenderSettings();
+  } catch (error) {
+    cloud.lastError = friendlyError(error);
+    setSyncMeta({ health: navigator.onLine === false ? "Waiting to sync" : "Needs attention" });
+    addHistory({ status: "failed", reason, message: cloud.lastError });
+    setCloudStatus(navigator.onLine === false ? "Waiting to sync" : "Saved on this device · Cloud retry needed", "error");
+  } finally {
+    cloud.syncing = false;
+  }
+}
+
+function scheduleFullSync(reason = "auto", delay = 1200) {
+  if (!cloud.user) return;
+  clearTimeout(cloud.syncTimer);
+  cloud.syncTimer = setTimeout(() => runFullSync(reason), delay);
+}
+
 async function initialize() {
   const client = await getSupabase();
   cloud.configured = Boolean(client);
@@ -64,11 +369,17 @@ async function initialize() {
   cloud.user = await currentUser();
   client.auth.onAuthStateChange((_event, session) => {
     cloud.user = session?.user || null;
+    if (cloud.user) {
+      scheduleFullSync("sign-in", 400);
+      startRealtimeSync().catch(() => {});
+    }
     local().rerenderSettings();
   });
   if (cloud.user) {
     await restoreCloudSettings().catch(() => {});
     await restoreCloudProjects().catch(error => { cloud.lastError = friendlyError(error); });
+    await runFullSync("launch").catch(() => {});
+    await startRealtimeSync().catch(() => {});
   }
   window.dispatchEvent(new CustomEvent("yarncha:cloud-ready"));
   local().rerenderSettings();
@@ -96,7 +407,7 @@ function openAccountModal() {
     };
     return;
   }
-  api.openModal(`<p class="eyebrow">PRIVATE BETA</p><h2>Sign in to Yarncha</h2><p class="muted-copy">Use email and password. Google and Apple sign-in are intentionally deferred.</p><div class="form-grid"><div class="field full"><label>Email</label><input id="cloud-email" type="email" autocomplete="email" inputmode="email"></div><div class="field full"><label>Password</label><input id="cloud-password" type="password" autocomplete="current-password" minlength="8"></div></div><p class="form-error" id="cloud-auth-error" role="alert"></p><div class="modal-actions"><button class="secondary-button" id="cloud-sign-up">Create account</button><button class="primary-button" id="cloud-sign-in">Sign in</button></div><div class="privacy-note">Yarncha stores your email with Supabase Auth. Chart files and projects are private to your account. AI chart analysis sends the selected chart to the configured server-side model only after you press Analyse.</div>`);
+  api.openModal(`<p class="eyebrow">PRIVATE BETA</p><h2>Sign in to Yarncha</h2><p class="muted-copy">Use Apple, Google, or email. Yarncha keeps saving on this device while cloud sync connects in the background.</p><div class="auth-buttons"><button class="auth-button apple" id="cloud-apple-sign-in">Continue with Apple</button><button class="auth-button" id="cloud-google-sign-in">Continue with Google</button></div><div class="form-grid"><div class="field full"><label>Email</label><input id="cloud-email" type="email" autocomplete="email" inputmode="email"></div><div class="field full"><label>Password</label><input id="cloud-password" type="password" autocomplete="current-password" minlength="8"></div></div><p class="form-error" id="cloud-auth-error" role="alert"></p><div class="modal-actions"><button class="secondary-button" id="cloud-sign-up">Create account</button><button class="primary-button" id="cloud-sign-in">Sign in</button></div><div class="privacy-note">Yarncha stores your account with Supabase Auth. Projects, counters, stash, charts, annotations, settings and tool history remain local-first and private to your account when synced.</div>`);
   const credentials = () => ({
     email: document.getElementById("cloud-email").value.trim(),
     password: document.getElementById("cloud-password").value
@@ -125,6 +436,14 @@ function openAccountModal() {
   };
   document.getElementById("cloud-sign-up").onclick = () => submit("signup");
   document.getElementById("cloud-sign-in").onclick = () => submit("signin");
+  document.getElementById("cloud-apple-sign-in").onclick = async () => {
+    try { await signInWithProvider("apple"); }
+    catch (error) { document.getElementById("cloud-auth-error").textContent = friendlyError(error); }
+  };
+  document.getElementById("cloud-google-sign-in").onclick = async () => {
+    try { await signInWithProvider("google"); }
+    catch (error) { document.getElementById("cloud-auth-error").textContent = friendlyError(error); }
+  };
 }
 
 async function runBusy(startText, task, successText) {
@@ -262,19 +581,18 @@ async function restoreCloudSettings() {
 
 function scheduleCloudSync() {
   if (!cloud.user || cloud.syncing) return;
-  clearTimeout(cloud.syncTimer);
-  cloud.syncTimer = setTimeout(async () => {
-    try {
-      setCloudStatus("Saving on this device + cloud…");
-      const state = local().getState();
-      await Promise.all((state.projects || []).map(project => syncProject(project, false)));
-      await saveUserSettings(settingsPayload(state));
-      setCloudStatus("✓ Saved to cloud", "success");
-    } catch (error) {
-      cloud.lastError = friendlyError(error);
-      setCloudStatus("Saved on this device · Cloud retry needed", "error");
-    }
-  }, 1000);
+  queueStateForCloud("local-save");
+  scheduleFullSync("local-save", 1200);
+}
+
+async function startRealtimeSync() {
+  if (!cloud.user || cloud.realtime) return;
+  cloud.realtime = await subscribeToSyncRecords(payload => {
+    const row = payload?.new || payload?.record;
+    if (!row || row.device_id === deviceProfile().id) return;
+    cloud.pendingDownloads += 1;
+    scheduleFullSync("realtime", 600);
+  });
 }
 
 async function queueChartUpload(projectId, localAssetId, file) {
@@ -448,45 +766,156 @@ async function generateCheckedPattern() {
   }
 }
 
+function formatDateTime(value) {
+  if (!value) return "Not yet";
+  try { return new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }); }
+  catch { return "Not yet"; }
+}
+
+function storageEstimateText() {
+  if (!navigator.storage?.estimate) return "Local estimate unavailable";
+  navigator.storage.estimate().then(estimate => {
+    const target = document.getElementById("cloud-storage-estimate");
+    if (!target) return;
+    const used = Math.round((estimate.usage || 0) / 1024 / 1024);
+    const quota = Math.round((estimate.quota || 0) / 1024 / 1024);
+    target.textContent = quota ? `${used} MB of ${quota} MB local quota` : `${used} MB local`;
+  }).catch(() => {});
+  return "Checking…";
+}
+
+function syncHealthLabel() {
+  const meta = syncMeta();
+  if (!cloud.configured) return "Not configured";
+  if (!cloud.user) return "Sign-in required";
+  if (navigator.onLine === false) return "Waiting to sync";
+  if (conflicts().some(item => item.status !== "resolved")) return "Needs review";
+  if (pendingQueue().length) return "Pending sync";
+  return meta.health || "Healthy";
+}
+
+function renderSyncHistoryModal() {
+  const api = local();
+  const rows = readJson(HISTORY_KEY, []);
+  api.openModal(`<p class="eyebrow">SYNC HISTORY</p><h2>Recent sync activity</h2>${rows.length ? `<div class="sync-history-list">${rows.map(row => `<article><strong>${api.escapeHtml(row.status || "Sync")}</strong><span>${formatDateTime(row.at)}</span><p>${api.escapeHtml([row.reason, row.message, row.uploaded !== undefined ? `${row.uploaded} uploaded` : "", row.downloaded !== undefined ? `${row.downloaded} downloaded` : "", row.conflicts ? `${row.conflicts} conflict(s)` : ""].filter(Boolean).join(" · "))}</p></article>`).join("")}</div>` : `<p class="empty-state">No cloud sync history yet.</p>`}<div class="modal-actions"><button class="primary-button" onclick="closeModal()">Done</button></div>`);
+}
+
+function renderConflictModal() {
+  const api = local();
+  const items = conflicts().filter(item => item.status !== "resolved");
+  api.openModal(`<p class="eyebrow">SYNC CONFLICTS</p><h2>Compare project changes</h2>${items.length ? `<div class="sync-conflict-list">${items.map(item => `<article class="sync-conflict-card"><h3>${api.escapeHtml(item.projectName || "Project")}</h3><div class="settings-account-summary"><div><span>This device</span><strong>${formatDateTime(item.localUpdatedAt)}</strong></div><div><span>Cloud</span><strong>${formatDateTime(item.cloudUpdatedAt)}</strong></div></div><div class="button-row"><button class="secondary-button" data-conflict-action="merge" data-conflict-id="${item.id}">Merge</button><button class="secondary-button" data-conflict-action="local" data-conflict-id="${item.id}">Keep Local</button><button class="secondary-button" data-conflict-action="cloud" data-conflict-id="${item.id}">Keep Cloud</button><button class="secondary-button" data-conflict-action="compare" data-conflict-id="${item.id}">Compare Changes</button></div></article>`).join("")}</div>` : `<p class="empty-state">No conflicts need review.</p>`}<div class="modal-actions"><button class="primary-button" onclick="closeModal()">Done</button></div>`);
+  document.querySelectorAll("[data-conflict-action]").forEach(button => button.addEventListener("click", () => resolveConflict(button.dataset.conflictId, button.dataset.conflictAction)));
+}
+
+function resolveConflict(id, action) {
+  const api = local();
+  const items = conflicts();
+  const item = items.find(entry => entry.id === id);
+  if (!item) return;
+  if (action === "compare") {
+    api.openModal(`<p class="eyebrow">COMPARE CHANGES</p><h2>${api.escapeHtml(item.projectName || "Project")}</h2><div class="sync-compare-grid"><div><strong>This device</strong><pre>${api.escapeHtml(JSON.stringify(item.localPayload, null, 2).slice(0, 5000))}</pre></div><div><strong>Cloud</strong><pre>${api.escapeHtml(JSON.stringify(item.cloudPayload, null, 2).slice(0, 5000))}</pre></div></div><div class="modal-actions"><button class="secondary-button" id="back-to-conflicts">Back</button><button class="primary-button" onclick="closeModal()">Done</button></div>`);
+    document.getElementById("back-to-conflicts").onclick = renderConflictModal;
+    return;
+  }
+  const state = api.getState();
+  const targetId = item.localPayload?.id || item.cloudPayload?.id;
+  const index = (state.projects || []).findIndex(project => String(project.id) === String(targetId));
+  if (index >= 0) {
+    if (action === "cloud") state.projects[index] = item.cloudPayload;
+    else if (action === "merge") state.projects[index] = mergeProject(item.localPayload, item.cloudPayload);
+  } else if (action !== "local" && item.cloudPayload) {
+    state.projects.push(item.cloudPayload);
+  }
+  item.status = "resolved";
+  item.resolvedAt = new Date().toISOString();
+  writeConflicts(items);
+  api.replaceState(state);
+  queueStateForCloud(`conflict-${action}`);
+  scheduleFullSync(`conflict-${action}`, 400);
+  api.toast("Conflict choice saved.");
+  renderConflictModal();
+}
+
+async function refreshDeviceList() {
+  const host = document.getElementById("cloud-device-list");
+  if (!host || !cloud.user) return;
+  try {
+    const devices = await listSyncDevices();
+    const currentId = deviceProfile().id;
+    host.innerHTML = devices.length ? devices.map(device => `<article class="cloud-device-row"><div><strong>${local().escapeHtml(device.name)}</strong><p>${device.id === currentId ? "Current device · " : ""}Last active ${formatDateTime(device.last_active_at)}</p></div><div class="button-row"><button class="secondary-button" data-rename-device="${device.id}">Rename</button>${device.id !== currentId ? `<button class="secondary-button danger-button" data-remove-device="${device.id}">Remove</button>` : ""}</div></article>`).join("") : `<p class="empty-state">No synced devices yet.</p>`;
+    host.querySelectorAll("[data-rename-device]").forEach(button => button.addEventListener("click", async () => {
+      const current = devices.find(device => device.id === button.dataset.renameDevice);
+      const name = prompt("Device name", current?.name || "Yarncha device");
+      if (!name) return;
+      await renameSyncDevice(button.dataset.renameDevice, name.trim());
+      if (button.dataset.renameDevice === currentId) writeJson(DEVICE_KEY, { ...deviceProfile(), name: name.trim() });
+      refreshDeviceList();
+    }));
+    host.querySelectorAll("[data-remove-device]").forEach(button => button.addEventListener("click", async () => {
+      if (!confirm("Remove this device from the cloud device list? Local data on that device is not deleted.")) return;
+      await removeSyncDevice(button.dataset.removeDevice);
+      refreshDeviceList();
+    }));
+  } catch {
+    host.innerHTML = `<p class="empty-state">Device list will appear after the next successful sync.</p>`;
+  }
+}
+
 function renderSettingsSection(host) {
   if (!host || document.getElementById("cloud-beta-settings")) return;
   const grid = host.querySelector(".settings-page-shell");
   if (!grid) return;
   const anchor = host.querySelector("#cloud-settings-anchor") || grid.lastElementChild;
   const email = cloud.user?.email || "";
+  const meta = syncMeta();
+  const device = deviceProfile();
+  const pendingUploads = pendingQueue().length;
+  const openConflicts = conflicts().filter(item => item.status !== "resolved").length;
   const accountTitle = document.createElement("div");
   accountTitle.className = "settings-group-title";
   accountTitle.innerHTML = `<p class="eyebrow">ACCOUNT & SYNC</p><h2>Account & Sync</h2>`;
   const section = document.createElement("section");
   section.id = "cloud-beta-settings";
   section.className = "card mobile-card settings-panel";
-  section.innerHTML = `<div class="settings-section-heading"><span class="settings-section-icon">${local().uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">PRIVATE BETA CLOUD</p><h2>${cloud.user ? "Cloud account" : "Sign in and cloud backup"}</h2><p>${cloud.configured ? (cloud.user ? "Cloud sync is connected. Local drafts remain available offline." : "Create an email account to keep private projects across devices.") : "Supabase environment variables have not been configured for this build."}</p></div></div>
-    <div class="settings-account-summary">
-      <div><span>Email</span><strong>${cloud.user ? local().escapeHtml(email || "Yarncha user") : "Not signed in"}</strong></div>
-      <div><span>Sync status</span><strong id="cloud-sync-status">${local().escapeHtml(cloud.lastError || (cloud.user ? "Ready" : cloud.configured ? "Sign-in required" : "Not configured"))}</strong></div>
+  section.innerHTML = `<div class="settings-section-heading"><span class="settings-section-icon">${local().uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">LOCAL-FIRST CLOUD SYNC</p><h2>${cloud.user ? "Sync Status" : "Sign in and cloud backup"}</h2><p>${cloud.configured ? (cloud.user ? "Yarncha saves here first, then syncs your projects, counters, stash, charts, settings and tool history to Supabase." : "Sign in with Apple, Google, or email to keep private work across devices.") : "Supabase environment variables have not been configured for this build."}</p></div></div>
+    <div class="settings-account-summary sync-status-grid">
+      <div><span>Signed in user</span><strong>${cloud.user ? local().escapeHtml(email || "Yarncha user") : "Not signed in"}</strong></div>
+      <div><span>Current device</span><strong>${local().escapeHtml(device.name)}</strong></div>
+      <div><span>Cloud connected</span><strong id="cloud-sync-status" data-tone="${cloud.lastError ? "error" : ""}">${local().escapeHtml(cloud.lastError || (cloud.user ? "Connected" : cloud.configured ? "Sign-in required" : "Not configured"))}</strong></div>
+      <div><span>Last sync time</span><strong>${formatDateTime(meta.lastSyncAt)}</strong></div>
+      <div><span>Pending uploads</span><strong>${pendingUploads}</strong></div>
+      <div><span>Pending downloads</span><strong>${cloud.pendingDownloads || 0}</strong></div>
+      <div><span>Storage usage</span><strong id="cloud-storage-estimate">${storageEstimateText()}</strong></div>
+      <div><span>Sync health</span><strong>${local().escapeHtml(syncHealthLabel())}${openConflicts ? ` · ${openConflicts} conflict(s)` : ""}</strong></div>
     </div>
     <div class="settings-divider"></div>
     <div class="settings-form-row settings-form-row-stack">
-      <div><strong>Sync preferences</strong><p>${cloud.user ? "Choose when to move local drafts into your private cloud account or refresh cloud projects." : "Cloud sync starts after sign-in."}</p></div>
+      <div><strong>Sync controls</strong><p>${cloud.user ? "Sync now, inspect history, resolve conflicts, or make a portable backup. Offline saves stay queued until the internet returns." : "Cloud sync starts after sign-in. Local backup remains available anytime."}</p></div>
       <div class="button-row settings-button-row">
         <button class="${cloud.user ? "secondary-button" : "primary-button"}" id="settings-cloud-account">${cloud.user ? "Account details" : "Sign in / create account"}</button>
-        ${cloud.user ? `<button class="secondary-button" id="settings-cloud-migrate">Move local projects to cloud</button><button class="secondary-button" id="settings-cloud-refresh">Refresh from cloud</button><button class="secondary-button" id="settings-cloud-sign-out">Sign out</button>` : ""}
+        ${cloud.user ? `<button class="primary-button" id="settings-cloud-sync-now">Sync Now</button><button class="secondary-button" id="settings-cloud-history">View Sync History</button><button class="secondary-button" id="settings-cloud-conflicts">Resolve Conflicts</button><button class="secondary-button" id="settings-cloud-export">Export Backup</button><button class="secondary-button" id="settings-cloud-import">Import Backup</button><button class="secondary-button" id="settings-cloud-sign-out">Sign out</button><input id="settings-cloud-backup-file" type="file" accept=".json,application/json" hidden>` : ""}
       </div>
     </div>
-    <div class="privacy-note"><strong>Privacy:</strong> Projects, charts and generated patterns are private to your account. Charts are sent for analysis only when you press Analyse.</div>`;
+    ${cloud.user ? `<div class="settings-divider"></div><div><strong>Signed in devices</strong><div id="cloud-device-list" class="cloud-device-list"><p class="empty-state">Loading devices…</p></div></div>` : ""}
+    <div class="privacy-note"><strong>Privacy:</strong> Every synced record belongs to your Supabase user. Charts are sent for analysis only when you press Analyse; ordinary saving never requires an internet connection.</div>`;
   grid.insertBefore(accountTitle, anchor);
   grid.insertBefore(section, anchor);
   document.getElementById("settings-cloud-account").onclick = openAccountModal;
-  document.getElementById("settings-cloud-migrate")?.addEventListener("click", migrateLocalProjects);
-  document.getElementById("settings-cloud-refresh")?.addEventListener("click", async () => {
-    await runBusy("Refreshing…", restoreCloudProjects, "Cloud projects restored");
-  });
+  document.getElementById("settings-cloud-sync-now")?.addEventListener("click", () => runFullSync("manual"));
+  document.getElementById("settings-cloud-history")?.addEventListener("click", renderSyncHistoryModal);
+  document.getElementById("settings-cloud-conflicts")?.addEventListener("click", renderConflictModal);
+  document.getElementById("settings-cloud-export")?.addEventListener("click", () => local().exportBackup?.(null));
+  document.getElementById("settings-cloud-import")?.addEventListener("click", () => document.getElementById("settings-cloud-backup-file")?.click());
+  document.getElementById("settings-cloud-backup-file")?.addEventListener("change", event => local().importBackup?.(event, "merge"));
   document.getElementById("settings-cloud-sign-out")?.addEventListener("click", async () => {
     await signOut();
     cloud.user = null;
+    if (cloud.realtime?.unsubscribe) await cloud.realtime.unsubscribe();
+    cloud.realtime = null;
     local().toast("Signed out. Local drafts remain on this device.");
     local().rerenderSettings();
   });
+  refreshDeviceList();
   if (!cloud.user) return;
   const dangerTitle = document.createElement("div");
   dangerTitle.className = "settings-group-title settings-danger-title";
@@ -533,11 +962,18 @@ window.YarnchaCloud = {
   deleteCloudProject,
   injectChartReader,
   migrateLocalProjects,
-  get status() { return { configured: cloud.configured, user: cloud.user, lastError: cloud.lastError }; }
+  syncNow: runFullSync,
+  queueStateForCloud,
+  get status() { return { configured: cloud.configured, user: cloud.user, lastError: cloud.lastError, pendingUploads: pendingQueue().length, pendingDownloads: cloud.pendingDownloads, device: deviceProfile(), meta: syncMeta(), conflicts: conflicts() }; }
 };
 
 window.addEventListener("yarncha:local-save", scheduleCloudSync);
 window.addEventListener("yarncha:project-rendered", injectChartReader);
+window.addEventListener("online", () => scheduleFullSync("reconnect", 500));
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") scheduleFullSync("resume", 800);
+});
+setInterval(() => scheduleFullSync("interval", 1000), 3 * 60 * 1000);
 initialize().catch(error => {
   cloud.lastError = friendlyError(error);
   console.error("Yarncha cloud initialization failed", error);

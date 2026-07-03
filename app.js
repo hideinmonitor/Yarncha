@@ -623,32 +623,91 @@ function loadState() {
   }
   catch { return structuredClone(starterData); }
 }
+let saveDebounceTimer=null;
+let saveDirty=false;
+let saveInFlight=null;
+let lastSaveFailed=false;
+function saveStatusText(){
+  if(lastSaveFailed)return "Save failed";
+  if(saveInFlight)return "Saving...";
+  return saveDirty?"• Unsaved changes":"✓ Saved";
+}
+function updateSaveIndicators(text=saveStatusText(),tone=""){
+  document.querySelectorAll("[data-save-indicator]").forEach(el=>{
+    el.textContent=text;
+    el.dataset.tone=tone || (text.includes("Unsaved")?"unsaved":text.includes("failed")?"error":text.includes("Saving")?"saving":"saved");
+  });
+}
+function markUnsavedChanges(){
+  saveDirty=true;
+  lastSaveFailed=false;
+  updateSaveStatus("• Unsaved changes","unsaved");
+}
 function saveState() {
   if(!hasLoadedSavedState)return;
   const now=new Date().toISOString();
   state.schemaVersion=PROJECT_SCHEMA_VERSION;
   state.lastSavedAt=now;
-  updateSaveStatus("Saving...");
+  lastSaveFailed=false;
+  updateSaveStatus("Saving...","saving");
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }catch(error){
-    updateSaveStatus("Save failed");
+    lastSaveFailed=true;
+    updateSaveStatus("Save failed","error");
     toast("Yarncha could not save progress in this browser.");
-    return;
+    return Promise.reject(error);
   }
-  putProjectStateSnapshot().then(()=>updateSaveStatus(`✓ Saved on this device · ${formatSavedTime(now)}`)).catch(()=>updateSaveStatus("Saved on this device · Expanded storage unavailable"));
+  saveInFlight=putProjectStateSnapshot()
+    .then(()=>{
+      saveDirty=false;
+      updateSaveStatus(`✓ Saved on this device · ${formatSavedTime(now)}`,"saved");
+    })
+    .catch(error=>{
+      lastSaveFailed=true;
+      updateSaveStatus("Saved locally · Expanded storage unavailable","error");
+      return false;
+    })
+    .finally(()=>{saveInFlight=null;updateSaveIndicators();});
   renderSidebar(); applyTheme(); queueMicrotask(applyLanguage);
   window.dispatchEvent(new CustomEvent("yarncha:local-save", { detail:{ savedAt:now } }));
+  return saveInFlight;
 }
-let saveDebounceTimer=null;
 function saveStateSoon(delay=350){
   if(!hasLoadedSavedState)return;
   clearTimeout(saveDebounceTimer);
-  updateSaveStatus("Saving...");
+  markUnsavedChanges();
   saveDebounceTimer=setTimeout(saveState,delay);
 }
-function updateSaveStatus(text){const el=document.getElementById("save-status");if(el)el.textContent=text;}
+function updateSaveStatus(text,tone=""){const el=document.getElementById("save-status");if(el){el.textContent=text;el.dataset.tone=tone;}updateSaveIndicators(text,tone);}
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
+async function manualSave(context="Project"){
+  const hadPending=saveDirty||!!saveDebounceTimer||!!saveInFlight||lastSaveFailed;
+  try{
+    if(saveDebounceTimer){clearTimeout(saveDebounceTimer);saveDebounceTimer=null;}
+    if(saveInFlight)await saveInFlight;
+    if(!hadPending){
+      updateSaveStatus(`✓ Saved on this device · ${formatSavedTime(state.lastSavedAt||new Date())}`,"saved");
+      toast("Everything is already saved.");
+      return false;
+    }
+    await saveState();
+    const cloud=window.YarnchaCloud?.status;
+    if(cloud?.user&&window.YarnchaCloud?.syncNow){
+      updateSaveStatus("Saving... syncing cloud","saving");
+      await window.YarnchaCloud.syncNow("manual-save");
+      toast("✓ Project saved · ✓ Synced to cloud");
+    }else{
+      toast(`✓ ${context} saved`);
+    }
+    updateSaveIndicators("✓ Saved","saved");
+    return true;
+  }catch(error){
+    updateSaveStatus("Save failed","error");
+    toast("Save failed. Try Save again.");
+    return false;
+  }
+}
 function getProject(id = currentProjectId) { return state.projects.find(p => String(p.id) === String(id)) || state.projects[0]; }
 function escapeHtml(value = "") { return String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
 function optionList(values,current,labels={}){return values.map(v=>`<option value="${escapeHtml(v)}" ${current===v?"selected":""}>${escapeHtml(labels[v]||v)}</option>`).join("");}
@@ -757,7 +816,18 @@ function routeForPage(pageId){
   return routes[pageId]||routes.today;
 }
 
-function showView(name) {
+async function ensureSafeToLeave(){
+  if(saveDebounceTimer){clearTimeout(saveDebounceTimer);saveDebounceTimer=null;await saveState();}
+  if(saveInFlight)await saveInFlight;
+  if(lastSaveFailed){
+    if(!confirm("Yarncha could not finish saving. Try saving again before leaving this page?"))return true;
+    await manualSave("Workspace");
+    return !lastSaveFailed;
+  }
+  return true;
+}
+async function showView(name) {
+  if(!(await ensureSafeToLeave()))return;
   const requested = name === "yarnStash" ? "market" : String(name || "today");
   const before = activePage;
   const route = routeForPage(requested);
@@ -778,6 +848,8 @@ function showView(name) {
 
 
 function handleAppShellClick(e){
+  const manualSaveButton=e.target.closest("[data-manual-save]");
+  if(manualSaveButton){e.preventDefault();manualSave(manualSaveButton.dataset.manualSave||"Project");return;}
   const nav = e.target.closest("[data-view]"); if (nav) { showView(nav.dataset.view); return; }
   const go = e.target.closest("[data-go]"); if (go) { showView(go.dataset.go); return; }
   const project = e.target.closest("[data-project-id],[data-project]");
@@ -911,7 +983,7 @@ function renderProjectDetail() {
       <div class="detail-head project-header">
         <button class="project-detail-cover cover-upload-button" id="project-cover-picker" aria-label="Upload or replace project cover photo">${visual(p,true)}</button>
         <div class="project-title-block"><p class="eyebrow">${escapeHtml(p.type).toUpperCase()}</p><div class="editable-title"><h1>${escapeHtml(p.name)}</h1></div><p class="project-type">${escapeHtml(p.status||"In progress")} · Row ${p.row}${p.totalRows?` of ${p.totalRows}`:""} · ${progress(p) === null ? "Open-ended" : `${progress(p)}% complete`}</p></div>
-        <div class="detail-actions project-actions"><button class="project-action-button ghost" id="edit-project-name">Edit Project</button><button class="project-action-button secondary" id="speak-row">Read row</button><button class="project-action-button primary voice-button voice-button--header voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","voice-button-icon")}</button></div>
+        <div class="detail-actions project-actions"><button class="project-action-button ghost" id="edit-project-name">Edit Project</button><button class="project-action-button secondary manual-save-button" data-manual-save="Project" type="button">Save</button><button class="project-action-button secondary" id="speak-row">Read row</button><button class="project-action-button primary voice-button voice-button--header voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","voice-button-icon")}</button></div>
       </div>
       <div class="project-tabs" role="tablist" aria-label="Project sections">
         ${["track","chart","project","assistant"].map(id=>`<button class="${tab===id?"active":""}" data-project-tab="${id}">${id[0].toUpperCase()+id.slice(1)}</button>`).join("")}
@@ -924,6 +996,7 @@ function renderProjectDetail() {
   const chartAssetId=p.activeChartAssetId&&p.attachments.some(a=>a.id===p.activeChartAssetId)?p.activeChartAssetId:p.attachments[0]?.id;
   if(chartAssetId)setTimeout(()=>showProjectAsset(chartAssetId),0);
   queueMicrotask(applyLanguage);
+  updateSaveIndicators();
   window.dispatchEvent(new CustomEvent("yarncha:project-rendered", { detail:{ projectId:p.id, tab } }));
 }
 
@@ -987,7 +1060,7 @@ function projectTrackHtml(p){
     </div>
     <div class="track-side">
       ${rowRemindersPanelHtml(p)}
-      <div class="notes-card card"><div class="card-header"><div><h3>Project notes</h3></div><button class="mini-button button-secondary" id="add-marker">+ Marker</button></div>
+      <div class="notes-card card"><div class="card-header"><div><h3>Project notes</h3><span class="manual-save-status" data-save-indicator>✓ Saved</span></div><div class="button-row compact-save-actions"><button class="mini-button button-secondary manual-save-button" data-manual-save="Project notes" type="button">Save</button><button class="mini-button button-secondary" id="add-marker">+ Marker</button></div></div>
         <textarea id="project-notes" placeholder="Modifications, reminders, yarn details...">${escapeHtml(p.notes)}</textarea>
         <div class="markers">${markers.map(m => markerChipHtml(m)).join("")}</div>
       </div>
@@ -1009,7 +1082,7 @@ function projectChartHtml(p){
         <button class="${chartMode==="og"?"active":""}" data-chart-mode="og" aria-checked="${chartMode==="og"}"><strong>OG Mode</strong><small>Manual Reading</small></button>
         <button class="${chartMode==="flow"?"active":""}" data-chart-mode="flow" aria-checked="${chartMode==="flow"}"><strong>Flow Mode</strong><small>Smart Reading</small></button>
         <span>Recommended for accurate row-by-row tracking. Yarncha Assistant lives in the Assistant section.</span>
-      </div></div>
+      </div><button class="secondary-button manual-save-button chart-save-button" data-manual-save="Chart" type="button">Save</button></div>
       <input type="file" id="chart-upload" accept=".pdf,image/*" multiple hidden>
     </div>
     <div class="reading-counter row-counter-card card workspace-card">
@@ -1132,7 +1205,7 @@ function friendlyChartBetaHtml(p){
         <div class="field full"><label>Project type</label><select id="flow-project-type">${options(projectTypes,setup.projectType)}</select></div>
         ${flowProjectTypeFields(setup,options,sizeOptions)}
       </div>
-      <div class="flow-setup-save-row"><button class="primary-button" id="save-flow-project-setup" type="button">Save project setup</button><span id="flow-setup-save-status" class="setup-save-status saved">Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
+      <div class="flow-setup-save-row"><button class="primary-button" id="save-flow-project-setup" type="button">Save project setup</button><button class="secondary-button manual-save-button" data-manual-save="Flow Mode" type="button">Save now</button><span id="flow-setup-save-status" class="setup-save-status saved" data-save-indicator>Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
       ${plan.warnings.length?`<div class="flow-warning-card"><strong>Before you begin</strong>${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<div class="flow-ready-card ready"><p>✓ Your hook or needle and yarn look close enough to the pattern to begin.</p></div>`}
       <div class="flow-ready-card ${plan.estimateOnly?"almost":"ready"}"><p>${plan.estimateOnly?"Estimate only":"Ready"} · ${escapeHtml(plan.summary||"Project setup summary is ready.")}</p></div>
       ${resultSummaryHtml("Project Setup Summary",flowCalculationItems(plan),"flow-calculation-summary")}
@@ -4585,7 +4658,7 @@ function symbolVerificationBadge(entry){
 }
 function symbolEditFormHtml(entry,isNew=false){
   const picture=entry.symbolImageAsset?`<div class="symbol-edit-picture" data-symbol-picture="${escapeHtml(entry.symbolImageAsset)}" data-symbol-picture-name="${escapeHtml(entry.symbolImageName||entry.nameEn||"Symbol picture")}">${symbolIconSvg(entry)}</div><div><strong>Uploaded symbol picture</strong><p>${escapeHtml(entry.symbolImageName||"Personal symbol image")}</p></div>`:`<div class="symbol-edit-picture">${symbolIconSvg(entry)}</div><div><strong>No uploaded picture</strong><p>The default Yarncha symbol will be used.</p></div>`;
-  return `<form class="symbol-edit-form edit-project-form" id="symbol-edit-form" novalidate><p class="eyebrow">SYMBOL DATABASE</p><h2>${isNew?"Add Symbol":"Edit Symbol"}</h2><p class="muted-copy">Edit the wording or add your own symbol picture. Yarncha keeps the original default available.</p><div id="symbol-edit-errors" class="form-error-list" role="alert" hidden></div><div class="form-grid"><div class="field"><label>English name *</label><input id="symbol-edit-name-en" value="${escapeHtml(entry.nameEn||"")}"></div><div class="field"><label>Chinese name</label><input id="symbol-edit-name-zh" value="${escapeHtml(entry.nameZh||"")}"></div><div class="field"><label>Abbreviation</label><input id="symbol-edit-abbreviation" value="${escapeHtml(entry.abbreviation||"")}"></div><div class="field"><label>Chart symbol / character</label><input id="symbol-edit-visual" value="${escapeHtml(entry.visualSymbol||entry.symbol||"")}" placeholder="e.g. ○, ×, /, \\" maxlength="24"></div><div class="field"><label>Craft type *</label><select id="symbol-edit-craft">${symbolCraftOptions.map(value=>`<option ${entry.craft===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Category</label><select id="symbol-edit-category">${window.YarnchaSymbolDatabase.categoryOrder.map(value=>`<option ${entry.category===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Difficulty</label><select id="symbol-edit-difficulty">${symbolDifficultyOptions.map(value=>`<option ${entry.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Verification status</label><select id="symbol-edit-verification">${symbolVerificationOptions.map(value=>`<option ${entry.verificationStatus===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field full"><label>Tags</label><input id="symbol-edit-tags" value="${escapeHtml((entry.tags||[]).join(", "))}" placeholder="lace, shaping, beginner"></div><div class="field full"><label>Symbol picture</label><div class="symbol-picture-editor" id="symbol-picture-editor">${picture}</div><div class="button-row symbol-picture-actions"><button class="secondary-button" type="button" id="choose-symbol-picture">${entry.symbolImageAsset?"Replace symbol picture":"Upload symbol picture"}</button><button class="secondary-button danger-button" type="button" id="remove-symbol-picture" ${entry.symbolImageAsset?"":"hidden"}>Remove uploaded picture</button></div><input id="symbol-picture-file" type="file" accept="image/*" hidden><small>If the default mark is wrong, upload a clear symbol image. It stays in this browser and becomes a recognition reference for Flow Mode.</small></div><div class="field full"><label>Explanation</label><textarea id="symbol-edit-explanation" rows="4">${escapeHtml(entry.explanation||"")}</textarea></div></div><label class="check-row"><input id="symbol-learn-toggle" type="checkbox" checked><span>Learn from this symbol</span></label><p class="privacy-note">Yarncha will remember this symbol for future chart reading. Yarncha remembers your corrections on this device.</p><div class="symbol-editor-secondary-actions">${!isNew&&window.YarnchaSymbolDatabase.defaultSymbols.some(item=>item.id===entry.id)?`<button class="secondary-button" type="button" id="reset-symbol-default">Reset to default</button>`:""}${!isNew?`<button class="secondary-button" type="button" id="duplicate-symbol">Duplicate symbol</button><button class="secondary-button danger-button" id="delete-symbol" type="button">Delete symbol</button>`:""}</div><div class="modal-actions"><button class="secondary-button" type="button" id="cancel-symbol-edit">Cancel</button><button class="primary-button" type="submit">Save Symbol</button></div></form>`;
+  return `<form class="symbol-edit-form edit-project-form" id="symbol-edit-form" novalidate><p class="eyebrow">SYMBOL DATABASE</p><h2>${isNew?"Add Symbol":"Edit Symbol"}</h2><p class="muted-copy">Edit the wording or add your own symbol picture. Yarncha keeps the original default available.</p><div id="symbol-edit-errors" class="form-error-list" role="alert" hidden></div><div class="form-grid"><div class="field"><label>English name *</label><input id="symbol-edit-name-en" value="${escapeHtml(entry.nameEn||"")}"></div><div class="field"><label>Chinese name</label><input id="symbol-edit-name-zh" value="${escapeHtml(entry.nameZh||"")}"></div><div class="field"><label>Abbreviation</label><input id="symbol-edit-abbreviation" value="${escapeHtml(entry.abbreviation||"")}"></div><div class="field"><label>Chart symbol / character</label><input id="symbol-edit-visual" value="${escapeHtml(entry.visualSymbol||entry.symbol||"")}" placeholder="e.g. ○, ×, /, \\" maxlength="24"></div><div class="field"><label>Craft type *</label><select id="symbol-edit-craft">${symbolCraftOptions.map(value=>`<option ${entry.craft===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Category</label><select id="symbol-edit-category">${window.YarnchaSymbolDatabase.categoryOrder.map(value=>`<option ${entry.category===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Difficulty</label><select id="symbol-edit-difficulty">${symbolDifficultyOptions.map(value=>`<option ${entry.difficulty===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field"><label>Verification status</label><select id="symbol-edit-verification">${symbolVerificationOptions.map(value=>`<option ${entry.verificationStatus===value?"selected":""}>${value}</option>`).join("")}</select></div><div class="field full"><label>Tags</label><input id="symbol-edit-tags" value="${escapeHtml((entry.tags||[]).join(", "))}" placeholder="lace, shaping, beginner"></div><div class="field full"><label>Symbol picture</label><div class="symbol-picture-editor" id="symbol-picture-editor">${picture}</div><div class="button-row symbol-picture-actions"><button class="secondary-button" type="button" id="choose-symbol-picture">${entry.symbolImageAsset?"Replace symbol picture":"Upload symbol picture"}</button><button class="secondary-button danger-button" type="button" id="remove-symbol-picture" ${entry.symbolImageAsset?"":"hidden"}>Remove uploaded picture</button></div><input id="symbol-picture-file" type="file" accept="image/*" hidden><small>If the default mark is wrong, upload a clear symbol image. It stays in this browser and becomes a recognition reference for Flow Mode.</small></div><div class="field full"><label>Explanation</label><textarea id="symbol-edit-explanation" rows="4">${escapeHtml(entry.explanation||"")}</textarea></div></div><label class="check-row"><input id="symbol-learn-toggle" type="checkbox" checked><span>Learn from this symbol</span></label><p class="privacy-note">Yarncha will remember this symbol for future chart reading. Yarncha remembers your corrections on this device.</p><div class="symbol-editor-secondary-actions">${!isNew&&window.YarnchaSymbolDatabase.defaultSymbols.some(item=>item.id===entry.id)?`<button class="secondary-button" type="button" id="reset-symbol-default">Reset to default</button>`:""}${!isNew?`<button class="secondary-button" type="button" id="duplicate-symbol">Duplicate symbol</button><button class="secondary-button danger-button" id="delete-symbol" type="button">Delete symbol</button>`:""}</div><div class="modal-actions"><span class="manual-save-status" data-save-indicator>✓ Saved</span><button class="secondary-button manual-save-button" type="button" data-manual-save="Symbol Database">Save app now</button><button class="secondary-button" type="button" id="cancel-symbol-edit">Cancel</button><button class="primary-button" type="submit">Save Symbol</button></div></form>`;
 }
 function symbolEntryFromEditForm(base){
   const visualSymbol=document.getElementById("symbol-edit-visual").value.trim();
@@ -4828,7 +4901,7 @@ function renderSettings(){
       </section>
       <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("preferences","ui-icon")}</span><div><p class="eyebrow">APP PREFERENCES</p><h2>Making preferences</h2><p>Set the defaults Yarncha uses while you work.</p></div></div><div class="settings-form-row settings-form-row-stack"><div><strong>Preferred units</strong><p>Calculators use this system by default.</p></div><div class="theme-grid mode-grid"><button class="theme-choice ${state.unitSystem!=="imperial"?"active":""}" data-unit-system="metric">UK / Metric<br><small>cm · mm · metres · grams</small></button><button class="theme-choice ${state.unitSystem==="imperial"?"active":""}" data-unit-system="imperial">US / Imperial<br><small>inches · yards · ounces</small></button></div></div><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Voice controls</strong><small>Allow hands-free row and note commands.</small></span><input type="checkbox" id="settings-voice" ${preferences.voice!==false?"checked":""}><i aria-hidden="true"></i></label><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Notification prompts</strong><small>Remember whether Yarncha may offer browser reminders later.</small></span><input type="checkbox" id="settings-notifications" ${preferences.notifications?"checked":""}><i aria-hidden="true"></i></label></section>
       <div class="settings-group-title"><p class="eyebrow">PROJECTS & BACKUP</p><h2>Projects & Backup</h2></div>
-      <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">LOCAL DATA</p><h2>Your saved work</h2><p>Review local storage and move projects using a Yarncha backup.</p></div></div><div class="storage-status-panel"><span>Projects <strong>${projectCount}</strong></span><span>Autosave <strong>Enabled</strong></span><span>Last saved <strong>${lastSaved}</strong></span><span>Storage <strong>Local-first</strong></span></div><div class="settings-divider"></div><div class="settings-form-row settings-form-row-stack"><div><strong>Export or import projects</strong><p>Backup before clearing browser data, changing browsers, or moving devices.</p></div><div class="backup-actions"><select id="backup-project-select" aria-label="Project to export"><option value="">All projects</option>${state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("")}</select><button class="secondary-button" id="export-selected-project">Export selected</button><button class="primary-button" id="export-all-projects">Export all projects</button><button class="secondary-button" id="import-project-backup">Import backup</button><input id="settings-backup-file" type="file" accept=".json,application/json" hidden></div></div><div class="backup-mode"><label class="check-row"><input type="radio" name="import-mode" value="merge" checked><span>Merge with current projects</span></label><label class="check-row"><input type="radio" name="import-mode" value="replace"><span>Replace all local projects</span></label></div><div class="privacy-note">Local drafts belong to this browser and device. Export a backup before moving elsewhere.</div></section>
+      <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">LOCAL DATA</p><h2>Your saved work</h2><p>Review local storage and move projects using a Yarncha backup.</p></div></div><div class="storage-status-panel"><span>Projects <strong>${projectCount}</strong></span><span>Autosave <strong>Enabled</strong></span><span>Last saved <strong>${lastSaved}</strong></span><span>Storage <strong>Local-first</strong></span></div><div class="settings-divider"></div><div class="settings-form-row settings-form-row-stack"><div><strong>Export or import projects</strong><p>Backup before clearing browser data, changing browsers, or moving devices.</p></div><div class="backup-actions"><button class="secondary-button manual-save-button" data-manual-save="Settings" type="button">Save now</button><select id="backup-project-select" aria-label="Project to export"><option value="">All projects</option>${state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("")}</select><button class="secondary-button" id="export-selected-project">Export selected</button><button class="primary-button" id="export-all-projects">Export all projects</button><button class="secondary-button" id="import-project-backup">Import backup</button><input id="settings-backup-file" type="file" accept=".json,application/json" hidden></div></div><div class="backup-mode"><label class="check-row"><input type="radio" name="import-mode" value="merge" checked><span>Merge with current projects</span></label><label class="check-row"><input type="radio" name="import-mode" value="replace"><span>Replace all local projects</span></label></div><div class="privacy-note">Local drafts belong to this browser and device. Export a backup before moving elsewhere.</div></section>
       <div id="cloud-settings-anchor" class="settings-cloud-anchor"></div>
       <section class="card mobile-card settings-panel settings-panel-wide settings-notes-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("info","ui-icon")}</span><div><p class="eyebrow">UPDATES & LIMITATIONS</p><h2>What to know</h2><p>Honest notes about the current Yarncha build.</p></div></div><div class="limitations-list">${limitations.map(([limit,fix])=>`<article><strong>${escapeHtml(limit)}</strong><p>${escapeHtml(fix)}</p></article>`).join("")}</div></section>
     </div>`;
@@ -4849,6 +4922,7 @@ function renderSettings(){
   document.getElementById("import-project-backup").onclick=()=>document.getElementById("settings-backup-file").click();
   document.getElementById("settings-backup-file").onchange=e=>importBackup(e,document.querySelector("input[name='import-mode']:checked")?.value||"merge");
   window.YarnchaCloud?.renderSettingsSection?.(host);
+  updateSaveIndicators();
   queueMicrotask(applyLanguage);
 }
 
@@ -5786,6 +5860,23 @@ document.addEventListener("keydown",event=>{
   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
 });
+if(window.__yarnchaManualSaveShortcut)document.removeEventListener("keydown",window.__yarnchaManualSaveShortcut);
+window.__yarnchaManualSaveShortcut=event=>{
+  if((event.metaKey||event.ctrlKey)&&String(event.key).toLowerCase()==="s"){
+    event.preventDefault();
+    manualSave("Workspace");
+  }
+};
+document.addEventListener("keydown",window.__yarnchaManualSaveShortcut);
+if(window.__yarnchaBeforeUnloadSaveGuard)window.removeEventListener("beforeunload",window.__yarnchaBeforeUnloadSaveGuard);
+window.__yarnchaBeforeUnloadSaveGuard=event=>{
+  if(saveDirty||saveInFlight||lastSaveFailed){
+    event.preventDefault();
+    event.returnValue="Yarncha is still saving your latest changes.";
+    return event.returnValue;
+  }
+};
+window.addEventListener("beforeunload",window.__yarnchaBeforeUnloadSaveGuard);
 document.getElementById("mobile-menu").onclick = () => document.querySelector(".sidebar").classList.toggle("open");
 document.getElementById("phone-help").onclick=()=>openModal(`<p class="eyebrow">DEVICE ACCESS</p><h2>Open Yarncha on your phone</h2><p><strong>On this Mac:</strong> open <code>http://localhost:4183/</code> while the Yarncha preview server is running.</p><p><strong>On your phone:</strong> localhost points to the phone itself, so it will not open Yarncha. Connect the phone and Mac to the same Wi-Fi, then open <code>http://MAC_LOCAL_IP:4183/</code> using the Mac's local network address.</p><p><strong>If it still does not connect:</strong> allow incoming connections through the Mac firewall and try another available port such as 4184 or 5173.</p><p><strong>Deployed website:</strong> once Yarncha is deployed, use its hosted address instead of a local network address.</p><div class="privacy-note">Local browser storage does not automatically sync between devices or browsers. Export a backup before switching browser, clearing data, or moving device.</div><div class="modal-actions"><button class="primary-button" onclick="closeModal()">Close</button></div>`);
 document.getElementById("account-button").onclick=openAccountModal;
@@ -5817,6 +5908,9 @@ window.YarnchaLocal={
     return descriptors;
   },
   rerenderSettings(){if(document.getElementById("settings-view")?.classList.contains("active"))renderSettings();},
+  exportBackup,
+  importBackup,
+  mergeLibrarySections,
   openModal,
   closeModal,
   toast,

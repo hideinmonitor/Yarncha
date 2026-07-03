@@ -23,6 +23,8 @@
     "test:voice": "node tests/voice-command-contract.test.mjs",
     "test:navigation": "node tests/navigation-contract.test.mjs",
     "test:settings": "node tests/settings-contract.test.mjs",
+    "test:cloud-sync": "node tests/cloud-sync-contract.test.mjs",
+    "test:manual-save": "node tests/manual-save-contract.test.mjs",
     "test:library": "node tests/library-delete-contract.test.mjs"
   },
   "dependencies": {
