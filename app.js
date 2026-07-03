@@ -1,7 +1,6 @@
 const STORAGE_KEY = "threadline-data-v1";
 const colors = ["#6f8872", "#b56d52", "#8a7895", "#c19b5b", "#637f91"];
 const APP_NAME = "Yarncha";
-const APP_BUILD = "111-safari-project-nav";
 const BACKUP_VERSION = 2;
 const PROJECT_SCHEMA_VERSION = 2;
 const projectTypeOptions = ["Knitting","Crochet","Tunisian Crochet","Weaving","Other"];
@@ -26,7 +25,6 @@ const ideaCraftOptions=["Knitting","Crochet","Tunisian Crochet","Mixed / Other"]
 const ideaKindOptions=["Blanket","Sweater","Hat / beanie","Scarf","Socks pair","Amigurumi","Shawl","Gloves pair","Cardigan","Bag","Homeware","Custom idea"];
 const ideaPlatformOptions=["Manual note","Instagram","Pinterest","Ravelry","YouTube","Book / magazine","Website","Other"];
 const ideaDifficultyOptions=["Not sure yet","Beginner","Easy","Intermediate","Advanced"];
-if(["localhost","127.0.0.1",""].includes(location.hostname))console.info(`[Yarncha] build ${APP_BUILD}`);
 
 const starterData = {
   activeProjectId: "p1",
@@ -852,17 +850,6 @@ async function showView(name) {
 function handleAppShellClick(e){
   const manualSaveButton=e.target.closest("[data-manual-save]");
   if(manualSaveButton){e.preventDefault();manualSave(manualSaveButton.dataset.manualSave||"Project");return;}
-  const projectOpener=e.target.closest("[data-open-project],[data-project-card]");
-  if(projectOpener){
-    const innerAction=e.target.closest("[data-project-action],a,button,input,select,textarea");
-    if(projectOpener.matches("[data-project-card]")&&innerAction&&innerAction!==projectOpener&&projectOpener.contains(innerAction))return;
-    e.preventDefault();
-    const projectId=projectOpener.dataset.openProject||projectOpener.dataset.projectId||projectOpener.dataset.project;
-    if(!projectId)return console.warn("[Yarncha project navigation] Missing project id", { target:e.target, opener:projectOpener });
-    projectNavigationDebug("[Project open control]",{target:e.target,opener:projectOpener,projectId});
-    openProject(projectId);
-    return;
-  }
   const nav = e.target.closest("[data-view]"); if (nav) { showView(nav.dataset.view); return; }
   const go = e.target.closest("[data-go]"); if (go) { showView(go.dataset.go); return; }
   const project = e.target.closest("[data-project-id],[data-project]");
@@ -882,26 +869,6 @@ function handleAppShellClick(e){
 if(window.__yarnchaShellClickHandler)document.removeEventListener("click",window.__yarnchaShellClickHandler);
 window.__yarnchaShellClickHandler=handleAppShellClick;
 document.addEventListener("click",handleAppShellClick);
-function bindProjectOpenControls(root=document){
-  root.querySelectorAll("[data-open-project],[data-project-card]").forEach(control=>{
-    control.addEventListener("click",event=>{
-      const innerAction=event.target.closest("[data-project-action],a,button,input,select,textarea");
-      if(control.matches("[data-project-card]")&&innerAction&&innerAction!==control&&control.contains(innerAction))return;
-      event.preventDefault();
-      event.stopPropagation();
-      const projectId=control.dataset.openProject||control.dataset.projectId||control.dataset.project;
-      if(!projectId)return console.warn("[Yarncha project navigation] Missing project id", { control });
-      openProject(projectId);
-    });
-    control.addEventListener("keydown",event=>{
-      if(event.key!=="Enter"&&event.key!==" ")return;
-      event.preventDefault();
-      const projectId=control.dataset.openProject||control.dataset.projectId||control.dataset.project;
-      if(!projectId)return console.warn("[Yarncha project navigation] Missing project id", { control });
-      openProject(projectId);
-    });
-  });
-}
 function handleProjectHashRoute(){
   const match=location.hash.match(/^#project-(.+)$/);
   if(match)openProject(decodeURIComponent(match[1]));
@@ -913,9 +880,8 @@ queueMicrotask(handleProjectHashRoute);
 
 function renderSidebar() {
   document.getElementById("sidebar-project-list").innerHTML = state.projects.map(p =>
-    `<button class="side-project" type="button" data-open-project="${p.id}"><span class="project-dot" style="background:${p.color}"></span><span>${escapeHtml(p.name)}</span></button>`
+    `<button class="side-project" data-project="${p.id}"><span class="project-dot" style="background:${p.color}"></span><span>${escapeHtml(p.name)}</span></button>`
   ).join("");
-  bindProjectOpenControls(document.getElementById("sidebar-project-list"));
 }
 
 function progress(project) { return project.totalRows ? Math.min(100, Math.round((project.row / project.totalRows) * 100)) : null; }
@@ -952,11 +918,10 @@ function renderToday() {
       <div class="row-progress"><span>${rowSummary(p)}</span><strong>${progress(p) === null ? "In progress" : `${progress(p)}%`}</strong></div>
       <div class="progress-track"><div class="progress-fill" style="width:${progress(p) ?? Math.min(95, p.row)}%"></div></div>
       <div class="counter-line"><div><small>Current row</small><strong>${p.row}</strong></div><div><small>Stitch markers</small><strong>${p.markers.length}</strong></div></div>
-      <button class="primary-button" type="button" data-open-project="${p.id}">Continue making →</button>
+      <button class="primary-button" data-project="${p.id}">Continue making →</button>
     </div>
   </article>`;
   hydrateProjectCovers();
-  bindProjectOpenControls(host);
 }
 
 function localCraftGreeting(){
@@ -981,12 +946,11 @@ function renderTimeGreeting(){
 
 function renderProjects() {
   const grid=document.getElementById("project-grid");
-  grid.innerHTML = state.projects.map(p => `<div class="project-card card" role="button" tabindex="0" data-project-card data-project-id="${p.id}" data-open-project="${p.id}" aria-label="Open ${escapeHtml(p.name)}">
+  grid.innerHTML = state.projects.map(p => `<button class="project-card card" type="button" data-project-id="${p.id}" data-project="${p.id}" aria-label="Open ${escapeHtml(p.name)}">
     ${visual(p, true)}<div class="project-card-info"><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.type)} · ${rowSummary(p)}</p>
     <div class="progress-track"><div class="progress-fill" style="width:${progress(p) ?? Math.min(95, p.row)}%"></div></div></div>
-  </div>`).join("") + `<button class="add-project-card card" type="button" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
+  </button>`).join("") + `<button class="add-project-card card" type="button" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
   hydrateProjectCovers();
-  bindProjectOpenControls(grid);
 }
 
 function projectNavigationDebug(...args){
