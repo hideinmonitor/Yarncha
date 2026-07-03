@@ -11,6 +11,7 @@ const distDir = resolve(projectRoot, "dist");
 const rootAssets = [
   "app.js",
   "calculator-engine.js",
+  "repeat-engine.js",
   "symbol-database.js",
   "styles.css",
   "favicon.ico",
@@ -30,7 +31,7 @@ for (const file of rootAssets) {
 }
 
 const indexFile = resolve(distDir, "index.html");
-const assetVersion = "89-technique-help-classifier";
+const assetVersion = "108-repeat-modal-colour-field";
 const classicScripts = [
   `<script src="src/data/sizeReference.js?v=${assetVersion}"></script>`,
   `<script src="src/calculations/core.js?v=${assetVersion}"></script>`,
@@ -44,6 +45,7 @@ const classicScripts = [
   `<script src="src/calculations/knitting.js?v=${assetVersion}"></script>`,
   `<script src="src/calculations/rendering.js?v=${assetVersion}"></script>`,
   `<script src="calculator-engine.js?v=${assetVersion}"></script>`,
+  `<script src="repeat-engine.js?v=${assetVersion}"></script>`,
   `<script src="symbol-database.js?v=${assetVersion}"></script>`,
   `<script src="app.js?v=${assetVersion}"></script>`
 ].join("\n    ");

@@ -2,6 +2,7 @@ const STORAGE_KEY = "threadline-data-v1";
 const colors = ["#6f8872", "#b56d52", "#8a7895", "#c19b5b", "#637f91"];
 const APP_NAME = "Yarncha";
 const BACKUP_VERSION = 2;
+const PROJECT_SCHEMA_VERSION = 2;
 const projectTypeOptions = ["Knitting","Crochet","Tunisian Crochet","Weaving","Other"];
 const projectStatusOptions = ["Planning","In progress","Paused","Finished","Frogged"];
 const themePresets=[
@@ -72,7 +73,9 @@ const starterData = {
   symbolLearningLibrary:[]
 };
 
+let hasLoadedSavedState = false;
 let state = loadState();
+hasLoadedSavedState = true;
 let currentProjectId = state.activeProjectId;
 let activePage = "today";
 let renderedComponent = "TodayPage";
@@ -90,6 +93,7 @@ let drawingStroke = null;
 let drawingFrame = null;
 let maskDrag = null;
 let arrowDrag = null;
+let touchReadTap = null;
 let recognition = null;
 let pendingVoiceIntent = null;
 let fxRates={EUR:1,AUD:1.6442,USD:1.1567,CNY:7.8220,JPY:185.30,HKD:9.025};
@@ -497,6 +501,79 @@ function isLegacySymbolLearningSection(section={}){
 function sanitizeLibrarySections(sections=[]){
   return (sections||[]).filter(section=>!isLegacySymbolLearningSection(section));
 }
+function repeatEngine(){return window.YarnchaRepeatEngine;}
+function stableProjectId(project={},index=0){
+  if(project.id)return project.id;
+  const base=String(project.name||project.title||project.started||index||"project").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48)||"project";
+  return `p-${base}-${index}`;
+}
+function normalizeProjectRecord(p={},index=0){
+  const now=new Date().toISOString(),id=stableProjectId(p,index),createdAt=p.createdAt || p.startedAt || p.startDate || p.updatedAt || now;
+  const normalized={
+    ...p,
+    id,
+    createdAt,
+    schemaVersion:Number(p.schemaVersion)||PROJECT_SCHEMA_VERSION,
+    totalRows: Number(p.totalRows) || null,
+    chartRows: Number(p.chartRows) || Number(p.totalRows) || null,
+    subCounters: (p.subCounters || []).map(normalizeSubCounter),
+    repeatRules: repeatEngine()?.migrateRepeatRules([{...p,subCounters:(p.subCounters||[]).map(normalizeSubCounter),repeatRules:p.repeatRules||[]}])?.[0]?.repeatRules || [],
+    rowReminders:(p.rowReminders || []).map(normalizeRowReminder),
+    rowReminderVoice:normalizeRowReminderVoice(p.rowReminderVoice),
+    activeRowReminder:p.activeRowReminder || null,
+    markers: (p.markers || []).map((m,index)=>({...m,id:m.id||`marker-${id}-${index}`,label:m.label||m.color})),
+    assistantMessages: p.assistantMessages || [],
+    projectTools: p.projectTools || {},
+    fitCheck:p.fitCheck || {},
+    toolHistory: p.toolHistory || [],
+    buyList: p.buyList || [],
+    pdfReference: p.pdfReference || "",
+    attachments: p.attachments || [],
+    patternPlan: p.patternPlan || {mode:"modified"},
+    chatPreference: p.chatPreference || "ask",
+    readerStatus:p.readerStatus||"No files analysed yet.",
+    flowMode:p.flowMode!==false,
+    activeTab:p.activeTab || "track",
+    readingMode:!!p.readingMode,
+    chartMode:p.chartMode || "og",
+    yarnchaAssistant:p.yarnchaAssistant || {},
+    chartZoom:Number(p.chartZoom)||1,
+    annotations:p.annotations || [],
+    annotationHistory:p.annotationHistory || [],
+    annotationRedo:p.annotationRedo || [],
+    annotationColor:p.annotationColor || "#d96572",
+    annotationWidth:Number(p.annotationWidth)||4,
+    annotationOpacity:Number(p.annotationOpacity)||.72,
+    eraserMode:p.eraserMode || "standard",
+    eraserSize:Number(p.eraserSize)||28,
+    selectedAnnotationId:p.selectedAnnotationId || null,
+    rowMask:p.rowMask || null,
+    maskLockSize:!!p.maskLockSize,
+    maskLockPosition:!!p.maskLockPosition,
+    coverAsset:p.coverAsset || null,
+    status:projectStatusOptions.includes(p.status) ? p.status : "In progress",
+    startDate:p.startDate || "",
+    finishDate:p.finishDate || "",
+    patternUrl:p.patternUrl || "",
+    yarn:p.yarn || "",
+    needles:p.needles || "",
+    gauge:p.gauge || "",
+    size:p.size || "",
+    sizingNotes:p.sizingNotes || "",
+    patternSource:normalizePatternSource(p.patternSource,p),
+    projectSetup:normalizeProjectSetup(p.projectSetup,p),
+    updatedAt:p.updatedAt || createdAt,
+    chartAnalysis:p.chartAnalysis ? {
+      ...p.chartAnalysis,
+      rows:p.chartAnalysis.rows || [],
+      legend:p.chartAnalysis.legend || "",
+      columns:p.chartAnalysis.columns || null,
+      gridStatus:p.chartAnalysis.gridStatus || "Grid and cell boundaries require user confirmation."
+    } : null,
+    chartReader:normalizeChartReaderConfig(p.chartReader,p)
+  };
+  return {...normalized,projectCalculations:calculateFlowProjectPlan(normalized,normalized.projectSetup)};
+}
 
 function loadState() {
   try {
@@ -539,85 +616,42 @@ function loadState() {
     merged.symbolLearningLibrary = (saved.symbolLearningLibrary || []).map(normalizeLearningRecord);
     merged.projectIdeas = (saved.projectIdeas || []).map(normalizeProjectIdea);
     merged.ideaFilters = saved.ideaFilters || {search:"",craft:"All",kind:"All",showArchived:false};
-    merged.projects = (saved.projects || starterData.projects).map(p => ({
-      ...p,
-      totalRows: Number(p.totalRows) || null,
-      chartRows: Number(p.chartRows) || Number(p.totalRows) || null,
-      subCounters: p.subCounters || [],
-      markers: (p.markers || []).map((m,index)=>({...m,id:m.id||`marker-${p.id}-${index}`,label:m.label||m.color})),
-      assistantMessages: p.assistantMessages || [],
-      projectTools: p.projectTools || {},
-      fitCheck:p.fitCheck || {},
-      toolHistory: p.toolHistory || [],
-      buyList: p.buyList || [],
-      pdfReference: p.pdfReference || "",
-      attachments: p.attachments || [],
-      patternPlan: p.patternPlan || {mode:"modified"},
-      chatPreference: p.chatPreference || "ask",
-      readerStatus:p.readerStatus||"No files analysed yet.",
-      flowMode:p.flowMode!==false,
-      activeTab:p.activeTab || "track",
-      readingMode:!!p.readingMode,
-      chartMode:p.chartMode || "og",
-      yarnchaAssistant:p.yarnchaAssistant || {},
-      chartZoom:Number(p.chartZoom)||1,
-      annotations:p.annotations || [],
-      annotationHistory:p.annotationHistory || [],
-      annotationRedo:p.annotationRedo || [],
-      annotationColor:p.annotationColor || "#d96572",
-      annotationWidth:Number(p.annotationWidth)||4,
-      annotationOpacity:Number(p.annotationOpacity)||.72,
-      eraserMode:p.eraserMode || "standard",
-      eraserSize:Number(p.eraserSize)||28,
-      selectedAnnotationId:p.selectedAnnotationId || null,
-      rowMask:p.rowMask || null,
-      maskLockSize:!!p.maskLockSize,
-      maskLockPosition:!!p.maskLockPosition,
-      coverAsset:p.coverAsset || null,
-      status:projectStatusOptions.includes(p.status) ? p.status : "In progress",
-      startDate:p.startDate || "",
-      finishDate:p.finishDate || "",
-      patternUrl:p.patternUrl || "",
-      yarn:p.yarn || "",
-      needles:p.needles || "",
-      gauge:p.gauge || "",
-      size:p.size || "",
-      sizingNotes:p.sizingNotes || "",
-      patternSource:normalizePatternSource(p.patternSource,p),
-      projectSetup:normalizeProjectSetup(p.projectSetup,p),
-      updatedAt:p.updatedAt || new Date().toISOString(),
-      chartAnalysis:p.chartAnalysis ? {
-        ...p.chartAnalysis,
-        rows:p.chartAnalysis.rows || [],
-        legend:p.chartAnalysis.legend || "",
-        columns:p.chartAnalysis.columns || null,
-        gridStatus:p.chartAnalysis.gridStatus || "Grid and cell boundaries require user confirmation."
-      } : null,
-      chartReader:normalizeChartReaderConfig(p.chartReader,p)
-    })).map(p=>({...p,projectCalculations:calculateFlowProjectPlan(p,p.projectSetup)}));
+    merged.schemaVersion = Number(saved.schemaVersion)||PROJECT_SCHEMA_VERSION;
+    merged.projects = (saved.projects || starterData.projects).map(normalizeProjectRecord);
+    if(!merged.projects.some(p=>String(p.id)===String(merged.activeProjectId)))merged.activeProjectId=merged.projects[0]?.id||null;
     return merged;
   }
   catch { return structuredClone(starterData); }
 }
 function saveState() {
+  if(!hasLoadedSavedState)return;
   const now=new Date().toISOString();
+  state.schemaVersion=PROJECT_SCHEMA_VERSION;
   state.lastSavedAt=now;
   updateSaveStatus("Saving...");
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  putProjectStateSnapshot().then(()=>updateSaveStatus(`✓ Saved · Last saved: ${formatSavedTime(now)}`)).catch(()=>updateSaveStatus("Saved locally in browser storage"));
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(error){
+    updateSaveStatus("Save failed");
+    toast("Yarncha could not save progress in this browser.");
+    return;
+  }
+  putProjectStateSnapshot().then(()=>updateSaveStatus(`✓ Saved on this device · ${formatSavedTime(now)}`)).catch(()=>updateSaveStatus("Saved on this device · Expanded storage unavailable"));
   renderSidebar(); applyTheme(); queueMicrotask(applyLanguage);
   window.dispatchEvent(new CustomEvent("yarncha:local-save", { detail:{ savedAt:now } }));
 }
 let saveDebounceTimer=null;
 function saveStateSoon(delay=350){
+  if(!hasLoadedSavedState)return;
   clearTimeout(saveDebounceTimer);
   updateSaveStatus("Saving...");
   saveDebounceTimer=setTimeout(saveState,delay);
 }
 function updateSaveStatus(text){const el=document.getElementById("save-status");if(el)el.textContent=text;}
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
-function getProject(id = currentProjectId) { return state.projects.find(p => p.id === id) || state.projects[0]; }
+function getProject(id = currentProjectId) { return state.projects.find(p => String(p.id) === String(id)) || state.projects[0]; }
 function escapeHtml(value = "") { return String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
+function optionList(values,current,labels={}){return values.map(v=>`<option value="${escapeHtml(v)}" ${current===v?"selected":""}>${escapeHtml(labels[v]||v)}</option>`).join("");}
 const uiIconPaths={
   touch:'<path d="M8.5 11.5V6.8a1.7 1.7 0 0 1 3.4 0v4.7"></path><path d="M11.9 11.1V9a1.55 1.55 0 0 1 3.1 0v3"></path><path d="M15 12V9.8a1.5 1.5 0 0 1 3 0v4.4c0 4-2.7 6.8-6.4 6.8h-.7a5.6 5.6 0 0 1-4-1.8l-2.8-3a1.55 1.55 0 0 1 2.1-2.3l2.3 1.8V11.5"></path><path d="M5.5 5.5 3.8 3.8M18.5 5.5l1.7-1.7M12 3V1"></path>',
   voice:'<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path>',
@@ -689,7 +723,8 @@ function applyTheme(){
 }
 function applyLanguage(){
   document.documentElement.lang=state.language;
-  document.getElementById("app-language").value=state.language;
+  const appLanguage=document.getElementById("app-language");
+  if(appLanguage)appLanguage.value=state.language;
   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
   let node;while(node=walker.nextNode()){const raw=originalText.get(node)||node.nodeValue;const trimmed=raw.trim();if(!trimmed)continue;if(!originalText.has(node))originalText.set(node,raw);const translated=state.language==="zh-HK"?(hkTranslations[trimmed]??trimmed):trimmed,target=translated!==trimmed?raw.replace(trimmed,translated):raw;if(node.nodeValue!==target)node.nodeValue=target;}
 }
@@ -745,7 +780,15 @@ function showView(name) {
 function handleAppShellClick(e){
   const nav = e.target.closest("[data-view]"); if (nav) { showView(nav.dataset.view); return; }
   const go = e.target.closest("[data-go]"); if (go) { showView(go.dataset.go); return; }
-  const project = e.target.closest("[data-project]"); if (project) { openProject(project.dataset.project); return; }
+  const project = e.target.closest("[data-project-id],[data-project]");
+  if(project){
+    const innerAction=e.target.closest("[data-project-action],a,button,input,select,textarea");
+    if(innerAction&&innerAction!==project&&project.contains(innerAction))return;
+    e.preventDefault();
+    projectNavigationDebug("[Project tap]",{target:e.target,card:project,projectId:project.dataset.projectId||project.dataset.project});
+    openProject(project.dataset.projectId||project.dataset.project);
+    return;
+  }
   const add = e.target.closest("[data-add-project]"); if (add) { openProjectModal(); return; }
   const tool = e.target.closest("[data-tool]"); if (tool&&!tool.closest(".annotation-toolbar")) { showView("tools"); renderTool(tool.dataset.tool); return; }
   const tab = e.target.closest("[data-tool-tab]"); if (tab) { renderTool(tab.dataset.toolTab); return; }
@@ -754,6 +797,14 @@ function handleAppShellClick(e){
 if(window.__yarnchaShellClickHandler)document.removeEventListener("click",window.__yarnchaShellClickHandler);
 window.__yarnchaShellClickHandler=handleAppShellClick;
 document.addEventListener("click",handleAppShellClick);
+function handleProjectHashRoute(){
+  const match=location.hash.match(/^#project-(.+)$/);
+  if(match)openProject(decodeURIComponent(match[1]));
+}
+if(window.__yarnchaHashProjectHandler)window.removeEventListener("hashchange",window.__yarnchaHashProjectHandler);
+window.__yarnchaHashProjectHandler=handleProjectHashRoute;
+window.addEventListener("hashchange",window.__yarnchaHashProjectHandler);
+queueMicrotask(handleProjectHashRoute);
 
 function renderSidebar() {
   document.getElementById("sidebar-project-list").innerHTML = state.projects.map(p =>
@@ -822,25 +873,31 @@ function renderTimeGreeting(){
 }
 
 function renderProjects() {
-  document.getElementById("project-grid").innerHTML = state.projects.map(p => `<button class="project-card card" type="button" data-project="${p.id}" aria-label="Open ${escapeHtml(p.name)}">
+  const grid=document.getElementById("project-grid");
+  grid.innerHTML = state.projects.map(p => `<button class="project-card card" type="button" data-project-id="${p.id}" data-project="${p.id}" aria-label="Open ${escapeHtml(p.name)}">
     ${visual(p, true)}<div class="project-card-info"><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.type)} · ${rowSummary(p)}</p>
     <div class="progress-track"><div class="progress-fill" style="width:${progress(p) ?? Math.min(95, p.row)}%"></div></div></div>
   </button>`).join("") + `<button class="add-project-card card" type="button" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
   hydrateProjectCovers();
 }
 
+function projectNavigationDebug(...args){
+  if(["localhost","127.0.0.1",""].includes(location.hostname))console.debug(...args);
+}
 function openProject(id) {
-  const project = state.projects.find(p=>p.id===id);
+  const project = state.projects.find(p=>String(p.id)===String(id));
+  projectNavigationDebug("[Project open] found project", project);
   if(!project){
     console.warn("[Yarncha project navigation] Project not found", { projectId:id });
     toast("Project not found. Please choose another project.");
     showView("projects");
     return;
   }
-  currentProjectId = id;
-  state.activeProjectId = id;
+  currentProjectId = project.id;
+  state.activeProjectId = project.id;
   saveState();
   showView("project-detail");
+  projectNavigationDebug("[Opened project view]", {projectId:project.id,activeView:[...document.querySelectorAll(".view")].find(view=>!view.hidden)?.id});
 }
 const showProject=openProject;
 
@@ -854,11 +911,12 @@ function renderProjectDetail() {
       <div class="detail-head project-header">
         <button class="project-detail-cover cover-upload-button" id="project-cover-picker" aria-label="Upload or replace project cover photo">${visual(p,true)}</button>
         <div class="project-title-block"><p class="eyebrow">${escapeHtml(p.type).toUpperCase()}</p><div class="editable-title"><h1>${escapeHtml(p.name)}</h1></div><p class="project-type">${escapeHtml(p.status||"In progress")} · Row ${p.row}${p.totalRows?` of ${p.totalRows}`:""} · ${progress(p) === null ? "Open-ended" : `${progress(p)}% complete`}</p></div>
-        <div class="detail-actions project-actions"><button class="project-action-button ghost" id="edit-project-name">Edit Project</button><button class="project-action-button secondary" id="speak-row">Read row</button><button class="project-action-button primary voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","button-icon")}</button></div>
+        <div class="detail-actions project-actions"><button class="project-action-button ghost" id="edit-project-name">Edit Project</button><button class="project-action-button secondary" id="speak-row">Read row</button><button class="project-action-button primary voice-button voice-button--header voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","voice-button-icon")}</button></div>
       </div>
       <div class="project-tabs" role="tablist" aria-label="Project sections">
         ${["track","chart","project","assistant"].map(id=>`<button class="${tab===id?"active":""}" data-project-tab="${id}">${id[0].toUpperCase()+id.slice(1)}</button>`).join("")}
       </div>
+      ${activeRowReminderHtml(p)}
       <section class="project-tab-panel">${tab==="track"?projectTrackHtml(p):tab==="chart"?projectChartHtml(p):tab==="project"?projectProjectHtml(p):projectAssistantTabHtml(p)}</section>
     </div>`;
   bindProjectDetail();
@@ -869,21 +927,69 @@ function renderProjectDetail() {
   window.dispatchEvent(new CustomEvent("yarncha:project-rendered", { detail:{ projectId:p.id, tab } }));
 }
 
+function markerChipHtml(marker){
+  const id=marker.id||`${marker.row}-${marker.color}`,color=markerColor(marker.color),label=marker.label||marker.color||"Marker";
+  return `<span class="marker-chip" style="--marker-color:${escapeHtml(color)}"><button type="button" class="marker-chip-main" data-edit-marker="${escapeHtml(id)}"><span class="marker-dot" aria-hidden="true"></span><span>Row ${Number(marker.row)||0} · ${escapeHtml(label)}</span></button><button type="button" class="marker-chip-delete" aria-label="Delete marker" data-delete-marker="${escapeHtml(id)}">${uiIcon("close")}</button></span>`;
+}
+function markerColorPresets(){
+  return [
+    {name:"Red",value:"#C75A55"},
+    {name:"Blue",value:"#577FA8"},
+    {name:"Yellow",value:"#D3A93F"},
+    {name:"Green",value:"#62856A"},
+    {name:"Pink",value:"#C77B91"},
+    {name:"Purple",value:"#84658E"},
+    {name:"Orange",value:"#D27B45"},
+    {name:"Brown / Neutral",value:"#8A6F5A"}
+  ];
+}
+function normalizeMarkerHex(value){
+  const clean=String(value||"").trim().replace(/^#/,"");
+  return /^[0-9a-f]{6}$/i.test(clean)?`#${clean.toUpperCase()}`:"";
+}
+function markerColorLabel(color){
+  const normalized=normalizeMarkerHex(markerColor(color));
+  return markerColorPresets().find(item=>item.value===normalized)?.name || normalized || "Marker";
+}
+function loadMarkerColorHistory(){
+  try{
+    const raw=JSON.parse(localStorage.getItem("yarncha.markerColorHistory")||"{}");
+    return {
+      recent:Array.isArray(raw.recent)?raw.recent.map(normalizeMarkerHex).filter(Boolean).slice(0,8):[],
+      frequency:Object.fromEntries(Object.entries(raw.frequency||{}).map(([key,value])=>[normalizeMarkerHex(key),Math.max(0,Number(value)||0)]).filter(([key,value])=>key&&value))
+    };
+  }catch{return {recent:[],frequency:{}};}
+}
+function saveMarkerColorHistory(color){
+  const hex=normalizeMarkerHex(color);
+  if(!hex)return;
+  const history=loadMarkerColorHistory();
+  history.recent=[hex,...history.recent.filter(item=>item!==hex)].slice(0,8);
+  history.frequency[hex]=(history.frequency[hex]||0)+1;
+  localStorage.setItem("yarncha.markerColorHistory",JSON.stringify(history));
+}
+function markerHistoryRowHtml(title,colours=[]){
+  if(!colours.length)return "";
+  return `<div class="marker-color-history"><strong>${escapeHtml(title)}</strong><div class="marker-color-history-row">${colours.map(color=>`<button type="button" class="marker-history-swatch" data-marker-history-color="${escapeHtml(color)}" style="--marker-color:${escapeHtml(color)}" aria-label="Use marker colour ${escapeHtml(color)}"><span></span><small>${escapeHtml(markerColorLabel(color))}</small></button>`).join("")}</div></div>`;
+}
 function projectTrackHtml(p){
+  const markers=(p.markers||[]).slice().sort((a,b)=>(Number(a.row)||0)-(Number(b.row)||0));
   return `<div class="track-layout">
     <div class="counter-card card hero-counter">
+      <div class="unified-counter-heading"><p class="eyebrow">COUNTER</p><h3>Main Row</h3></div>
       <div class="counter-label">Current row</div>
       <button class="main-count" id="edit-main-row" title="Set exact row">${p.row}</button>
-      <div class="counter-controls counter-controls-large"><button data-counter="-1" aria-label="Previous row">−</button><button class="next" data-counter="1">Next row</button></div>
-      <div class="manual-row-line"><label>Jump to row <input id="manual-row-input" type="number" min="0" value="${p.row}"></label><button class="secondary-button" id="manual-row-save">Go</button></div>
+      <div class="counter-controls counter-controls-large main-row-controls"><button data-counter="-1" aria-label="Previous row">−</button><button class="next button-primary" data-counter="1">Next row</button><button class="button-icon voice-button voice-button--counter voice-icon-button inline-voice-button" data-voice-project aria-label="Voice controls" title="Voice controls">${uiIcon("voice","voice-button-icon")}</button></div>
+      <div class="manual-row-line compact-row-jump"><label>Jump to row <input id="manual-row-input" type="number" min="0" value="${p.row}"></label><button class="secondary-button button-secondary" id="manual-row-save">Go</button></div>
       <div class="progress-summary"><span>${p.totalRows?`${progress(p)}% complete`:"Open-ended project"}</span><div class="progress-track"><div class="progress-fill" style="width:${progress(p) ?? 0}%"></div></div></div>
-      <div class="counter-menu"><button id="edit-project-rows">Planned rows</button><button id="reset-main">Reset rows</button><button id="edit-project-from-counter">Edit Project</button></div>
+      <div class="counter-menu button-group"><button class="button-secondary" id="edit-project-rows">Planned rows</button><button class="button-ghost" id="reset-main">Reset rows</button><button class="button-ghost" id="edit-project-from-counter">Edit Project</button></div>
+      ${unifiedRepeatCountersHtml(p)}
     </div>
     <div class="track-side">
-      <div class="card mobile-card"><div class="section-heading compact-row"><h3>Repeat counters</h3><button class="mini-button" id="add-sub-counter">+ Add</button></div><div id="sub-counters">${p.subCounters.length?p.subCounters.map(s => subCounterHtml(s)).join(""):`<p class="muted-copy">Add repeats, sleeves, pattern sections or lace repeats here.</p>`}</div></div>
-      <div class="notes-card card"><div class="section-heading compact-row"><h3>Project notes</h3><button class="mini-button" id="add-marker">+ Marker</button></div>
+      ${rowRemindersPanelHtml(p)}
+      <div class="notes-card card"><div class="card-header"><div><h3>Project notes</h3></div><button class="mini-button button-secondary" id="add-marker">+ Marker</button></div>
         <textarea id="project-notes" placeholder="Modifications, reminders, yarn details...">${escapeHtml(p.notes)}</textarea>
-        <div class="markers">${p.markers.map(m => `<span class="marker-line" style="border-left:5px solid ${markerColor(m.color)}">Row ${m.row} · ${escapeHtml(m.label||m.color)} <button data-edit-marker="${m.id||`${m.row}-${m.color}`}">Edit</button><button class="minimal-icon-button" aria-label="Delete marker" data-delete-marker="${m.id||`${m.row}-${m.color}`}">${uiIcon("close")}</button></span>`).join("")}</div>
+        <div class="markers">${markers.map(m => markerChipHtml(m)).join("")}</div>
       </div>
     </div>
   </div>`;
@@ -907,16 +1013,18 @@ function projectChartHtml(p){
       <input type="file" id="chart-upload" accept=".pdf,image/*" multiple hidden>
     </div>
     <div class="reading-counter row-counter-card card workspace-card">
+      <div class="unified-counter-heading"><p class="eyebrow">COUNTER</p><h3>Main Row</h3></div>
       <div class="row-stepper">
         <button data-counter="-1" aria-label="Previous row">−</button>
-        <label class="field row-current-field">Row <input id="manual-row-input" type="number" min="0" value="${p.row}"></label>
+        <label class="field row-current-field"><span class="row-counter-label">Row</span><input class="row-counter-input" id="manual-row-input" type="number" min="0" value="${p.row}"></label>
         <button data-counter="1" aria-label="Next row">+</button>
+        <button class="button-icon voice-button voice-button--counter voice-icon-button inline-voice-button" data-voice-project aria-label="Voice controls" title="Voice controls">${uiIcon("voice","voice-button-icon")}</button>
       </div>
-      <label class="field total-rows-field">Rows <input id="chart-rows" type="number" min="1" value="${p.chartRows || p.totalRows || ""}" placeholder="Planned"></label>
-      <div class="row-counter-actions">
-        <button class="mini-button" id="reset-main">Reset</button>
-        <button class="mini-button voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","button-icon")}</button>
+      <div class="row-counter-actions button-group">
+        <button class="mini-button button-secondary" id="edit-project-rows">Planned rows</button>
+        <button class="mini-button button-ghost" id="reset-main">Reset</button>
       </div>
+      ${unifiedRepeatCountersHtml(p,{chart:true})}
     </div>
     <div class="annotation-toolbar-shell card workspace-card">
     <div class="annotation-toolbar ${hasChart?"":"is-disabled"}" role="toolbar" aria-label="Annotation tools" aria-disabled="${!hasChart}">
@@ -931,6 +1039,7 @@ function projectChartHtml(p){
       <button id="undo-annotation" ${hasChart?"":"disabled"}>${uiIcon("undo","annotation-button-icon")}<span>Undo</span></button><button id="redo-annotation" ${hasChart?"":"disabled"}>${uiIcon("redo","annotation-button-icon")}<span>Redo</span></button><button class="danger-button" id="clear-annotations" ${hasChart?"":"disabled"}>Clear</button>
       <div class="zoom-tools"><button data-zoom="-0.15">−</button><strong>${Math.round((p.chartZoom||1)*100)}%</strong><button data-zoom="0.15">+</button></div>
     </div>
+    ${hasChart&&activeAnnotationTool==="touch"?`<p class="annotation-mode-hint">Tap a chart row to read or correct it.</p>`:""}
     </div>
     ${chartHidden?`<div class="chart-reader card workspace-card collapsed-workspace-panel"><strong>Visual chart is hidden.</strong><p class="muted-copy">Your original upload is still saved for Manual Reading Mode.</p><button class="secondary-button" data-pattern-collapse="show-chart">Show visual chart</button></div>`:`<div class="chart-reader card workspace-card">
       <div class="chart-stage og-chart-stage" id="chart-stage">${chartViewerHtml(p)}</div>
@@ -1378,11 +1487,27 @@ const projectContextService={
     const recognition=highlightedRowRecognition(project||{})[0]||project?.chartReader?.recognitionResults?.[0]||null;
     return {currentSymbol:recognition?.candidates?.[0]?.abbreviation||recognition?.detectedSymbol||"",symbolMeaning:recognition?.candidates?.[0]?.nameEn||""};
   },
+  getSubCounterContext(project=this.getCurrentProject()){
+    return (project?.subCounters||[]).map(normalizeSubCounter).map(counter=>({name:counter.name,count:counter.count,every:counter.every,anchorRow:counter.anchorRow,linked:counter.linked,notes:counter.notes,nextIn:counter.linked!==false?subCounterRowsUntilNext(counter,Number(project?.row)||0):null}));
+  },
   getCurrentProjectContext(){
     const project=this.getCurrentProject(),setup=ensureProjectSetup(project||{}),chart=this.getCurrentChartContext(project),row=this.getCurrentRowContext(project),symbol=this.getCurrentSymbolContext(project),memory=learningMemoryService.getLearningMemory(project?.id||"");
-    return {projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",savedProgress:row.savedProgress,verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}};
+    return {projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",savedProgress:row.savedProgress,subCounters:this.getSubCounterContext(project),verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}};
   }
 };
+function subCounterRowsUntilNext(counter,currentRow=0){
+  const c=normalizeSubCounter(counter),row=Number(currentRow)||0;
+  const next=repeatEngine()?.getNextTrigger(c.repeatRule,row);
+  if(next!==undefined&&next!==null)return Math.max(0,next-row);
+  if(row<c.anchorRow)return c.anchorRow-row;
+  const offset=(row-c.anchorRow)%c.every;
+  return offset===0?c.every:c.every-offset;
+}
+function assistantSubCounterSummary(counters=[]){
+  const list=(counters||[]).filter(Boolean);
+  if(!list.length)return "No sub row counters have been added yet.";
+  return list.map(counter=>`${counter.name} is at ${counter.count}${counter.nextIn!==null?` · next update in ${counter.nextIn} row${counter.nextIn===1?"":"s"}`:""}`).join("; ");
+}
 const techniqueHelpLabels={en:{projectContext:"Project context",technique:"Technique",quickAnswer:"Quick answer",whatToDoNow:"What to do now",stepByStep:"Step-by-step",checkBeforeContinuing:"Check before continuing",commonMistakes:"Common mistakes",relatedTechniques:"Related techniques",moreDetails:"More details",countCheck:"Count check"}};
 const techniqueGuideDatabase=[
   {id:"crochet-merge-new-yarn",label:"Merge New Yarn",craft:"crochet",category:"joining",level:"beginner",aliases:["join new yarn","add new yarn","change ball","merge yarn","換線","接新線"],stitchCountEffect:"no-change",shortMeaning:"Join a new strand of yarn so you can continue the project.",quickAnswer:"For merging new yarn in crochet, join the new yarn at the correct stitch or edge, then keep the first few stitches relaxed so the join does not look tight or bulky.",whatToDoNow:"Join the new yarn at the next stitch, leave a tail for weaving in, and crochet 3-5 stitches slowly before checking the tension.",steps:["Stop before the stitch where the new yarn needs to begin.","Place the new yarn over the hook and pull it through as instructed.","Leave a tail long enough to weave in later.","Work the next few stitches slowly while holding the tail gently at the back.","Check that the edge is not pulled tight.","Continue the row once the join looks secure."],checks:["Join at the edge if the pattern allows it.","Do not knot tightly unless the pattern or fibre needs it.","The yarn tail should be long enough to weave in securely."],commonMistakes:["Joining one stitch too early or too late.","Pulling the new yarn too tightly.","Accidentally counting the joining loop as an extra stitch."],relatedTechniqueIds:["crochet-weave-in-ends","crochet-standing-stitch","crochet-colour-change","crochet-edge-placement","crochet-tension-control"]},
@@ -1518,6 +1643,7 @@ const yarnchaAssistantService={
     if(projectContext.craftType)bits.push(`Craft: ${assistantCraftLabel(projectContext.craftType)}`);
     if(projectContext.currentRow)bits.push(`Current row: ${projectContext.currentRow}`);
     if(projectContext.expectedStitchCount)bits.push(`Expected stitch count: ${projectContext.expectedStitchCount}`);
+    if(projectContext.subCounters?.length)bits.push(`Sub counters: ${assistantSubCounterSummary(projectContext.subCounters)}`);
     return bits.join(" · ");
   },
   async askYarnchaAssistant({question="",projectContext={},skillLevel="beginner",craftType="knitting"}={}){
@@ -1526,6 +1652,10 @@ const yarnchaAssistantService={
     const inferredTechnique=findTechniqueGuide(q,craftType)?.label||"";
     const context={...projectContext,craftType,selectedTechnique:projectContext.selectedTechnique||inferredTechnique};
     let questionType=this.classifyQuestion(q);
+    if(/sub.?counter|counter|repeat counter|cable repeat|lace repeat|increase counter|next increase/i.test(q)){
+      const summary=assistantSubCounterSummary(context.subCounters);
+      return {questionType:"counterStatus",quickAnswer:summary,whatToDoNow:context.subCounters?.length?"Use the Sub Row Counters panel under the chart row counter to adjust, pause, duplicate, or edit these counters while reading.":"Add a Sub Row Counter below the chart row counter, then Yarncha can reference it while you read.",steps:(context.subCounters||[]).map(counter=>counter.nextIn!==null?`${counter.name}: current count ${counter.count}; next update in ${counter.nextIn} row${counter.nextIn===1?"":"s"}.`:`${counter.name}: current count ${counter.count}.`),checkBeforeContinuing:["Make sure the counter anchor row matches where that section begins.","Use manual + or - if you intentionally adjust the repeat count.","If the pattern has an 8-row repeat, set Update every X rows to 8 so Flow Mode has a better hint."],commonMistakes:["Starting a sleeve or neckline counter too early.","Forgetting to set an anchor row for shaping that begins later.","Using a voice reminder on backward row movement; Yarncha only speaks these while moving forward."],relatedTechniques:["row tracking","reading repeats","chart reading"],libraryLinks:[{title:"Reading Repeats",target:"library:reading-repeats"}],contextNote:this.contextNote(context),confidence:"medium",sourceType:"local-rule-based"};
+    }
     if(context.selectedTechnique&&(questionType==="generalQuestion"||questionType==="stitchTechnique"))questionType="stitchTechnique";
     if(context.selectedTechnique&&/selected technique|technique help|help me with|how do i work|how do i do/i.test(q))questionType="stitchTechnique";
     const base=questionType==="stitchCountProblem"?troubleshootingService.troubleshootStitchCount(context,skillLevel,craftType):questionType==="droppedStitch"?troubleshootingService.troubleshootDroppedStitch(context,skillLevel,craftType):questionType==="symbolMeaning"?teachingService.explainSymbol(context.currentSymbol||"this symbol",craftType,skillLevel,context):questionType==="abbreviation"?teachingService.explainAbbreviation(this.extractAbbreviation(q),craftType,skillLevel,context):questionType==="patternReading"||questionType==="rowInstruction"?teachingService.explainPatternLine(context.rowInstruction,craftType,skillLevel,context):questionType==="gaugeProblem"?troubleshootingService.troubleshootGaugeIssue(context,skillLevel):questionType==="projectLooksDifferent"?troubleshootingService.troubleshootProjectLooksDifferent(context,skillLevel):teachingService.explainTechnique(context.selectedTechnique,craftType,skillLevel,context);
@@ -1644,10 +1774,228 @@ function patternReadingSpaceHtml(p){
   </section>`;
 }
 function chartRowHtml(r){return `<div class="chart-row ${r.status==="uncertain"?"uncertain":""}"><div><strong>Row ${r.number}</strong><span>${escapeHtml(r.side||"Side uncertain")} · ${Number(r.stitchCount)||"?"} stitches</span></div><p>${escapeHtml(r.sequence||"uncertain")}</p><small>${escapeHtml(r.shaping||"No increase/decrease detected")}</small><div class="row-actions"><button class="mini-button" data-edit-analysis-row="${r.id}">Edit</button><button class="mini-button danger-button" data-delete-analysis-row="${r.id}">Delete</button></div></div>`;}
-function subCounterHtml(s) {
-  return `<div class="sub-counter repeat-counter-card"><div class="sub-counter-main"><strong>${escapeHtml(s.name)}</strong><div class="link-toggle">${s.linked!==false ? "Linked to main row counter" : "Manual counter"}</div></div>
-  <div class="sub-counter-controls"><button data-sub="${s.id}" data-delta="-1" aria-label="Decrease ${escapeHtml(s.name)}">−</button><strong>${s.count}</strong><button data-sub="${s.id}" data-delta="1" aria-label="Increase ${escapeHtml(s.name)}">+</button></div>
-  <div class="repeat-counter-actions"><button class="secondary-button" data-edit-sub="${s.id}">Edit Counter</button><button class="mini-button" data-counter-more="${s.id}">More</button></div></div>`;
+function normalizeSubCounter(counter={},index=0){
+  const start=Math.max(0,Math.round(Number(counter.start??counter.startingValue??0)||0));
+  const step=Math.max(1,Math.round(Number(counter.step??counter.incrementStep??1)||1));
+  const every=Math.max(1,Math.round(Number(counter.every??counter.updateEvery??1)||1));
+  const resetValue=Math.max(0,Math.round(Number(counter.resetValue??start)||0));
+  const count=Math.max(0,Math.round(Number(counter.count??start)||0));
+  const maxRaw=counter.max??counter.maximumValue;
+  const max=maxRaw===""||maxRaw==null?null:Math.max(0,Math.round(Number(maxRaw)||0));
+  const anchorRaw=counter.anchorRow??counter.startRow;
+  const mode=counter.mode==="repeatCounter"?"repeatCounter":"subCounter";
+  const repeatRule=repeatEngine()?.createRepeatRule({
+    ...(counter.repeatRule||{}),
+    id:counter.repeatRuleId||counter.repeatRule?.id||`repeat-${counter.id||index}`,
+    mode,
+    sectionName:counter.sectionName||counter.name||"Sub row counter",
+    repeatType:counter.repeatType||counter.repeatRule?.repeatType||"every-x-rows",
+    repeatValue:counter.repeatValue??counter.repeatRule?.repeatValue??every,
+    unit:counter.unit||counter.repeatRule?.unit||"row",
+    startAt:counter.startAt??counter.repeatRule?.startAt??start,
+    sectionStartProjectPosition:counter.sectionStartProjectPosition??counter.repeatRule?.sectionStartProjectPosition??(anchorRaw===""||anchorRaw==null?0:Math.max(0,Math.round(Number(anchorRaw)||0))),
+    localStartValue:counter.localStartValue??counter.repeatRule?.localStartValue??start,
+    endAt:counter.endAt??counter.repeatRule?.endAt,
+    repeatCount:counter.repeatCount??counter.repeatRule?.repeatCount,
+    offset:counter.offset??counter.repeatRule?.offset,
+    skipFirstRepeat:counter.skipFirstRepeat??counter.repeatRule?.skipFirstRepeat,
+    rowSide:counter.rowSide||counter.repeatRule?.rowSide||"all",
+    unlimitedRepeats:counter.unlimitedRepeats??counter.repeatRule?.unlimitedRepeats,
+    enabled:counter.enabled!==false,
+    notes:counter.notes,
+    source:counter.source||counter.repeatRule?.source||"manual",
+    linkedFeature:counter.linkedFeature||"project",
+    createdAt:counter.createdAt,
+    updatedAt:counter.updatedAt
+  });
+  return {
+    id:counter.id||`s${Date.now()}-${index}`,
+    name:String(counter.name||"Sub row counter").trim()||"Sub row counter",
+    mode,
+    sectionName:counter.sectionName||String(counter.name||"Sub row counter").trim()||"Sub row counter",
+    repeatRuleId:repeatRule?.id||counter.repeatRuleId||`repeat-${counter.id||index}`,
+    repeatRule,
+    repeatType:repeatRule?.repeatType||"every-x-rows",
+    repeatValue:repeatRule?.repeatValue||every,
+    unit:repeatRule?.unit||"row",
+    startAt:repeatRule?.startAt??start,
+    endAt:repeatRule?.endAt??null,
+    repeatCount:repeatRule?.repeatCount??null,
+    offset:repeatRule?.offset??0,
+    skipFirstRepeat:!!repeatRule?.skipFirstRepeat,
+    rowSide:repeatRule?.rowSide||"all",
+    unlimitedRepeats:repeatRule?.unlimitedRepeats!==false,
+    localStartValue:repeatRule?.localStartValue??start,
+    sectionStartProjectPosition:repeatRule?.sectionStartProjectPosition??null,
+    enabled:repeatRule?.enabled!==false,
+    count:max===null?count:Math.min(max,count),
+    linked:counter.linked!==false,
+    every,
+    start,
+    step,
+    max,
+    resetValue,
+    color:validHex(counter.color)?counter.color:"#718c72",
+    notes:String(counter.notes||""),
+    anchorRow:anchorRaw===""||anchorRaw==null?0:Math.max(0,Math.round(Number(anchorRaw)||0)),
+    voiceEvery:Math.max(0,Math.round(Number(counter.voiceEvery)||0)),
+    voiceMessage:String(counter.voiceMessage||"").trim(),
+    lastVoiceRow:Number(counter.lastVoiceRow)||null,
+    syncRow:Number.isFinite(Number(counter.syncRow))?Number(counter.syncRow):null,
+    syncCount:Number.isFinite(Number(counter.syncCount))?Number(counter.syncCount):null
+  };
+}
+function subCounterTicksAt(row,counter){
+  const c=normalizeSubCounter(counter),current=Math.max(0,Math.round(Number(row)||0));
+  const triggers=repeatEngine()?.getTriggerPositions(c.repeatRule,{from:c.repeatRule?.startAt??c.anchorRow,to:current,limit:1000});
+  if(triggers)return triggers.length;
+  if(current<c.anchorRow)return 0;
+  return Math.floor((current-c.anchorRow)/c.every)+1;
+}
+function subCounterLinkedCount(counter,row){
+  const c=normalizeSubCounter(counter),syncRow=Number.isFinite(Number(c.syncRow))?Number(c.syncRow):Number(row)||0,syncCount=Number.isFinite(Number(c.syncCount))?Number(c.syncCount):c.count;
+  const next=syncCount+(subCounterTicksAt(row,c)-subCounterTicksAt(syncRow,c))*c.step;
+  const clamped=Math.max(c.resetValue??c.start??0,next);
+  return c.max===null?clamped:Math.min(c.max,clamped);
+}
+function subCounterVoiceDue(counter,oldRow,newRow){
+  const c=normalizeSubCounter(counter);
+  if(!c.voiceEvery||!c.voiceMessage||newRow<=oldRow)return null;
+  for(let row=oldRow+1;row<=newRow;row++){
+    if(row<c.anchorRow)continue;
+    if((row-c.anchorRow)%c.voiceEvery===0&&c.lastVoiceRow!==row)return row;
+  }
+  return null;
+}
+function repeatPreviewHtml(counter,currentRow=0){
+  const c=normalizeSubCounter(counter),rule=c.repeatRule||repeatEngine()?.createRepeatRule(c),engine=repeatEngine();
+  if(!engine)return "";
+  const preview=engine.getTriggerPositions(rule,{from:Math.max(0,Number(currentRow)||0),limit:5});
+  const next=engine.getNextTrigger(rule,Number(currentRow)||0);
+  const label=rule.mode==="subCounter"?"Local triggers":"Triggers";
+  const projectTriggers=rule.mode==="subCounter"?preview.map(local=>engine.projectPositionForLocal(rule,local)):preview;
+  return `<div class="repeat-preview-mini"><span>${escapeHtml(label)}</span><strong>${preview.length?preview.join(" · "):"No upcoming triggers"}</strong>${rule.mode==="subCounter"?`<small>Project rows: ${projectTriggers.join(" · ")||"none yet"}</small>`:""}${next!==null?`<small>Next trigger ${rule.mode==="subCounter"?`on local ${next} / project ${engine.projectPositionForLocal(rule,next)}`:`on ${rule.unit} ${next}`}</small>`:""}</div>`;
+}
+function repeatCounterSummary(counter,currentRow=0){
+  const c=normalizeSubCounter(counter),rule=c.repeatRule,engine=repeatEngine();
+  const repeat=engine?.formatRepeatRule(rule)?.split(" · ").pop() || `Every ${c.every} row${c.every===1?"":"s"}`;
+  const link=c.linked!==false?"linked to main row":"manual";
+  if(c.linked!==false&&c.anchorRow&&Number(currentRow)<c.anchorRow)return `Starts in ${c.anchorRow-Number(currentRow)} rows`;
+  return `${repeat} · ${link}`;
+}
+function syncSubCounterToMainRow(counter,oldRow,newRow){
+  const c=normalizeSubCounter(counter);
+  if(c.linked===false)return c;
+  if(c.syncRow===null){c.syncRow=oldRow;c.syncCount=c.count;}
+  const dueVoiceRow=subCounterVoiceDue(c,oldRow,newRow);
+  c.count=subCounterLinkedCount(c,newRow);
+  if(dueVoiceRow){
+    c.lastVoiceRow=dueVoiceRow;
+    speak(c.voiceMessage,{rate:1,lang:"en-AU",volume:.9});
+  }
+  return c;
+}
+function subCounterMetaText(counter,currentRow=0){
+  const c=normalizeSubCounter(counter),bits=[];
+  bits.push(c.mode==="repeatCounter"?"Repeat Counter":"Sub-Counter");
+  bits.push(c.linked!==false?"Linked to main row":"Manual counter");
+  if(c.anchorRow)bits.push(`Anchor row ${c.anchorRow}`);
+  bits.push(repeatEngine()?.formatRepeatRule(c.repeatRule)||`updates every ${c.every} row${c.every===1?"":"s"}`);
+  if(c.max!==null)bits.push(`max ${c.max}`);
+  if(c.voiceEvery&&c.voiceMessage)bits.push(`voice every ${c.voiceEvery} rows`);
+  if(c.linked!==false&&c.anchorRow&&Number(currentRow)<c.anchorRow)bits.push(`starts in ${c.anchorRow-Number(currentRow)} rows`);
+  return bits.join(" · ");
+}
+function subCounterHtml(counter,{chart=false,currentRow=0}={}) {
+  const s=normalizeSubCounter(counter),inactive=s.linked!==false&&s.anchorRow&&Number(currentRow)<s.anchorRow;
+  return `<article class="sub-counter repeat-counter-card sub-row-counter-card subcounter-card ${chart?"chart-sub-counter":""} ${inactive?"is-inactive":""}" style="--counter-tag:${escapeHtml(s.color||"var(--primary)")};--counter-theme:var(--primary)">
+    <div class="subcounter-info sub-counter-main"><div class="subcounter-title-row"><h4>${escapeHtml(s.name)}</h4><button class="button-icon counter-overflow-button subcounter-menu" data-counter-more="${s.id}" aria-label="More actions for ${escapeHtml(s.name)}">⋮</button></div><p class="subcounter-meta link-toggle">${escapeHtml(repeatCounterSummary(s,currentRow))}</p></div>
+    <div class="subcounter-controls sub-counter-controls"><button data-sub="${s.id}" data-delta="-1" aria-label="Decrease ${escapeHtml(s.name)}">−</button><strong>${s.count}</strong><button data-sub="${s.id}" data-delta="1" aria-label="Increase ${escapeHtml(s.name)}">+</button></div>
+  </article>`;
+}
+function unifiedRepeatCountersHtml(p,{chart=false}={}){
+  const counters=(p.subCounters||[]).map(normalizeSubCounter);
+  return `<section class="repeat-section unified-repeat-section ${chart?"chart-repeat-section":""}" aria-label="Repeat and sub-counters">
+    <div class="repeat-section-header unified-repeat-heading"><div class="repeat-section-title-group"><p class="section-kicker repeat-section-kicker">REPEAT / SUB-COUNTER</p><h3 class="section-title repeat-section-title">${counters.length?"Repeat / Sub-Counter":"No repeat counter yet"}</h3></div><button class="button-secondary add-subcounter-button mini-button" id="add-sub-counter">+ Add</button></div>
+    <div id="sub-counters" class="unified-repeat-list">${counters.length?counters.map(counter=>subCounterHtml(counter,{chart,currentRow:p.row})).join(""):`<p class="muted-copy">Add sleeve shaping, cable repeats, lace repeats, colour changes, or any section that needs its own count.</p>`}</div>
+  </section>`;
+}
+function chartSubCountersHtml(p){
+  const counters=(p.subCounters||[]).map(normalizeSubCounter);
+  return `<details class="chart-sub-counters-card card workspace-card" hidden ${counters.length?"open":""}>
+    <summary><div><p class="eyebrow">CHART TRACKER</p><h3>Sub Row Counters</h3><p>Track repeats, shaping sections, cable repeats, lace repeats, colourwork repeats, or custom reminders while reading the chart.</p></div><span>${counters.length} counter${counters.length===1?"":"s"}</span></summary>
+    <div class="chart-sub-counter-body"><button class="secondary-button" id="add-sub-counter">+ Add counter</button>
+      <div class="chart-sub-counter-list">${counters.length?counters.map(counter=>subCounterHtml(counter,{chart:true,currentRow:p.row})).join(""):`<p class="muted-copy">Add Cable Repeat, Sleeve Increase, Lace Repeat, or any chart section you want to track beside your main row.</p>`}</div>
+    </div>
+  </details>`;
+}
+function normalizeRowReminderVoice(settings={}){
+  return {speed:Math.max(.6,Math.min(1.5,Number(settings.speed)||1)),language:settings.language||state.language||"en",volume:Math.max(0,Math.min(1,Number(settings.volume??1)))};
+}
+function normalizeRowReminder(reminder={},index=0){
+  const every=Math.max(1,Math.round(Number(reminder.every)||Number(reminder.interval)||1));
+  return {
+    id:reminder.id||`reminder-${Date.now()}-${index}`,
+    name:String(reminder.name||"Row reminder").trim()||"Row reminder",
+    every,
+    startRow:Math.max(0,Math.round(Number(reminder.startRow??reminder.start??1)||1)),
+    endRow:reminder.endRow===""||reminder.endRow==null?null:Math.max(0,Math.round(Number(reminder.endRow)||0)),
+    message:String(reminder.message||"Remember your special action.").trim()||"Remember your special action.",
+    voice:reminder.voice!==false,
+    visual:reminder.visual!==false,
+    repeat:reminder.repeat!==false,
+    paused:!!reminder.paused,
+    lastTriggeredRow:Number(reminder.lastTriggeredRow)||null,
+    snoozedUntilRow:Number(reminder.snoozedUntilRow)||null,
+    doneRows:Array.isArray(reminder.doneRows)?reminder.doneRows.map(Number).filter(Number.isFinite):[]
+  };
+}
+function rowReminderMatches(reminder,currentRow){
+  const row=Number(currentRow)||0,r=normalizeRowReminder(reminder);
+  if(r.paused||row<r.startRow)return false;
+  if(r.endRow!==null&&row>r.endRow)return false;
+  if(r.snoozedUntilRow&&row<r.snoozedUntilRow)return false;
+  if(r.doneRows.includes(row))return false;
+  if(r.lastTriggeredRow===row)return false;
+  if(!r.repeat&&r.lastTriggeredRow)return false;
+  return (row-r.startRow)%r.every===0;
+}
+function dueRowReminders(p=getProject(),row=p?.row){
+  return (p?.rowReminders||[]).map(normalizeRowReminder).filter(reminder=>rowReminderMatches(reminder,row));
+}
+function triggerRowReminders(p=getProject(),row=p?.row){
+  if(!p)return;
+  p.rowReminders=(p.rowReminders||[]).map(normalizeRowReminder);
+  const due=dueRowReminders(p,row);
+  const reminder=due[0]||null;
+  if(!reminder){p.activeRowReminder=null;return;}
+  const target=p.rowReminders.find(item=>item.id===reminder.id);
+  if(target)target.lastTriggeredRow=Number(row)||0;
+  p.activeRowReminder=reminder.visual!==false?{id:reminder.id,row:Number(row)||0,shownAt:new Date().toISOString()}:null;
+  if(reminder.voice!==false)readRowReminderAloud(p,reminder);
+  if(navigator.vibrate)navigator.vibrate([80,40,80]);
+}
+function readRowReminderAloud(p,reminder){
+  const settings=normalizeRowReminderVoice(p.rowReminderVoice);
+  speak(reminder.message,{rate:settings.speed,lang:settings.language==="yue"?"yue-Hant-HK":settings.language==="zh-Hant"?"zh-Hant-HK":"en-AU",volume:settings.volume});
+}
+function activeRowReminderHtml(p){
+  const active=p.activeRowReminder,reminder=active&&(p.rowReminders||[]).find(item=>item.id===active.id);
+  if(!active||!reminder||reminder.visual===false)return "";
+  return `<section class="row-reminder-banner" role="status" aria-live="polite"><div><p class="eyebrow">ROW REMINDER</p><h3>${escapeHtml(reminder.name)}</h3><p>${escapeHtml(reminder.message)}</p><small>Row ${Number(active.row)||p.row} · every ${reminder.every} rows from row ${reminder.startRow}${reminder.endRow?` to ${reminder.endRow}`:""}</small></div><div class="row-reminder-banner-actions"><button class="mini-button" data-row-reminder-snooze="${reminder.id}">Snooze until next row</button><button class="primary-button" data-row-reminder-done="${reminder.id}">Done</button></div></section>`;
+}
+function rowReminderHtml(reminder){
+  const r=normalizeRowReminder(reminder);
+  return `<article class="row-reminder-card ${r.paused?"paused":""}"><div><strong>${escapeHtml(r.name)}</strong><p>${escapeHtml(r.message)}</p><small>Every ${r.every} rows · starts row ${r.startRow}${r.endRow?` · ends row ${r.endRow}`:""} · ${r.voice?"Voice on":"Voice off"} · ${r.visual?"Visual on":"Visual off"} · ${r.repeat?"Repeats":"Once"}</small></div><div class="row-reminder-actions"><button class="mini-button button-secondary" data-test-reminder="${r.id}">Test voice</button><button class="mini-button button-ghost" data-toggle-reminder="${r.id}">${r.paused?"Resume":"Pause"}</button><details class="overflow-menu row-reminder-more"><summary class="button-icon reminder-menu-button reminder-overflow-button row-reminder-menu" aria-label="More reminder actions">⋮</summary><div><button class="button-ghost" data-edit-reminder="${r.id}">Edit</button><button class="danger-button" data-delete-reminder="${r.id}">Delete</button></div></details></div></article>`;
+}
+function rowRemindersPanelHtml(p){
+  const reminders=(p.rowReminders||[]).map(normalizeRowReminder),voice=normalizeRowReminderVoice(p.rowReminderVoice);
+  return `<div class="card mobile-card row-reminders-card"><div class="card-header"><div><h3>Row Reminders</h3><p class="muted-copy">Get a gentle visual or voice cue every few rows.</p></div><button class="mini-button button-secondary" id="add-row-reminder">+ Add reminder</button></div>
+    <div class="flow-reading-controls row-reminder-voice-settings">
+      <label>Reminder speed <input id="row-reminder-speed" type="range" min=".6" max="1.5" step=".05" value="${voice.speed}"><span>${voice.speed.toFixed(2)}x</span></label>
+      <label>Volume <input id="row-reminder-volume" type="range" min="0" max="1" step=".05" value="${voice.volume}"><span>${Math.round(voice.volume*100)}%</span></label>
+    </div>
+    <div class="row-reminder-list">${reminders.length?reminders.map(rowReminderHtml).join(""):`<p class="muted-copy">Add reminders for increases, decreases, cable rows, colour changes, stitch counts, or try-on checks.</p>`}</div></div>`;
 }
 function projectAssistantHtml(p) {
   const messages = p.assistantMessages.length ? p.assistantMessages : [];
@@ -2203,12 +2551,16 @@ function bindProjectDetail() {
   document.querySelectorAll("[data-project-tab]").forEach(b => b.onclick = () => { p.activeTab=b.dataset.projectTab; p.readingMode=false; saveProjectTouch(p); renderProjectDetail(); });
   document.querySelectorAll("[data-counter]").forEach(b => b.onclick = () => changeMainCounter(Number(b.dataset.counter)));
   document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => {
-    const s = p.subCounters.find(x => x.id === b.dataset.sub),floor=Math.max(0,Number(s?.start)||0);
+    const s = p.subCounters.find(x => x.id === b.dataset.sub);
     if(!s)return;
-    s.count = Math.max(floor, (Number(s.count)||0) + Number(b.dataset.delta));
+    const normalized=normalizeSubCounter(s),delta=Number(b.dataset.delta)||0,next=(Number(normalized.count)||0)+(delta*normalized.step);
+    normalized.count = Math.max(normalized.resetValue??normalized.start??0, normalized.max===null?next:Math.min(normalized.max,next));
+    normalized.syncRow=Number(p.row)||0;
+    normalized.syncCount=normalized.count;
+    Object.assign(s,normalized);
+    p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[];
     saveProjectTouch(p); renderProjectDetail();
   });
-  document.querySelectorAll("[data-edit-sub]").forEach(b => b.onclick = () => openSubCounterModal(b.dataset.editSub));
   document.querySelectorAll("[data-counter-more]").forEach(b => b.onclick = () => openSubCounterActionsModal(b.dataset.counterMore));
   document.getElementById("project-notes")?.addEventListener("input", e => { p.notes = e.target.value; saveProjectTouch(p); });
   document.getElementById("pdf-reference")?.addEventListener("input", e => { p.pdfReference=e.target.value; saveProjectTouch(p); });
@@ -2218,10 +2570,18 @@ function bindProjectDetail() {
   document.getElementById("edit-main-row")?.addEventListener("click", openEditRowModal);
   document.getElementById("add-marker")?.addEventListener("click", () => openMarkerModal());
   document.querySelectorAll("[data-edit-marker]").forEach(b=>b.onclick=()=>openMarkerModal(b.dataset.editMarker));
-  document.querySelectorAll("[data-delete-marker]").forEach(b=>b.onclick=()=>{p.markers=p.markers.filter(m=>m.id!==b.dataset.deleteMarker);saveState();renderProjectDetail();});
+  document.querySelectorAll("[data-delete-marker]").forEach(b=>b.onclick=()=>{p.markers=p.markers.filter(m=>(m.id||`${m.row}-${m.color}`)!==b.dataset.deleteMarker);saveState();renderProjectDetail();});
   document.getElementById("add-sub-counter")?.addEventListener("click", openSubCounterModal);
+  document.getElementById("add-row-reminder")?.addEventListener("click",()=>openRowReminderModal());
+  document.querySelectorAll("[data-edit-reminder]").forEach(b=>b.onclick=()=>openRowReminderModal(b.dataset.editReminder));
+  document.querySelectorAll("[data-toggle-reminder]").forEach(b=>b.onclick=()=>{const reminder=(p.rowReminders||[]).find(r=>r.id===b.dataset.toggleReminder);if(!reminder)return;reminder.paused=!reminder.paused;reminder.active=false;saveProjectTouch(p);renderProjectDetail();toast(reminder.paused?"Reminder paused":"Reminder resumed");});
+  document.querySelectorAll("[data-delete-reminder]").forEach(b=>b.onclick=()=>{const reminder=(p.rowReminders||[]).find(r=>r.id===b.dataset.deleteReminder);if(!reminder)return;if(!confirm(`Delete "${reminder.name}"?`))return;p.rowReminders=p.rowReminders.filter(r=>r.id!==reminder.id);if(p.activeRowReminder?.id===reminder.id)p.activeRowReminder=null;saveProjectTouch(p);renderProjectDetail();});
+  document.querySelectorAll("[data-test-reminder]").forEach(b=>b.onclick=()=>{const reminder=(p.rowReminders||[]).find(r=>r.id===b.dataset.testReminder);if(reminder)readRowReminderAloud(p,normalizeRowReminder(reminder));});
+  document.querySelectorAll("[data-row-reminder-snooze]").forEach(b=>b.onclick=()=>{const reminder=(p.rowReminders||[]).find(r=>r.id===b.dataset.rowReminderSnooze);if(!reminder)return;reminder.snoozedUntilRow=(Number(p.row)||0)+1;p.activeRowReminder=null;saveProjectTouch(p);renderProjectDetail();toast("Reminder snoozed until the next row.");});
+  document.querySelectorAll("[data-row-reminder-done]").forEach(b=>b.onclick=()=>{const reminder=(p.rowReminders||[]).find(r=>r.id===b.dataset.rowReminderDone);if(!reminder)return;reminder.doneRows=[...(reminder.doneRows||[]),Number(p.row)||0];if(reminder.repeat===false)reminder.paused=true;p.activeRowReminder=null;saveProjectTouch(p);renderProjectDetail();});
+  ["row-reminder-speed","row-reminder-volume"].forEach(id=>document.getElementById(id)?.addEventListener("change",()=>{p.rowReminderVoice=normalizeRowReminderVoice({speed:valueOf("row-reminder-speed"),language:state.language,volume:valueOf("row-reminder-volume")});saveProjectTouch(p);renderProjectDetail();toast("Reminder voice settings saved.");}));
   document.getElementById("speak-row")?.addEventListener("click", () => speak(buildRowGuidance(p)));
-  document.querySelectorAll("#voice-project").forEach(b=>b.onclick = startVoice);
+  document.querySelectorAll("#voice-project,[data-voice-project]").forEach(b=>b.onclick = startVoice);
   document.getElementById("toggle-reading")?.addEventListener("click",()=>{p.readingMode=!p.readingMode;p.activeTab="chart";saveProjectTouch(p);renderProjectDetail();});
   document.querySelectorAll("[data-chart-mode]").forEach(b=>b.onclick=()=>{p.chartMode=b.dataset.chartMode;if(p.chartMode==="flow")toast("Flow Mode stays inside this project chart. Review every AI suggestion before using it.");saveProjectTouch(p);renderProjectDetail();});
   bindYarnchaAssistant(p);
@@ -2242,7 +2602,7 @@ function bindProjectDetail() {
   document.getElementById("chart-rows")?.addEventListener("change", e => { p.chartRows = Math.max(1, +e.target.value || 0) || null; p.totalRows=p.chartRows||p.totalRows; saveProjectTouch(p); renderProjectDetail(); });
   document.getElementById("manual-row-save")?.addEventListener("click",()=>setManualRowFromInput());
   document.getElementById("manual-row-input")?.addEventListener("change",()=>setManualRowFromInput());
-  document.getElementById("reset-main")?.addEventListener("click", () => { setMainRow(0,{render:false}); p.subCounters.forEach(s=>{s.count=Math.max(0,Number(s.start)||0);}); saveProjectTouch(p); renderProjectDetail(); toast("Counters reset"); });
+  document.getElementById("reset-main")?.addEventListener("click", () => { setMainRow(0,{render:false}); p.subCounters=p.subCounters.map(counter=>{const s=normalizeSubCounter(counter);s.count=s.resetValue??s.start??0;s.syncRow=0;s.syncCount=s.count;s.lastVoiceRow=null;return s;}); p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[]; saveProjectTouch(p); renderProjectDetail(); toast("Counters reset"); });
   document.getElementById("edit-project-rows")?.addEventListener("click", () => openRowPlanModal());
   document.getElementById("ask-assistant")?.addEventListener("click", askProjectAssistant);
   document.getElementById("open-chatgpt")?.addEventListener("click", openInChatGPT);
@@ -2555,7 +2915,7 @@ function bindFlowModeReader(p){
   ["flow-voice-speed","flow-voice-language","flow-voice-mode"].forEach(id=>document.getElementById(id)?.addEventListener("change",()=>{
     chartImageService.prepare(p,chartSetup());
     saveProjectTouch(p);renderProjectDetail();toast("Voice settings saved.");
-  }));
+    }));
 }
 function saveProjectTouch(p){p.updatedAt=new Date().toISOString();saveState();}
 function setManualRowFromInput(){const p=getProject(),input=document.getElementById("manual-row-input");if(!input)return;const next=Math.max(0,Math.round(+input.value||0));setMainRow(next);}
@@ -2570,11 +2930,11 @@ function setMainRow(nextRow,{render=true}={}){
   const delta=next-oldRow;
   p.row=next;
   if(delta){
-    (p.subCounters||[]).filter(s=>s.linked!==false).forEach(s=>{
-      const floor=Math.max(0,Number(s.start)||0);
-      s.count=Math.max(floor,(Number(s.count)||0)+delta);
-      if(delta>0)s.lastForwardMainRow=next;
-    });
+    p.subCounters=(p.subCounters||[]).map(counter=>syncSubCounterToMainRow(counter,oldRow,next));
+    p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[];
+    triggerRowReminders(p,next);
+    const reached=(p.markers||[]).find(marker=>Number(marker.row)===next);
+    if(reached)toast(`You reached Row ${next} marker${reached.label?`: ${reached.label}`:""}.`);
   }
   if(normalizeChartReaderConfig(p.chartReader,p).coverCompletedRows)coverCompletedRows({render:false});
   saveProjectTouch(p);
@@ -2649,10 +3009,11 @@ function beginAnnotation(event){
   if(!pt)return;
   if(!(p.chart||p.attachments?.length))return;
   if(activeAnnotationTool==="touch"){
-    event.preventDefault();
-    handleTouchRead(pt);
+    if(event.pointerType==="touch"&&event.isPrimary===false){touchReadTap=null;return;}
+    touchReadTap={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,startedAt:Date.now(),pt,moved:false,target:event.target.closest?.("#chart-stage .chart-canvas")};
     return;
   }
+  touchReadTap=null;
   const annId=event.target?.dataset?.annId;
   const arrowHandle=event.target?.dataset?.arrowHandle;
   if(annId){
@@ -2719,6 +3080,10 @@ function moveAnnotation(event){
   const p=getProject(),pt=pointFromEvent(event);
   if(!pt)return;
   if(!(p.chart||p.attachments?.length))return;
+  if(touchReadTap&&event.pointerId===touchReadTap.pointerId){
+    if(Math.hypot(event.clientX-touchReadTap.startX,event.clientY-touchReadTap.startY)>8)touchReadTap.moved=true;
+    return;
+  }
   if(maskDrag&&p.rowMask){
     event.preventDefault();
     updateMaskDrag(p,pt);
@@ -2742,6 +3107,20 @@ function moveAnnotation(event){
   }
 }
 function endAnnotation(event){
+  if(touchReadTap&&event.pointerId===touchReadTap.pointerId){
+    const tap=touchReadTap;
+    touchReadTap=null;
+    const duration=Date.now()-tap.startedAt;
+    const distance=Math.hypot(event.clientX-tap.startX,event.clientY-tap.startY);
+    const targetInsideChart=!!event.target.closest?.("#chart-stage .chart-canvas");
+    const canOpen=activeAnnotationTool==="touch"&&!tap.moved&&distance<8&&duration<500&&!drawingStroke&&!maskDrag&&!arrowDrag&&targetInsideChart&&tap.target;
+    if(canOpen){
+      event.preventDefault();
+      handleTouchRead(tap.pt);
+    }
+    return;
+  }
+  touchReadTap=null;
   if(maskDrag){maskDrag=null;saveProjectTouch(getProject());return;}
   if(arrowDrag){arrowDrag=null;saveProjectTouch(getProject());return;}
   if(!drawingStroke)return;
@@ -2873,7 +3252,7 @@ function undoAnnotation(){const p=getProject(),history=p.annotationHistory||[];i
 function redoAnnotation(){const p=getProject(),redo=p.annotationRedo||[];if(!redo.length)return toast("Nothing to redo.");p.annotationHistory=[...(p.annotationHistory||[]),cloneAnnotations(p.annotations)].slice(-40);p.annotations=redo.pop();p.annotationRedo=redo;p.selectedAnnotationId=null;paintAnnotations(p);saveStateSoon(120);}
 function buildRowGuidance(p) {
   const analysed=p.chartAnalysis?.rows?.find(r=>Number(r.number)===p.row);
-  const linked = p.subCounters.filter(s=>s.linked).map(s=>`${s.name} is at repeat ${s.count}, advancing every ${s.every} rows.`).join(" ");
+  const linked = p.subCounters.filter(s=>s.linked!==false).map(s=>{const c=normalizeSubCounter(s),next=subCounterRowsUntilNext(c,p.row);return `${c.name} is at ${c.count}, updates every ${c.every} rows${c.anchorRow?`, anchored at row ${c.anchorRow}`:""}, next update in ${next} rows.`;}).join(" ");
   const marker = p.markers.filter(m=>m.row===p.row).map(m=>`${m.color} marker here.`).join(" ");
   const rowText=analysed?`${analysed.side||"Side uncertain"}. ${analysed.sequence||"Sequence uncertain"}. Stitch count ${analysed.stitchCount||"uncertain"}. ${analysed.shaping||""}`:"No checked written instruction is saved for this row.";
   return `${chartReadingContext(p)} ${rowText} ${linked} ${marker} ${p.notes ? `Project note: ${p.notes}` : "Check the highlighted chart row."}`.trim();
@@ -3819,7 +4198,7 @@ function createProjectFromIdea(id){
   const craft=idea.craftType||idea.calculatorValues?.craftType||"Mixed / Other";
   const toolHistory=(idea.savedCalculatorResults||[]).map((payload,index)=>({...structuredClone(payload),id:`hist${Date.now()}-${index}`,linkedProject:null,notes:payload.notes||""}));
   const notes=[`Created from project idea: ${idea.title||""}`,idea.inspirationNotes||idea.description||"",idea.sourceLink?`Source: ${idea.sourceLink}`:"",idea.yarnEstimate?`Yarn estimate: ${idea.yarnEstimate}`:"",(idea.tags||[]).length?`Tags: ${idea.tags.join(", ")}`:""].filter(Boolean).join("\n\n");
-  const project={id:`p${Date.now()}`,name:idea.title||"Project from idea",type:projectTypeOptions.includes(craft)?craft:"Mixed / Other",projectKind:idea.projectKind||"Custom idea",color:colors[state.projects.length%colors.length],row:1,totalRows:null,started:new Date().toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"}),notes,subCounters:[],markers:[],chart:null,projectTools:{},toolHistory,buyList:[],attachments:[],annotations:[],rowMask:null,coverAsset:idea.referenceImageAsset||null,sourceIdeaId:idea.id,activeTab:"project",updatedAt:new Date().toISOString()};
+  const project={id:`p${Date.now()}`,name:idea.title||"Project from idea",type:projectTypeOptions.includes(craft)?craft:"Mixed / Other",projectKind:idea.projectKind||"Custom idea",color:colors[state.projects.length%colors.length],row:1,totalRows:null,started:new Date().toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"}),notes,subCounters:[],rowReminders:[],rowReminderVoice:{speed:1,language:"en",volume:1},markers:[],chart:null,projectTools:{},toolHistory,buyList:[],attachments:[],annotations:[],rowMask:null,coverAsset:idea.referenceImageAsset||null,sourceIdeaId:idea.id,activeTab:"project",updatedAt:new Date().toISOString()};
   project.toolHistory.forEach(h=>h.linkedProject=project.id);
   state.projects=[project,...state.projects];state.activeProjectId=project.id;currentProjectId=project.id;saveState();toast("Project created from idea.");showProject(project.id);
 }
@@ -4462,7 +4841,7 @@ function renderSettings(){
   document.querySelectorAll("[data-theme-mode]").forEach(b=>b.onclick=()=>{state.theme.mode=b.dataset.themeMode;saveState();renderSettings();});
   document.getElementById("reset-appearance").onclick=()=>{state.theme=structuredClone(starterData.theme);saveState();renderSettings();};
   document.querySelectorAll("[data-unit-system]").forEach(b=>b.onclick=()=>{state.unitSystem=b.dataset.unitSystem;saveState();renderSettings();});
-  document.getElementById("settings-language").onchange=event=>{state.language=event.target.value;document.getElementById("app-language").value=state.language;saveState();applyLanguage();renderTimeGreeting();};
+  document.getElementById("settings-language").onchange=event=>{state.language=event.target.value;const appLanguage=document.getElementById("app-language");if(appLanguage)appLanguage.value=state.language;saveState();applyLanguage();renderTimeGreeting();};
   document.getElementById("settings-voice").onchange=event=>{state.appPreferences={...(state.appPreferences||starterData.appPreferences),voice:event.target.checked};saveState();};
   document.getElementById("settings-notifications").onchange=event=>{state.appPreferences={...(state.appPreferences||starterData.appPreferences),notifications:event.target.checked};saveState();};
   document.getElementById("export-selected-project").onclick=()=>exportBackup(document.getElementById("backup-project-select").value||null);
@@ -4876,33 +5255,186 @@ function openProjectModal() {
     const name = document.getElementById("new-name").value.trim();
     if (!name) return toast("Give your project a name.");
     const files=document.getElementById("new-chart").files;
-    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,patternSource:normalizePatternSource(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
+    const p = { id:`p${Date.now()}`,name,type:document.getElementById("new-type").value,status:"Planning",startDate:new Date().toISOString().slice(0,10),finishDate:"",patternUrl:"",size:"",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"",subCounters:[],rowReminders:[],rowReminderVoice:{speed:1,language:"en",volume:1},markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,patternSource:normalizePatternSource(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };
     state.projects.push(p); saveState(); closeModal(); openProject(p.id); if(files.length)handleChartFiles(files);
   };
 }
 function openSubCounterModal(editId=null) {
-  const existing=editId?getProject().subCounters.find(s=>s.id===editId):null;
-  openModal(`<p class="eyebrow">TRACK A REPEAT</p><h2>${existing?"Edit":"Add"} sub-counter</h2><div class="form-grid">
-    <div class="field full"><label>Name</label><input id="sub-name" value="${escapeHtml(existing?.name||"")}" placeholder="e.g. Cable repeat"></div>
-    <div class="field"><label>Sync with main row counter</label><select id="sub-linked"><option value="yes" ${existing?.linked!==false?"selected":""}>On</option><option value="no" ${existing?.linked===false?"selected":""}>Off</option></select></div>
-    <div class="field"><label>Start value</label><input id="sub-start" type="number" min="0" value="${Math.max(0,Number(existing?.start)||0)}"></div>
-    <div class="field full"><label>Reminder interval</label><input id="sub-every" type="number" min="1" value="${existing?.every||1}"><small>Linked counters move by the same row delta. This interval is kept for reminders and notes.</small></div></div>
-    <div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="create-sub">${existing?"Save changes":"Add counter"}</button></div>`);
-  document.getElementById("create-sub").onclick = () => {
-    const name = document.getElementById("sub-name").value.trim(); if (!name) return toast("Name your sub-counter.");
-    const start=Math.max(0,+document.getElementById("sub-start").value||0);
-    const values={name,linked:document.getElementById("sub-linked").value==="yes",every:Math.max(1,+document.getElementById("sub-every").value||1),start};
-    if(existing){Object.assign(existing,values);existing.count=Math.max(start,Number(existing.count)||0);}else getProject().subCounters.push({id:`s${Date.now()}`,count:start,...values});
-    saveState(); closeModal(); renderProjectDetail();
+  const existing=editId?getProject().subCounters.find(s=>s.id===editId):null,counter=normalizeSubCounter(existing||{name:"",mode:"subCounter",linked:true,start:0,count:0,every:1,step:1,resetValue:0,color:"#718c72",anchorRow:Number(getProject().row)||0,sectionStartProjectPosition:Number(getProject().row)||0,localStartValue:0});
+  const projectRow=Number(getProject().row)||0,sectionStartValue=counter.sectionStartProjectPosition??counter.anchorRow??projectRow;
+  const typeOptions=[
+    ["every-x-rows","Every X Rows"],["every-xth-row","Every Xth Row"],["every-x-rounds","Every X Rounds"],["every-xth-round","Every Xth Round"],
+    ["every-row","Every Row"],["every-round","Every Round"],["every-rs-row","Every RS Row"],["every-ws-row","Every WS Row"],
+    ["every-other-row","Every Other Row"],["every-alternate-row","Every Alternate Row"],["custom","Custom, future only"]
+  ];
+  openModal(`<section class="repeat-engine-modal">
+    <p class="eyebrow">REPEAT ENGINE</p><h2>${existing?"Edit repeat rule":"Add repeat rule"}</h2><p class="muted-copy">Use Repeat Counter for project-wide row repeats, or Sub-Counter when a sleeve, border, neckline, or chart section starts counting from its own zero.</p>
+    <div class="repeat-mode-toggle" role="group" aria-label="Repeat mode">
+      <label><input type="radio" name="repeat-mode" value="repeatCounter" ${counter.mode==="repeatCounter"?"checked":""}><span>Repeat Counter</span></label>
+      <label><input type="radio" name="repeat-mode" value="subCounter" ${counter.mode!=="repeatCounter"?"checked":""}><span>Sub-Counter / New Section</span></label>
+    </div>
+    <div class="repeat-engine-grid">
+      <div class="repeat-settings-card">
+        <h3>Basic settings</h3>
+        <div class="form-grid">
+          <div class="field full"><label>Counter name</label><input id="sub-name" value="${escapeHtml(existing?counter.name:"")}" placeholder="e.g. Sleeve Increase"></div>
+          <div class="field"><label>Repeat type</label><select id="sub-repeat-type">${typeOptions.map(([value,label])=>`<option value="${value}" ${counter.repeatType===value?"selected":""}>${label}</option>`).join("")}</select></div>
+          <div class="field"><label>Repeat every / Repeat value</label><input id="sub-every" type="number" min="1" value="${counter.repeatValue||counter.every}"></div>
+          <div class="field"><label>Unit</label><select id="sub-unit"><option value="row" ${counter.unit!=="round"?"selected":""}>Rows</option><option value="round" ${counter.unit==="round"?"selected":""}>Rounds</option></select></div>
+          <div class="field"><label>Start row / round</label><input id="sub-start-at" type="number" min="0" value="${counter.startAt??counter.start}"></div>
+          <div class="field"><label>Current count</label><input id="sub-count" type="number" min="0" value="${counter.count}"></div>
+          <div class="field"><label>Starting value</label><input id="sub-start" type="number" min="0" value="${counter.start}"></div>
+          <div class="field"><label>Increment step</label><input id="sub-step" type="number" min="1" value="${counter.step}"></div>
+          <div class="field"><label>Link to Main Row Counter</label><select id="sub-linked"><option value="yes" ${counter.linked!==false?"selected":""}>On</option><option value="no" ${counter.linked===false?"selected":""}>Off</option></select></div>
+          <div class="field repeat-colour-field-wrap"><label>Colour tag</label><label class="repeat-colour-field" style="--repeat-colour:${escapeHtml(counter.color)}"><span class="repeat-colour-swatch" aria-hidden="true"></span><span class="repeat-colour-label" id="repeat-colour-label">${escapeHtml(counter.color).toUpperCase()}</span><input id="sub-color" type="color" value="${escapeHtml(counter.color)}" aria-label="Choose repeat colour tag"></label></div>
+        </div>
+      </div>
+      <div class="repeat-settings-card sub-counter-settings-card" id="sub-section-card">
+        <h3>Sub-Counter section</h3>
+        <div class="form-grid">
+          <div class="field full"><label>Section name</label><input id="sub-section-name" value="${escapeHtml(counter.sectionName||counter.name||"")}" placeholder="Sleeve, Neckline, Border, Pattern Repeat"></div>
+          <div class="field"><label>Section starts at project row / round</label><input id="sub-section-start" type="number" min="0" value="${sectionStartValue}"></div>
+          <div class="field"><label>Local counter starts from</label><select id="sub-local-start"><option value="0" ${Number(counter.localStartValue)!==1?"selected":""}>0</option><option value="1" ${Number(counter.localStartValue)===1?"selected":""}>1</option></select></div>
+          <div class="field"><label>Anchor Row</label><input id="sub-anchor" type="number" min="0" value="${counter.anchorRow}" placeholder="Start counting from row"></div>
+        </div>
+        <p class="privacy-note">Your project row is ${projectRow}, but this section can start from ${Number(counter.localStartValue)||0}.</p>
+      </div>
+      <div class="repeat-settings-card repeat-preview-card">
+        <h3>Live preview</h3>
+        <div id="repeat-rule-preview" aria-live="polite"></div>
+      </div>
+      <details class="repeat-settings-card repeat-advanced-settings">
+        <summary>Advanced Repeat Settings</summary>
+        <div class="form-grid">
+          <div class="field"><label>End row / round</label><input id="sub-end-at" type="number" min="0" value="${counter.endAt??""}" placeholder="No end"></div>
+          <div class="field"><label>Repeat count</label><input id="sub-repeat-count" type="number" min="1" value="${counter.repeatCount??""}" placeholder="Unlimited"></div>
+          <div class="field"><label>Offset</label><input id="sub-offset" type="number" value="${counter.offset||0}"></div>
+          <div class="field"><label>RS / WS only</label><select id="sub-row-side"><option value="all" ${counter.rowSide==="all"?"selected":""}>All rows</option><option value="RS" ${counter.rowSide==="RS"?"selected":""}>RS only</option><option value="WS" ${counter.rowSide==="WS"?"selected":""}>WS only</option></select></div>
+          <label class="check-row"><input id="sub-skip-first" type="checkbox" ${counter.skipFirstRepeat?"checked":""}><span>Skip first repeat</span></label>
+          <label class="check-row"><input id="sub-unlimited" type="checkbox" ${counter.unlimitedRepeats!==false?"checked":""}><span>Unlimited repeats</span></label>
+          <div class="field"><label>Maximum value optional</label><input id="sub-max" type="number" min="0" value="${counter.max??""}" placeholder="No maximum"></div>
+          <div class="field"><label>Reset value</label><input id="sub-reset" type="number" min="0" value="${counter.resetValue}"></div>
+          <div class="field"><label>Speak reminder every X rows</label><input id="sub-voice-every" type="number" min="0" value="${counter.voiceEvery}" placeholder="0 = off"></div>
+          <div class="field full"><label>Voice reminder message</label><input id="sub-voice-message" value="${escapeHtml(counter.voiceMessage)}" placeholder="e.g. Cable twist now."></div>
+          <div class="field full"><label>Notes</label><textarea id="sub-notes" rows="3" placeholder="Repeat notes, shaping instruction, chart hint...">${escapeHtml(counter.notes)}</textarea></div>
+        </div>
+      </details>
+    </div>
+    <p class="form-error" id="repeat-rule-error" role="alert"></p>
+    <p class="privacy-note">Manual + / - sets a new sync point at the current main row, so this counter stays aligned after Jump to Row or reversing rows. This repeat should not change your stitch count by itself.</p>
+    <div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button>${existing?`<button class="secondary-button" id="disable-repeat-rule">${counter.enabled===false?"Enable":"Disable"}</button><button class="secondary-button" id="reset-section-counter">Reset section counter</button>`:""}<button class="primary-button" id="create-sub">${existing?"Save Repeat Rule":"Save Repeat Rule"}</button></div>
+  </section>`);
+  const currentMode=()=>document.querySelector('[name="repeat-mode"]:checked')?.value||"subCounter";
+  const readRuleDraft=()=>repeatEngine().createRepeatRule({
+    id:counter.repeatRuleId||counter.repeatRule?.id,
+    mode:currentMode(),
+    sectionName:valueOf("sub-section-name")||valueOf("sub-name"),
+    repeatType:valueOf("sub-repeat-type"),
+    repeatValue:valueOf("sub-every"),
+    unit:valueOf("sub-unit"),
+    startAt:valueOf("sub-start-at"),
+    endAt:valueOf("sub-end-at"),
+    repeatCount:valueOf("sub-repeat-count"),
+    offset:valueOf("sub-offset"),
+    skipFirstRepeat:document.getElementById("sub-skip-first").checked,
+    rowSide:valueOf("sub-row-side"),
+    unlimitedRepeats:document.getElementById("sub-unlimited").checked,
+    sectionStartProjectPosition:valueOf("sub-section-start"),
+    localStartValue:valueOf("sub-local-start"),
+    enabled:counter.enabled!==false,
+    notes:valueOf("sub-notes")
+  });
+  const updateRepeatPreview=()=>{
+    const mode=currentMode(),section=document.getElementById("sub-section-card");
+    if(section)section.hidden=mode!=="subCounter";
+    const validation=repeatEngine().validateRepeatRule(readRuleDraft()),preview=document.getElementById("repeat-rule-preview"),error=document.getElementById("repeat-rule-error");
+    error.textContent=validation.valid?"":validation.errors[0];
+    const rule=validation.rule,triggers=repeatEngine().getTriggerPositions(rule,{from:Number(getProject().row)||0,limit:5}),next=repeatEngine().getNextTrigger(rule,Number(getProject().row)||0);
+    const projectTriggers=rule.mode==="subCounter"?triggers.map(local=>repeatEngine().projectPositionForLocal(rule,local)):triggers;
+    const repeatColour=valueOf("sub-color")||counter.color||"#718c72",colourField=document.querySelector(".repeat-colour-field"),colourLabel=document.getElementById("repeat-colour-label");
+    if(colourField)colourField.style.setProperty("--repeat-colour",repeatColour);
+    if(colourLabel)colourLabel.textContent=repeatColour.toUpperCase();
+    const summary=repeatEngine().formatRepeatRule(rule);
+    const chips=triggers.map((trigger,index)=>`<span class="repeat-preview-chip ${next===trigger?"is-next":""}">${rule.mode==="subCounter"?`Local ${trigger} · Project ${projectTriggers[index]}`:`${rule.unit==="round"?"Round":"Row"} ${trigger}`}</span>`).join("")||'<span class="repeat-preview-chip is-empty">No upcoming triggers</span>';
+    preview.style.setProperty("--repeat-colour",repeatColour);
+    preview.innerHTML=`<p class="repeat-preview-summary">${escapeHtml(summary)}</p><div class="repeat-preview-pills">${chips}</div>${next!==null?`<p class="repeat-preview-next">${rule.mode==="subCounter"?`Next trigger on ${escapeHtml(rule.sectionName)} Row ${next} / Project Row ${repeatEngine().projectPositionForLocal(rule,next)}.`:`Next trigger on ${rule.unit==="round"?"Round":"Row"} ${next}.`}</p>`:""}`;
   };
+  document.querySelectorAll(".repeat-engine-modal input,.repeat-engine-modal select,.repeat-engine-modal textarea").forEach(el=>el.addEventListener("input",updateRepeatPreview));
+  document.querySelectorAll('[name="repeat-mode"]').forEach(el=>el.addEventListener("change",updateRepeatPreview));
+  updateRepeatPreview();
+  document.getElementById("create-sub").onclick = () => {
+    const name = document.getElementById("sub-name").value.trim(); if (!name) return toast("Name your repeat rule.");
+    const ruleValidation=repeatEngine().validateRepeatRule(readRuleDraft());
+    if(!ruleValidation.valid){document.getElementById("repeat-rule-error").textContent=ruleValidation.errors[0];return toast(ruleValidation.errors[0]);}
+    const start=Math.max(0,+document.getElementById("sub-start").value||0);
+    const count=Math.max(0,+document.getElementById("sub-count").value||0);
+    const values=normalizeSubCounter({id:existing?.id,name,mode:currentMode(),sectionName:valueOf("sub-section-name")||name,count,linked:document.getElementById("sub-linked").value==="yes",every:valueOf("sub-every"),repeatValue:valueOf("sub-every"),repeatType:valueOf("sub-repeat-type"),unit:valueOf("sub-unit"),startAt:valueOf("sub-start-at"),endAt:valueOf("sub-end-at"),repeatCount:valueOf("sub-repeat-count"),offset:valueOf("sub-offset"),skipFirstRepeat:document.getElementById("sub-skip-first").checked,rowSide:valueOf("sub-row-side"),unlimitedRepeats:document.getElementById("sub-unlimited").checked,localStartValue:valueOf("sub-local-start"),sectionStartProjectPosition:valueOf("sub-section-start"),repeatRule:ruleValidation.rule,repeatRuleId:ruleValidation.rule.id,start,step:valueOf("sub-step"),max:valueOf("sub-max"),resetValue:valueOf("sub-reset"),color:valueOf("sub-color"),anchorRow:valueOf("sub-anchor"),voiceEvery:valueOf("sub-voice-every"),voiceMessage:valueOf("sub-voice-message"),notes:valueOf("sub-notes"),lastVoiceRow:existing?.lastVoiceRow,enabled:existing?.enabled!==false});
+    values.syncRow=Number(getProject().row)||0;
+    values.syncCount=values.count;
+    if(existing)Object.assign(existing,values);
+    else getProject().subCounters.push(values);
+    getProject().repeatRules=repeatEngine().migrateRepeatRules([getProject()])[0].repeatRules;
+    saveProjectTouch(getProject()); closeModal(); renderProjectDetail(); toast(existing?"Counter updated":"Counter added");
+  };
+  document.getElementById("disable-repeat-rule")?.addEventListener("click",()=>{
+    if(!existing)return;
+    existing.enabled=existing.enabled===false;
+    existing.repeatRule=repeatEngine().createRepeatRule({...existing.repeatRule,enabled:existing.enabled});
+    getProject().repeatRules=repeatEngine().migrateRepeatRules([getProject()])[0].repeatRules;
+    saveProjectTouch(getProject()); closeModal(); renderProjectDetail(); toast(existing.enabled?"Repeat rule enabled":"Repeat rule disabled");
+  });
+  document.getElementById("reset-section-counter")?.addEventListener("click",()=>{
+    if(!existing)return;
+    const values=normalizeSubCounter(existing);existing.count=values.resetValue??values.localStartValue??values.start??0;existing.syncRow=Number(getProject().row)||0;existing.syncCount=existing.count;saveProjectTouch(getProject());closeModal();renderProjectDetail();toast("Section counter reset");
+  });
 }
 function openSubCounterActionsModal(id){
   const p=getProject(),counter=p.subCounters.find(s=>s.id===id);
   if(!counter)return;
-  openModal(`<p class="eyebrow">REPEAT COUNTER</p><h2>${escapeHtml(counter.name)}</h2><p class="muted-copy">Keep everyday controls simple. Reset and delete are kept here so they are harder to hit by accident.</p><div class="form-grid"><button class="secondary-button" id="counter-edit-action">Edit Counter</button><button class="secondary-button" id="counter-reset-action">Reset Progress</button></div><div class="danger-zone"><strong>Danger zone</strong><p>Deleting this counter cannot be undone.</p><button class="danger-button secondary-button" id="counter-delete-action">Delete Counter</button></div><div class="modal-actions"><button class="primary-button" onclick="closeModal()">Done</button></div>`);
+  const normalized=normalizeSubCounter(counter);
+  openModal(`<p class="eyebrow">COUNTER DETAILS</p><h2>${escapeHtml(normalized.name)}</h2><p class="muted-copy">${escapeHtml(repeatCounterSummary(normalized,p.row))}</p>
+    <div class="counter-more-details">
+      <div><strong>Section</strong><span>${escapeHtml(normalized.sectionName||normalized.name)}</span></div>
+      <div><strong>Linked main row</strong><span>${normalized.linked!==false?"On":"Off"}</span></div>
+      <div><strong>Local counter start</strong><span>${normalized.localStartValue??normalized.start}</span></div>
+      <div><strong>Repeat settings</strong><span>${escapeHtml(subCounterMetaText(normalized,p.row))}</span></div>
+    </div>
+    ${repeatPreviewHtml(normalized,p.row)}
+    <div class="form-grid"><button class="secondary-button" id="counter-rename-action">Rename</button><button class="secondary-button" id="counter-duplicate-action">Duplicate</button><button class="secondary-button" id="counter-edit-action">Edit Settings</button><button class="secondary-button" id="counter-reset-action">Reset</button></div><div class="danger-zone"><strong>Danger zone</strong><p>Deleting this counter cannot be undone.</p><button class="danger-button secondary-button" id="counter-delete-action">Delete</button></div><div class="modal-actions"><button class="primary-button" onclick="closeModal()">Done</button></div>`);
+  document.getElementById("counter-rename-action").onclick=()=>{closeModal();openSubCounterRenameModal(id);};
+  document.getElementById("counter-duplicate-action").onclick=()=>{const copy=normalizeSubCounter({...counter,id:`s${Date.now()}`,repeatRuleId:`repeat-s${Date.now()}`,name:`${normalized.name} copy`,syncRow:Number(p.row)||0,syncCount:normalized.count});p.subCounters.push(copy);p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[];saveProjectTouch(p);closeModal();renderProjectDetail();toast("Counter duplicated");};
   document.getElementById("counter-edit-action").onclick=()=>{closeModal();openSubCounterModal(id);};
-  document.getElementById("counter-reset-action").onclick=()=>{counter.count=0;saveProjectTouch(p);closeModal();renderProjectDetail();toast("Repeat counter reset");};
-  document.getElementById("counter-delete-action").onclick=()=>{if(!confirm(`Delete "${counter.name}"? This cannot be undone.`))return;p.subCounters=p.subCounters.filter(s=>s.id!==id);saveProjectTouch(p);closeModal();renderProjectDetail();};
+  document.getElementById("counter-reset-action").onclick=()=>{const values=normalizeSubCounter(counter);values.count=values.resetValue??values.start??0;values.syncRow=Number(p.row)||0;values.syncCount=values.count;values.lastVoiceRow=null;Object.assign(counter,values);p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[];saveProjectTouch(p);closeModal();renderProjectDetail();toast("Counter reset");};
+  document.getElementById("counter-delete-action").onclick=()=>{if(!confirm(`Delete "${counter.name}"? This cannot be undone.`))return;p.subCounters=p.subCounters.filter(s=>s.id!==id);p.repeatRules=(p.repeatRules||[]).filter(rule=>rule.id!==(counter.repeatRuleId||counter.repeatRule?.id||`repeat-${id}`));saveProjectTouch(p);closeModal();renderProjectDetail();};
+}
+function openSubCounterRenameModal(id){
+  const p=getProject(),counter=p.subCounters.find(s=>s.id===id);
+  if(!counter)return;
+  openModal(`<p class="eyebrow">RENAME COUNTER</p><h2>${escapeHtml(counter.name)}</h2><div class="field"><label>Counter name</label><input id="counter-rename-input" value="${escapeHtml(counter.name)}"></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-counter-rename">Save</button></div>`);
+  document.getElementById("save-counter-rename").onclick=()=>{const name=valueOf("counter-rename-input").trim();if(!name)return toast("Name this counter.");counter.name=name;counter.sectionName=counter.sectionName||name;p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[];saveProjectTouch(p);closeModal();renderProjectDetail();};
+}
+function openRowReminderModal(editId=null){
+  const p=getProject(),existing=editId?(p.rowReminders||[]).find(r=>r.id===editId):null,r=existing?normalizeRowReminder(existing):normalizeRowReminder({name:"",every:4,startRow:Math.max(1,Number(p.row)||1),message:"Remember your special action."});
+  openModal(`<p class="eyebrow">ROW REMINDER</p><h2>${existing?"Edit":"Add"} reminder</h2><p class="muted-copy">Yarncha checks reminders whenever the current row changes.</p><div class="form-grid">
+    <div class="field full"><label>Reminder name</label><input id="reminder-name" value="${escapeHtml(existing?r.name:"")}" placeholder="e.g. Sleeve increases"></div>
+    <div class="field"><label>Trigger every X rows/rounds</label><input id="reminder-every" type="number" min="1" value="${r.every}"></div>
+    <div class="field"><label>Start row/round</label><input id="reminder-start" type="number" min="0" value="${r.startRow}"></div>
+    <div class="field"><label>End row/round optional</label><input id="reminder-end" type="number" min="0" value="${r.endRow??""}" placeholder="No end"></div>
+    <div class="field full"><label>Custom reminder message</label><textarea id="reminder-message" rows="3" placeholder="e.g. Upcoming row: increase at both ends.">${escapeHtml(r.message)}</textarea></div>
+    <label class="check-row"><input id="reminder-voice" type="checkbox" ${r.voice?"checked":""}><span>Voice reminder on</span></label>
+    <label class="check-row"><input id="reminder-visual" type="checkbox" ${r.visual?"checked":""}><span>Visual notification on</span></label>
+    <label class="check-row"><input id="reminder-repeat" type="checkbox" ${r.repeat?"checked":""}><span>Repeat enabled</span></label>
+  </div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-row-reminder">${existing?"Save reminder":"Add reminder"}</button></div>`);
+  document.getElementById("save-row-reminder").onclick=()=>{
+    const name=valueOf("reminder-name").trim(),message=valueOf("reminder-message").trim();
+    if(!name)return toast("Name this reminder.");
+    if(!message)return toast("Write the reminder message.");
+    const values=normalizeRowReminder({id:existing?.id,name,every:valueOf("reminder-every"),startRow:valueOf("reminder-start"),endRow:valueOf("reminder-end"),message,voice:document.getElementById("reminder-voice").checked,visual:document.getElementById("reminder-visual").checked,repeat:document.getElementById("reminder-repeat").checked,paused:existing?.paused});
+    p.rowReminders=p.rowReminders||[];
+    if(existing)Object.assign(existing,values,{doneRows:existing.doneRows||[],lastTriggeredRow:existing.lastTriggeredRow||null,snoozedUntilRow:existing.snoozedUntilRow||null});
+    else p.rowReminders.push(values);
+    saveProjectTouch(p);closeModal();renderProjectDetail();toast("Row reminder saved.");
+  };
 }
 function openRowPlanModal(){const p=getProject();openModal(`<p class="eyebrow">OPTIONAL PLAN</p><h2>Set planned rows</h2><p>Leave blank to keep this project open-ended.</p><div class="field"><label>Planned total rows</label><input id="planned-rows" type="number" value="${p.totalRows||""}" placeholder="No fixed total"></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-row-plan">Save</button></div>`);document.getElementById("save-row-plan").onclick=()=>{p.totalRows=Math.max(1,+document.getElementById("planned-rows").value||0)||null;saveState();closeModal();renderProjectDetail();};}
 function editProjectField(id){return document.getElementById(id);}
@@ -4994,7 +5526,53 @@ function openEditProjectModal(){
   };
 }
 function openEditRowModal(){const p=getProject();openModal(`<p class="eyebrow">ROW COUNTER</p><h2>Set exact row</h2><div class="field"><label>Current row</label><input id="exact-row" type="number" min="0" value="${p.row}"></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-exact-row">Set row</button></div>`);document.getElementById("save-exact-row").onclick=()=>{setMainRow(Math.max(0,+document.getElementById("exact-row").value||0),{render:false});closeModal();renderProjectDetail();};}
-function openMarkerModal(markerId=null){const p=getProject(),marker=p.markers.find(m=>m.id===markerId);openModal(`<p class="eyebrow">STITCH MARKER</p><h2>${marker?"Edit":"Add"} marker</h2><div class="form-grid"><div class="field"><label>Row</label><input id="marker-row" type="number" min="0" value="${marker?.row??p.row}"></div><div class="field"><label>HEX color</label><input id="marker-color" type="color" value="${validHex(marker?.color)?marker.color:"#577fa8"}"></div><div class="field full"><label>Label</label><input id="marker-label" value="${escapeHtml(marker?.label||"")}" placeholder="e.g. sleeve join"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-marker">Save marker</button></div>`);document.getElementById("save-marker").onclick=()=>{const values={row:Math.max(0,+document.getElementById("marker-row").value||0),color:document.getElementById("marker-color").value,label:document.getElementById("marker-label").value.trim()||document.getElementById("marker-color").value};if(marker)Object.assign(marker,values);else p.markers.push({id:`marker${Date.now()}`,...values});saveState();closeModal();renderProjectDetail();};}
+function openMarkerModal(markerId=null){
+  const p=getProject(),marker=p.markers.find(m=>(m.id||`${m.row}-${m.color}`)===markerId);
+  const presets=markerColorPresets(),presetValues=new Set(presets.map(item=>item.value)),currentColor=normalizeMarkerHex(markerColor(marker?.color||"#577FA8"))||"#577FA8",selectedPreset=presets.find(item=>item.value===currentColor),history=loadMarkerColorHistory();
+  const recentSeed=selectedPreset?history.recent:[currentColor,...history.recent];
+  const recent=[...new Set(recentSeed.filter(color=>!presetValues.has(color)))].slice(0,8);
+  const frequent=Object.entries(history.frequency).sort((a,b)=>b[1]-a[1]).map(([color])=>color).filter(color=>!presetValues.has(color)&&!recent.includes(color)).slice(0,8);
+  openModal(`<p class="eyebrow">STITCH MARKER</p><h2>${marker?"Edit":"Add"} marker</h2><div class="form-grid marker-modal-grid"><div class="field"><label>Row number</label><input id="marker-row" type="number" min="0" value="${marker?.row??p.row}"></div><div class="field full marker-color-section"><label>Marker colour</label><span class="marker-color-label">Preset colours</span><div class="marker-color-picker"><div class="marker-swatch-grid marker-color-grid">${presets.map(item=>`<label class="marker-swatch-option marker-color-option ${selectedPreset?.value===item.value?"is-selected":""}" style="--marker-color:${item.value}"><input type="radio" name="marker-color" value="${item.value}" ${selectedPreset?.value===item.value?"checked":""}><span class="marker-swatch marker-color-swatch"></span><span class="marker-swatch-name">${escapeHtml(item.name)}</span></label>`).join("")}<label class="marker-swatch-option marker-color-option marker-color-other ${!selectedPreset?"is-selected":""}" style="--marker-color:${currentColor}"><input type="radio" name="marker-color" value="other" ${!selectedPreset?"checked":""}><span class="marker-swatch marker-color-swatch"></span><span class="marker-swatch-name">Other</span></label></div><div class="marker-custom-row marker-custom-color" ${selectedPreset?"hidden":""}><span class="marker-custom-preview marker-color-preview" style="--marker-color:${currentColor}"></span><div><label>Other / Custom HEX</label><input class="marker-hex-input" id="marker-custom-hex" value="${escapeHtml(currentColor)}" placeholder="#5B8DEF" inputmode="text" autocomplete="off"></div><p class="marker-color-error" id="marker-color-error" role="alert" hidden>Enter a valid HEX colour, for example #5B8DEF.</p></div>${markerHistoryRowHtml("Recent colours",recent)}${markerHistoryRowHtml("Frequently used",frequent)}</div></div><div class="field full"><label>Marker name (optional)</label><input id="marker-label" value="${escapeHtml(marker?.label||"")}" placeholder="e.g. sleeve join"></div></div><div class="modal-actions"><button class="secondary-button button-ghost" onclick="closeModal()">Cancel</button><button class="primary-button button-primary" id="save-marker">Save marker</button></div>`);
+  const syncMarkerColorPicker=()=>{
+    const picked=document.querySelector('input[name="marker-color"]:checked')?.value||currentColor,custom=document.getElementById("marker-custom-hex"),customWrap=document.querySelector(".marker-custom-color"),error=document.getElementById("marker-color-error");
+    document.querySelectorAll(".marker-color-option").forEach(option=>option.classList.toggle("is-selected",option.querySelector("input")?.checked));
+    const isOther=picked==="other";
+    if(customWrap)customWrap.hidden=!isOther;
+    if(isOther){
+      const normalized=normalizeMarkerHex(custom?.value);
+      document.querySelector(".marker-color-other")?.style.setProperty("--marker-color",normalized||"#8A6F5A");
+      document.querySelector(".marker-color-preview")?.style.setProperty("--marker-color",normalized||"#8A6F5A");
+      if(error)error.hidden=true;
+    }
+  };
+  document.querySelectorAll('input[name="marker-color"]').forEach(input=>input.addEventListener("change",syncMarkerColorPicker));
+  document.querySelectorAll("[data-marker-history-color]").forEach(button=>button.addEventListener("click",()=>{
+    const hex=normalizeMarkerHex(button.dataset.markerHistoryColor);
+    const other=document.querySelector('input[name="marker-color"][value="other"]'),custom=document.getElementById("marker-custom-hex");
+    if(other)other.checked=true;
+    if(custom)custom.value=hex;
+    syncMarkerColorPicker();
+  }));
+  document.getElementById("marker-custom-hex")?.addEventListener("input",event=>{
+    const normalized=normalizeMarkerHex(event.target.value),error=document.getElementById("marker-color-error");
+    if(normalized)event.target.value=normalized;
+    document.querySelector(".marker-color-other")?.style.setProperty("--marker-color",normalized||"#8A6F5A");
+    document.querySelector(".marker-color-preview")?.style.setProperty("--marker-color",normalized||"#8A6F5A");
+    if(error)error.hidden=true;
+  });
+  syncMarkerColorPicker();
+  document.getElementById("save-marker").onclick=()=>{
+    const picked=document.querySelector('input[name="marker-color"]:checked')?.value||currentColor,error=document.getElementById("marker-color-error");
+    const color=picked==="other"?normalizeMarkerHex(document.getElementById("marker-custom-hex")?.value):normalizeMarkerHex(picked);
+    if(!color){if(error)error.hidden=false;document.getElementById("marker-custom-hex")?.focus();return;}
+    const label=document.getElementById("marker-label").value.trim();
+    const values={row:Math.max(0,+document.getElementById("marker-row").value||0),color,label:label||markerColorLabel(color)};
+    if(marker)Object.assign(marker,values);else p.markers.push({id:`marker${Date.now()}`,...values});
+    p.markers=p.markers.slice().sort((a,b)=>(Number(a.row)||0)-(Number(b.row)||0));
+    saveMarkerColorHistory(color);
+    saveState();closeModal();renderProjectDetail();
+  };
+}
 function openBuyItemModal(itemId=null){const p=getProject(),item=p.buyList.find(i=>i.id===itemId);openModal(`<p class="eyebrow">PROJECT BUY LIST</p><h2>${item?"Edit":"Add"} supply</h2><div class="form-grid"><div class="field full"><label>Item</label><input id="buy-name" value="${escapeHtml(item?.name||"")}" placeholder="e.g. Sage DK yarn"></div><div class="field"><label>Category</label><select id="buy-category">${["Yarn","Tools","DIY kit","Other"].map(c=>`<option ${c===item?.category?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Quantity</label><input id="buy-quantity" type="number" min="1" value="${item?.quantity||1}"></div><div class="field"><label>Price each</label><input id="buy-price" type="number" min="0" step=".01" value="${item?.price||0}"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-buy-item">Save</button></div>`);document.getElementById("save-buy-item").onclick=()=>{const name=document.getElementById("buy-name").value.trim();if(!name)return toast("Name this supply.");const values={name,category:document.getElementById("buy-category").value,quantity:Math.max(1,+document.getElementById("buy-quantity").value||1),price:Math.max(0,+document.getElementById("buy-price").value||0)};if(item)Object.assign(item,values);else p.buyList.push({id:`buy${Date.now()}`,...values});saveState();closeModal();renderProjectDetail();};}
 function sendBuyItemToCart(itemId){const p=getProject(),item=p.buyList.find(i=>i.id===itemId);if(!item)return;const existing=state.cart.find(i=>i.projectId===p.id&&i.name.toLowerCase()===item.name.toLowerCase());if(existing)existing.quantity+=item.quantity;else state.cart.push({id:`cart${Date.now()}`,...item,projectId:p.id,reason:`Required for ${p.name}`});saveState();toast("Added to Yarn Stash shopping list");}
 function openInventoryModal(itemId=null){const item=state.inventory.find(i=>i.id===itemId);openModal(`<p class="eyebrow">MAKER INVENTORY</p><h2>${item?"Edit":"Add"} inventory</h2><div class="form-grid"><div class="field full"><label>Name</label><input id="inventory-name" value="${escapeHtml(item?.name||"")}"></div><div class="field"><label>Category</label><select id="inventory-category">${["Yarn","Tools","DIY kit","Other"].map(c=>`<option ${c===item?.category?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Quantity</label><input id="inventory-quantity" type="number" min="0" value="${item?.quantity||1}"></div><div class="field"><label>Unit</label><input id="inventory-unit" value="${escapeHtml(item?.unit||"items")}" placeholder="balls, skeins, pieces"></div><div class="field"><label>HEX color</label><input id="inventory-color" type="color" value="${validHex(item?.color)?item.color:"#718c72"}"></div><div class="field full"><label>Details</label><input id="inventory-details" value="${escapeHtml(item?.details||"")}" placeholder="weight, dye lot, fibre, size..."></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-inventory">Save</button></div>`);document.getElementById("save-inventory").onclick=()=>{const name=document.getElementById("inventory-name").value.trim();if(!name)return toast("Name this inventory item.");const values={name,category:document.getElementById("inventory-category").value,quantity:Math.max(0,+document.getElementById("inventory-quantity").value||0),unit:document.getElementById("inventory-unit").value.trim()||"items",color:document.getElementById("inventory-color").value,details:document.getElementById("inventory-details").value.trim()};if(item)Object.assign(item,values);else state.inventory.push({id:`inv${Date.now()}`,...values});saveState();closeModal();renderMarket();};}
@@ -5021,7 +5599,7 @@ function openCartItemModal(itemId=null){
   };
 }
 function openBudgetModal(){const b=state.budgetSettings;openModal(`<p class="eyebrow">SHOPPING BOUNDARY</p><h2>Set cart budget</h2><div class="form-grid"><div class="field"><label>Budget amount</label><input id="market-budget" type="number" min="0" step="1" value="${b.amount}"></div><div class="field"><label>Budget currency</label><select id="budget-currency">${["AUD","HKD","USD","CNY","JPY","EUR"].map(c=>`<option ${c===b.currency?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Reset period</label><select id="budget-period"><option value="weekly" ${b.period==="weekly"?"selected":""}>Every week</option><option value="monthly" ${b.period==="monthly"?"selected":""}>Every month</option><option value="yearly" ${b.period==="yearly"?"selected":""}>Every year</option><option value="never" ${b.period==="never"?"selected":""}>Never</option></select></div><div class="field"><label>Current period started</label><input id="budget-start" type="date" value="${b.periodStart}"></div></div><div class="modal-actions"><button class="secondary-button" id="reset-budget-now">Reset spent now</button><button class="primary-button" id="save-budget">Save</button></div>`);document.getElementById("reset-budget-now").onclick=()=>{b.spent=0;b.periodStart=new Date().toISOString().slice(0,10);saveState();closeModal();renderMarket();};document.getElementById("save-budget").onclick=()=>{b.amount=Math.max(0,+document.getElementById("market-budget").value||0);b.currency=document.getElementById("budget-currency").value;b.period=document.getElementById("budget-period").value;b.periodStart=document.getElementById("budget-start").value||new Date().toISOString().slice(0,10);saveState();closeModal();renderMarket();};}
-function purchaseCartItem(itemId){const item=state.cart.find(i=>i.id===itemId);if(!item)return;const cost=toAud(item.quantity*item.price,item.currency||"AUD");if(state.budgetSettings.spent+cost>budgetAmountAud())return toast("Purchase blocked: this exceeds the active budget.");const owned=state.inventory.find(i=>i.name.toLowerCase()===item.name.toLowerCase());if(owned)owned.quantity+=item.quantity;else state.inventory.push({id:`inv${Date.now()}`,name:item.name,category:item.category,quantity:item.quantity,unit:item.category==="Yarn"?"balls":"items",color:"#718c72",details:"Added from shopping cart"});state.budgetSettings.spent+=cost;state.purchaseHistory.push({...item,boughtAt:new Date().toISOString(),audCost:cost});if(item.category==="DIY kit"&&item.createProject){const p={id:`p${Date.now()}`,name:item.name,type:"Other",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"Created from a purchased DIY kit.",subCounters:[],markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,linkedKit:item.name};state.projects.push(p);item.projectId=p.id;}state.cart=state.cart.filter(i=>i.id!==itemId);saveState();renderMarket();toast("Purchase moved into inventory");}
+function purchaseCartItem(itemId){const item=state.cart.find(i=>i.id===itemId);if(!item)return;const cost=toAud(item.quantity*item.price,item.currency||"AUD");if(state.budgetSettings.spent+cost>budgetAmountAud())return toast("Purchase blocked: this exceeds the active budget.");const owned=state.inventory.find(i=>i.name.toLowerCase()===item.name.toLowerCase());if(owned)owned.quantity+=item.quantity;else state.inventory.push({id:`inv${Date.now()}`,name:item.name,category:item.category,quantity:item.quantity,unit:item.category==="Yarn"?"balls":"items",color:"#718c72",details:"Added from shopping cart"});state.budgetSettings.spent+=cost;state.purchaseHistory.push({...item,boughtAt:new Date().toISOString(),audCost:cost});if(item.category==="DIY kit"&&item.createProject){const p={id:`p${Date.now()}`,name:item.name,type:"Other",color:colors[state.projects.length%colors.length],row:0,totalRows:null,chartRows:null,started:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}),notes:"Created from a purchased DIY kit.",subCounters:[],rowReminders:[],rowReminderVoice:{speed:1,language:"en",volume:1},markers:[],chart:null,assistantMessages:[],projectTools:{},buyList:[],pdfReference:"",attachments:[],patternPlan:{mode:"modified"},chatPreference:"ask",readerStatus:"No files analysed yet.",flowMode:true,chartMode:"og",yarnchaAssistant:{},annotations:[],annotationHistory:[],annotationRedo:[],annotationColor:"#d96572",annotationWidth:4,rowMask:null,coverAsset:null,chartAnalysis:null,linkedKit:item.name};state.projects.push(p);item.projectId=p.id;}state.cart=state.cart.filter(i=>i.id!==itemId);saveState();renderMarket();toast("Purchase moved into inventory");}
 function openLibrarySpaceModal(editId=null){const section=state.librarySections.find(s=>s.id===editId);openModal(`<p class="eyebrow">LIBRARY SPACE</p><h2>${section?"Rename space":"New custom space"}</h2><div class="form-grid"><div class="field full"><label>Name</label><input id="space-name" value="${escapeHtml(section?.name||"")}" placeholder="e.g. Embroidery references"></div><div class="field full"><label>Description</label><input id="space-description" value="${escapeHtml(section?.description||"")}" placeholder="What belongs here?"></div></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-space">Save</button></div>`);document.getElementById("save-space").onclick=()=>{const name=document.getElementById("space-name").value.trim();if(!name)return toast("Name this space.");if(section){section.name=name;section.description=document.getElementById("space-description").value;}else state.librarySections.push({id:`lib${Date.now()}`,name,description:document.getElementById("space-description").value,icon:"□",items:[]});saveState();closeModal();renderLibrary();};}
 async function deleteLibraryItem(sectionId,item){
   if(!item)return;
@@ -5057,10 +5635,17 @@ function openLibraryItemModal(sectionId,itemId=null){
 }
 function markerColor(name) {
   if(validHex(name))return name;
-  const map = { red:"#c75a55",blue:"#577fa8",green:"#62856a",yellow:"#d3a93f",purple:"#84658e",pink:"#c77b91",orange:"#d27b45" };
-  return map[name.toLowerCase()] || "#7a837d";
+  const map = { red:"#C75A55",blue:"#577FA8",green:"#62856A",yellow:"#D3A93F",purple:"#84658E",pink:"#C77B91",orange:"#D27B45",brown:"#8A6F5A",neutral:"#8A6F5A" };
+  return map[String(name||"").toLowerCase()] || "#7A837D";
 }
-function speak(text) { if (!("speechSynthesis" in window)) return toast("Speech is not supported in this browser."); speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }
+function speak(text,settings={}) {
+  if (!("speechSynthesis" in window)) return toast("Speech is not supported in this browser.");
+  const utterance=new SpeechSynthesisUtterance(text);
+  if(settings.rate)utterance.rate=Number(settings.rate)||1;
+  if(settings.lang)utterance.lang=settings.lang;
+  if(settings.volume!==undefined)utterance.volume=Math.max(0,Math.min(1,Number(settings.volume)));
+  speechSynthesis.cancel(); speechSynthesis.speak(utterance);
+}
 function startVoice() {
   if(state.appPreferences?.voice===false)return toast("Voice controls are turned off in Settings.");
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -5186,7 +5771,8 @@ function completeOnboarding(){state.onboardingComplete=true;saveState();document
 
 document.getElementById("new-project").onclick = openProjectModal;
 document.getElementById("quick-add-project").onclick = openProjectModal;
-document.getElementById("app-language").onchange=e=>{state.language=e.target.value;saveState();applyLanguage();renderTimeGreeting();};
+const appLanguageSelect=document.getElementById("app-language");
+if(appLanguageSelect)appLanguageSelect.onchange=e=>{state.language=e.target.value;saveState();applyLanguage();renderTimeGreeting();};
 ensureModalElements();
 document.getElementById("modal-close").onclick = () => closeModal();
 document.getElementById("modal-backdrop").onclick = e => { if (e.target.id === "modal-backdrop") closeModal(); };
@@ -5211,9 +5797,12 @@ window.YarnchaLocal={
   getActiveProject:()=>getProject(),
   saveState,
   replaceState(next){
+    if(!next?.projects?.length&&state.projects?.length)return updateSaveStatus("Sync conflict — kept newer device progress");
+    next.schemaVersion=PROJECT_SCHEMA_VERSION;
     localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
     state=loadState();
     currentProjectId=state.activeProjectId||state.projects[0]?.id||null;
+    updateSaveStatus(`✓ Saved on this device · ${formatSavedTime(state.lastSavedAt||new Date())}`);
     renderSidebar();renderToday();renderProjects();renderLibrary();applyTheme();applyLanguage();
     if(document.getElementById("project-detail-view")?.classList.contains("active"))renderProjectDetail();
     if(document.getElementById("settings-view")?.classList.contains("active"))renderSettings();

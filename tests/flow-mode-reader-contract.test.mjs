@@ -144,11 +144,17 @@ assert.doesNotMatch(source, /function chartAnalysisHtml/, "legacy OG analysis re
 assert.doesNotMatch(source, /Analysis report/, "OG Mode analysis report copy is removed");
 assert.match(source, /row-counter-card/, "row counter uses a dedicated responsive card");
 assert.match(source, /row-stepper/, "row counter stepper keeps minus, row input, and plus together");
+assert.match(source, /class="row-counter-label">Row<\/span><input class="row-counter-input"/, "row counter label and input have mobile-safe hooks");
 assert.match(source, /annotation-toolbar-shell/, "annotation toolbar has an overflow-safe shell");
 assert.match(source, /function bindAnnotationToolbar/, "annotation toolbar has delegated click handling");
 assert.match(source, /function setActiveAnnotationTool/, "annotation tools update from one source of truth");
 assert.match(source, /const selectAnnotationTool=setActiveAnnotationTool/, "legacy annotation helper aliases the single source of truth");
 assert.match(source, /annotationTools=\["touch","pen","highlighter","eraser","row-mask","text","arrow","marker"\]/, "annotation toolbar uses stable internal tool ids");
+assert.match(source, /let touchReadTap = null/, "Touch-to-Read tracks a deliberate tap separately from drawing");
+assert.match(source, /activeAnnotationTool==="touch"[\s\S]*touchReadTap=\{pointerId:event\.pointerId,startX:event\.clientX,startY:event\.clientY,startedAt:Date\.now\(\),pt,moved:false/, "Touch-to-Read starts as a tap candidate instead of opening on pointerdown");
+assert.match(source, /const canOpen=activeAnnotationTool==="touch"&&!tap\.moved&&distance<8&&duration<500&&!drawingStroke&&!maskDrag&&!arrowDrag[\s\S]*handleTouchRead\(tap\.pt\)/, "Touch-to-Read opens only for a short still tap");
+assert.doesNotMatch(source, /activeAnnotationTool==="touch"\)\{\s*event\.preventDefault\(\);\s*handleTouchRead\(pt\);/, "Touch-to-Read does not open immediately on pointerdown");
+assert.match(source, /Tap a chart row to read or correct it\./, "Touch tool shows a deliberate tap hint");
 assert.match(source, /button type="button" class="\$\{activeAnnotationTool===tool\?"active":""\}" data-tool="\$\{tool\}" aria-pressed="\$\{activeAnnotationTool===tool\}"/, "annotation buttons use type button, data-tool and aria-pressed");
 assert.match(source, /tool&&!tool\.closest\("\.annotation-toolbar"\)/, "global Tools navigation ignores annotation toolbar buttons");
 assert.match(source, /setAnnotationSetting\("color"/, "annotation color control updates settings");
@@ -213,6 +219,10 @@ assert.match(styles, /\.chart-file-remove[\s\S]*min-height:44px/, "attachment ch
 assert.match(styles, /\.chart-file-text strong[\s\S]*text-overflow:ellipsis/, "attachment filenames truncate cleanly");
 assert.match(styles, /\.project-workspace-page \.annotation-toolbar button\[aria-pressed="true"\]/, "active toolbar button has non-colour focus/active outline");
 assert.match(styles, /\.project-workspace-page \.annotation-toolbar input,[\s\S]*\.project-workspace-page \.annotation-toolbar select/, "toolbar form controls remain flex items");
+assert.match(styles, /\.annotation-mode-hint/, "Touch-to-Read hint is styled");
+assert.match(styles, /\.project-workspace-page \.row-stepper[\s\S]*grid-template-columns:56px minmax\(88px,128px\) 56px 44px/, "row counter stepper keeps the voice button beside the plus button");
+assert.match(styles, /\.project-workspace-page \.row-counter-label[\s\S]*white-space:nowrap/, "row counter labels do not wrap on mobile");
+assert.match(styles, /\.project-workspace-page \.row-counter-actions[\s\S]*justify-content:center/, "row counter action buttons stay compact and centered");
 assert.match(styles, /\.chart-upload-content/, "upload content wrapper is styled");
 assert.match(styles, /\.chart-upload-card/, "upload card height is controlled");
 assert.match(styles, /\.ocr-review-layout/, "OCR review modal is styled");

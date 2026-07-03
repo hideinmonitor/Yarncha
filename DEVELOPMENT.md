@@ -1,6 +1,6 @@
 # Yarncha Development Memory
 
-Last documentation update: 2026-07-01
+Last documentation update: 2026-07-03
 
 This file is the project memory card for AI-assisted development. Read it before changing code. Keep it practical, current, and honest about what is stable, experimental, local-only, or paused.
 
@@ -9,7 +9,7 @@ This file is the project memory card for AI-assisted development. Read it before
 Yarncha is a local-first yarn craft companion for knitting, crochet, Tunisian crochet, and related craft projects. The current MVP focuses on daily project workflow:
 
 - Today dashboard and project resume cards
-- Project creation, editing, covers, notes, row tracking, repeat counters, markers, and buy lists
+- Project creation, editing, covers, notes, row tracking, repeat counters, row reminders, markers, and buy lists
 - Project Chart workspace with OG Mode and Flow Mode
 - Manual annotation tools, row mask, chart upload, PDF/image viewing, OCR review, and pattern text reading
 - Project Toolkit and standalone Tools page
@@ -44,8 +44,8 @@ Paused / deprecated:
 
 Current inspected branch during this update:
 
-- `feature/assistant`
-- The branch currently contains uncommitted Yarncha Assistant, Project Rendering Studio, service-worker/cache-version, style, and assistant contract test updates. Do not discard these changes.
+- `feature/counter`
+- The branch currently contains uncommitted sub-counter voice reminder and Chart tab Sub Row Counter updates for project row tracking. Do not discard these changes.
 
 Recent branch history:
 
@@ -153,6 +153,7 @@ Saved locally:
 - Symbol Database user overrides, uploaded symbol pictures, favorites, technique references, local learning records
 - Theme, style, language, unit system, app preferences, onboarding state, account/sync preference
 - Project ideas, tool history, saved calculator results
+- Per-project row reminder rules (`rowReminders`), voice settings (`rowReminderVoice`), and Sub Row Counter settings (`subCounters`)
 
 Not automatically synced:
 
@@ -194,6 +195,7 @@ Track tab:
 - Main row counter
 - Manual row jump
 - Linked repeat/sub-counters
+- Row Reminders for visual and optional voice cues every X rows/rounds
 - Markers
 - Project notes
 
@@ -202,6 +204,10 @@ Row counter behavior:
 - `setMainRow()` is the central row update path.
 - Linked sub-counters move forward and backward by the main-row delta.
 - Linked sub-counters do not go below zero or their configured start value.
+- `triggerRowReminders()` runs from `setMainRow()` when the row changes. Reminder rules use `(currentRow - startRow) % every === 0`, can be paused, snoozed, marked done per row, spoken through browser speech synthesis, and vibrated on supported mobile browsers.
+- `subCounters` are shared by Track and Chart. Chart renders a collapsible Sub Row Counters card below the main row counter and above annotation tools. Counter sync uses anchor rows, update intervals, increment steps, reset/max values, and manual override sync baselines.
+- Repeat Engine is a separate classic runtime file (`repeat-engine.js`) and should be treated as the source of truth for repeat scheduling. Current Sub Row Counters keep their legacy shape for compatibility but mirror to per-project `repeatRules`; future repeat-based features should call `YarnchaRepeatEngine` instead of duplicating interval math in UI code.
+- Progress persistence is local-first: local saved state loads before cloud, autosave is guarded until restore finishes, save status says "Saved on this device" unless a cloud write actually succeeds, and cloud refresh chooses the newest project by `updatedAt` instead of replacing local progress with empty or older data.
 - Voice commands and Flow Mode row controls should call central row helpers rather than mutating `p.row` directly.
 
 Assistant tab:
@@ -822,10 +828,10 @@ PWA files:
 
 Important cache notes:
 
-- Root `index.html` currently references classic assets and shared calculation assets with `v=89-technique-help-classifier`.
-- `scripts/copy-static.mjs` injects classic scripts with asset version `89-technique-help-classifier` if missing after Vite build. If stale production behavior appears, check this version path carefully.
-- `service-worker.js` uses cache name `yarncha-shell-v89-technique-help-classifier`.
-- `public/service-worker.js` also uses cache name `yarncha-shell-v89-technique-help-classifier` and matching asset urls.
+- Root `index.html` currently references classic assets and shared calculation assets with `v=98-repeat-engine`.
+- `scripts/copy-static.mjs` injects classic scripts with asset version `98-repeat-engine` if missing after Vite build. If stale production behavior appears, check this version path carefully.
+- `service-worker.js` uses cache name `yarncha-shell-v98-repeat-engine`.
+- `public/service-worker.js` also uses cache name `yarncha-shell-v98-repeat-engine` and matching asset urls.
 - Cache issues should be verified before assuming code regression, but do not overfocus on cache when incognito and versioned URLs reproduce a render bug.
 
 ## Tests And NPM Scripts
@@ -880,6 +886,18 @@ Current scripts from `package.json`:
 - `npm run test:voice`
   - Checks intent matching, aliases, fuzzy row wording, confidence thresholds, debug output, and Flow Mode read-row routing.
   - Use after changing voice commands or read aloud.
+- `node tests/row-reminders-contract.test.mjs`
+  - Checks Sub-Counter Row Reminder fields, trigger formula, same-row repeat guard, visual banner hooks, browser speech synthesis, vibration hook, project defaults, and responsive reminder styling.
+  - Use after changing row tracking, repeat counters, reminder voice settings, or project persistence defaults.
+- `node tests/chart-sub-counters-contract.test.mjs`
+  - Checks Chart tab Sub Row Counter placement, settings fields, anchor row sync, manual override baseline, More-menu delete placement, assistant context, and responsive styling.
+  - Use after changing Chart row tracking, repeat counter sync, Flow Mode hints, or counter card layout.
+- `node tests/repeat-engine-contract.test.mjs`
+  - Checks Repeat Engine API, distinct repeat types, trigger previews, RS/WS filtering, validation, legacy sub-counter migration, and Repeat Engine UI hooks.
+  - Use after changing repeat scheduling, Sub-Counter/Repeat Counter settings, repeat migrations, or cache/build wiring for `repeat-engine.js`.
+- `node tests/progress-persistence-contract.test.mjs`
+  - Checks local autosave guard, stable legacy project ids, project schema metadata, honest device/cloud save status, newest-project cloud merge, and empty-cloud protection.
+  - Use after changing save/load, project ids, cloud restore, settings restore, service-worker cache versions, row progress, chart annotations, or Flow Mode corrections.
 - `npm run test:navigation`
   - Checks global page ids, mobile/desktop nav, project card opening, project tabs, and stable internal nav behavior.
   - Use after any navigation, layout overlay, project card, route, or tab change.
@@ -893,10 +911,6 @@ Current scripts from `package.json`:
   - Checks Library delete behavior and hidden card-level destructive actions.
   - Use after library card/modal/delete changes.
 
-Missing script note:
-
-- `npm run test:project-setup-calculations` is not present in the current `package.json`. The current branch's Project Setup coverage lives in `npm run test:flow-mode`. If a future branch adds a standalone project setup calculation contract, update this section and the developer checklist.
-
 Suggested full local verification:
 
 ```bash
@@ -909,6 +923,8 @@ npm run test:symbol-learning
 npm run test:themes
 npm run test:flow-mode
 npm run test:voice
+node tests/row-reminders-contract.test.mjs
+node tests/chart-sub-counters-contract.test.mjs
 npm run test:navigation
 node tests/yarncha-assistant-contract.test.mjs
 npm run test:settings
@@ -1078,6 +1094,8 @@ Recent major work represented in the current codebase:
 - `scripts/copy-static.mjs` now copies shared calculation/data files into production `dist` builds.
 - `test:project-setup-calculations` now verifies shared calculation module presence and Flow Mode delegation.
 - Flow Mode read aloud, voice settings, and intent matching were improved.
+- Sub-Counter Row Reminders add per-project visual and optional voice cues to the row tracker.
+- Chart tab Sub Row Counters expose the same repeat counters below the main row counter in OG Mode and Flow Mode, with anchor rows, manual override sync, and Flow/Assistant context.
 - Symbol Database edits merge with local symbol learning behind the scenes.
 - Visible Symbol Learning Library summary was removed from Library.
 - Theme gallery was simplified into clickable visual cards; Sky Blessing replaced Morning Orchard.
@@ -1087,7 +1105,11 @@ Recent major work represented in the current codebase:
 - Yarncha Assistant answer quality was improved with question classification, "What to do now", craft-specific troubleshooting, and answer-specific library links.
 - Technique Help was refactored into a structured local technique guide database with selected-technique answers, stitch-count logic, polished related-technique labels, and mobile-friendly answer cards.
 - `tests/yarncha-assistant-contract.test.mjs` covers Assistant placement, Technique Help contracts, answer-quality guardrails, and local-rule-based behavior.
-- Current asset/cache version is `89-technique-help-classifier`.
+- `tests/row-reminders-contract.test.mjs` covers row reminder storage defaults, UI fields, trigger behavior, speech settings, vibration hook, and responsive styling.
+- `tests/chart-sub-counters-contract.test.mjs` covers Chart tab counter placement, sync contracts, More-menu actions, assistant context, and responsive styling.
+- `tests/repeat-engine-contract.test.mjs` covers reusable repeat scheduling, validation, UI hooks, and legacy counter migration into `repeatRules`.
+- `tests/progress-persistence-contract.test.mjs` covers local-first progress persistence, save-status wording, cloud merge safety, and stable project id migration.
+- Current asset/cache version is `98-repeat-engine`.
 
 Documentation-only update:
 

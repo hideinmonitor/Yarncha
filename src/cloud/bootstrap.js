@@ -181,16 +181,42 @@ async function migrateLocalProjects() {
   }, "Local projects moved to cloud").catch(error => api.toast(friendlyError(error)));
 }
 
+function projectTime(project = {}) {
+  return Date.parse(project.updatedAt || project.updated_at || project.lastSavedAt || project.createdAt || 0) || 0;
+}
+
+function chooseNewestProject(localProject, cloudProject) {
+  if (!localProject) return cloudProject;
+  if (!cloudProject) return localProject;
+  return projectTime(cloudProject) > projectTime(localProject) ? cloudProject : localProject;
+}
+
+function hasMeaningfulProjects(state = {}) {
+  return Array.isArray(state.projects) && state.projects.length > 0;
+}
+
 async function restoreCloudProjects() {
   if (!cloud.user) return;
   const api = local();
   const rows = await listProjects();
   const current = api.getState();
+  if (!rows.length && hasMeaningfulProjects(current)) {
+    setCloudStatus("Cloud empty · kept device progress", "success");
+    return;
+  }
   const byLocalId = new Map((current.projects || []).map(project => [String(project.id), project]));
   for (const row of rows) {
-    const incoming = { ...(row.project_data || {}), id: row.local_id, name: row.title, notes: row.description, cloudId: row.id };
-    const existing = byLocalId.get(row.local_id);
-    if (!existing || new Date(row.updated_at) > new Date(existing.updatedAt || 0)) byLocalId.set(row.local_id, incoming);
+    if (!row.local_id || !row.project_data) continue;
+    const incoming = {
+      ...(row.project_data || {}),
+      id: row.local_id,
+      name: row.title || row.project_data?.name,
+      notes: row.description ?? row.project_data?.notes,
+      cloudId: row.id,
+      updatedAt: row.project_data?.updatedAt || row.updated_at
+    };
+    const existing = byLocalId.get(String(row.local_id));
+    byLocalId.set(String(row.local_id), chooseNewestProject(existing, incoming));
     for (const [assetId, asset] of Object.entries(incoming.cloudAssets || {})) {
       if (await api.getAsset(assetId)) continue;
       try {
@@ -202,7 +228,11 @@ async function restoreCloudProjects() {
     }
   }
   current.projects = [...byLocalId.values()];
+  if (!current.projects.some(project => String(project.id) === String(current.activeProjectId))) {
+    current.activeProjectId = current.projects[0]?.id || null;
+  }
   api.replaceState(current);
+  setCloudStatus("✓ Synced · newest progress kept", "success");
 }
 
 function settingsPayload(state) {
@@ -220,7 +250,13 @@ async function restoreCloudSettings() {
   if (!remote) return;
   const api = local();
   const state = api.getState();
-  Object.assign(state, remote);
+  const { theme, language, unitSystem, budgetSettings } = remote;
+  Object.assign(state, {
+    ...(theme ? { theme } : {}),
+    ...(language ? { language } : {}),
+    ...(unitSystem ? { unitSystem } : {}),
+    ...(budgetSettings ? { budgetSettings } : {})
+  });
   api.replaceState(state);
 }
 
@@ -229,14 +265,14 @@ function scheduleCloudSync() {
   clearTimeout(cloud.syncTimer);
   cloud.syncTimer = setTimeout(async () => {
     try {
-      setCloudStatus("Saving locally + cloud…");
+      setCloudStatus("Saving on this device + cloud…");
       const state = local().getState();
       await Promise.all((state.projects || []).map(project => syncProject(project, false)));
       await saveUserSettings(settingsPayload(state));
-      setCloudStatus("✓ Saved locally + cloud", "success");
+      setCloudStatus("✓ Saved to cloud", "success");
     } catch (error) {
       cloud.lastError = friendlyError(error);
-      setCloudStatus("Saved locally · Cloud retry needed", "error");
+      setCloudStatus("Saved on this device · Cloud retry needed", "error");
     }
   }, 1000);
 }
