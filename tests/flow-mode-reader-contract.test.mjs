@@ -152,7 +152,9 @@ assert.match(source, /const selectAnnotationTool=setActiveAnnotationTool/, "lega
 assert.match(source, /annotationTools=\["touch","pen","highlighter","eraser","row-mask","text","arrow","marker"\]/, "annotation toolbar uses stable internal tool ids");
 assert.match(source, /let touchReadTap = null/, "Touch-to-Read tracks a deliberate tap separately from drawing");
 assert.match(source, /activeAnnotationTool==="touch"[\s\S]*touchReadTap=\{pointerId:event\.pointerId,startX:event\.clientX,startY:event\.clientY,startedAt:Date\.now\(\),pt,moved:false/, "Touch-to-Read starts as a tap candidate instead of opening on pointerdown");
-assert.match(source, /const canOpen=activeAnnotationTool==="touch"&&!tap\.moved&&distance<8&&duration<500&&!drawingStroke&&!maskDrag&&!arrowDrag[\s\S]*handleTouchRead\(tap\.pt\)/, "Touch-to-Read opens only for a short still tap");
+assert.doesNotMatch(source, /\b(?:let|const|var)\s+maskDrag\b/, "Row mask drag state does not use the duplicate-prone global maskDrag name");
+assert.match(source, /let rowMaskDragState = null/, "Row mask drag state has a unique global name");
+assert.match(source, /const canOpen=activeAnnotationTool==="touch"&&!tap\.moved&&distance<8&&duration<500&&!drawingStroke&&!rowMaskDragState&&!arrowDrag[\s\S]*handleTouchRead\(tap\.pt\)/, "Touch-to-Read opens only for a short still tap");
 assert.doesNotMatch(source, /activeAnnotationTool==="touch"\)\{\s*event\.preventDefault\(\);\s*handleTouchRead\(pt\);/, "Touch-to-Read does not open immediately on pointerdown");
 assert.match(source, /Tap a chart row to read or correct it\./, "Touch tool shows a deliberate tap hint");
 assert.match(source, /button type="button" class="\$\{activeAnnotationTool===tool\?"active":""\}" data-tool="\$\{tool\}" aria-pressed="\$\{activeAnnotationTool===tool\}"/, "annotation buttons use type button, data-tool and aria-pressed");

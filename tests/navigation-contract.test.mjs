@@ -44,8 +44,11 @@ assert.match(app, /e\.target\.closest\("\[data-project-id\],\[data-project\]"\)/
 assert.match(app, /const innerAction=e\.target\.closest\("\[data-project-action\],a,button,input,select,textarea"\)/, "Inner project actions can avoid opening the card");
 assert.match(app, /innerAction&&innerAction!==project&&project\.contains\(innerAction\)/, "The project card itself is not blocked by the inner-action guard");
 assert.match(app, /function stableProjectId\(project=\{\},index=0\)/, "Legacy projects missing ids receive stable local ids during load");
+assert.match(app, /attachments: Array\.isArray\(p\.attachments\) \? p\.attachments : \[\]/, "Legacy projects missing attachments receive an empty attachments array");
 assert.match(app, /function getProject\(id = currentProjectId\) \{ return state\.projects\.find\(p => String\(p\.id\) === String\(id\)\)/, "Project lookup tolerates string and numeric ids");
 assert.match(app, /function openProject\(id\)[\s\S]*state\.projects\.find\(p=>String\(p\.id\)===String\(id\)\)[\s\S]*showView\("project-detail"\)/, "Project card clicks validate the id and route to the project detail page");
+assert.match(app, /const attachments = Array\.isArray\(p\.attachments\) \? p\.attachments : \[\];\s*const \[firstAttachment = null\] = attachments;\s*p\.attachments = attachments;/, "Project detail renders old projects without attachments safely");
+assert.doesNotMatch(app, /p\.attachments\[0\]/, "Project code does not directly read p.attachments[0]");
 assert.ok(app.includes("location.hash.match(/^#project-(.+)$/)"), "Project hash route fallback is implemented");
 assert.match(app, /window\.addEventListener\("hashchange",window\.__yarnchaHashProjectHandler\)/, "Project hash route fallback is registered");
 assert.match(app, /queueMicrotask\(handleProjectHashRoute\)/, "Project hash route fallback runs on initial load");

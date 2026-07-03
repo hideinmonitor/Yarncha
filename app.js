@@ -91,7 +91,7 @@ const annotationTools=["touch","pen","highlighter","eraser","row-mask","text","a
 let annotationSettings={color:"#d96572",size:4,opacity:.72};
 let drawingStroke = null;
 let drawingFrame = null;
-let maskDrag = null;
+let rowMaskDragState = null;
 let arrowDrag = null;
 let touchReadTap = null;
 let recognition = null;
@@ -528,7 +528,7 @@ function normalizeProjectRecord(p={},index=0){
     toolHistory: p.toolHistory || [],
     buyList: p.buyList || [],
     pdfReference: p.pdfReference || "",
-    attachments: p.attachments || [],
+    attachments: Array.isArray(p.attachments) ? p.attachments : [],
     patternPlan: p.patternPlan || {mode:"modified"},
     chatPreference: p.chatPreference || "ask",
     readerStatus:p.readerStatus||"No files analysed yet.",
@@ -976,6 +976,9 @@ const showProject=openProject;
 function renderProjectDetail() {
   const p = getProject();
   if (!p) return showView("projects");
+  const attachments = Array.isArray(p.attachments) ? p.attachments : [];
+  const [firstAttachment = null] = attachments;
+  p.attachments = attachments;
   p.activeTab ||= "track";
   const tab = p.readingMode ? "chart" : p.activeTab;
   document.getElementById("project-detail").innerHTML = `
@@ -993,7 +996,7 @@ function renderProjectDetail() {
     </div>`;
   bindProjectDetail();
   hydrateProjectCovers();
-  const chartAssetId=p.activeChartAssetId&&p.attachments.some(a=>a.id===p.activeChartAssetId)?p.activeChartAssetId:p.attachments[0]?.id;
+  const chartAssetId=p.activeChartAssetId&&attachments.some(a=>a.id===p.activeChartAssetId)?p.activeChartAssetId:firstAttachment?.id;
   if(chartAssetId)setTimeout(()=>showProjectAsset(chartAssetId),0);
   queueMicrotask(applyLanguage);
   updateSaveIndicators();
@@ -3107,7 +3110,7 @@ function beginAnnotation(event){
   if(maskTarget&&p.rowMask&&!p.rowMask.locked&&!p.maskLockPosition){
     event.preventDefault();
     const action=event.target.dataset.maskAction || "move";
-    maskDrag={action,start:pt,original:{...p.rowMask}};
+    rowMaskDragState={action,start:pt,original:{...p.rowMask}};
     event.currentTarget.setPointerCapture?.(event.pointerId);
     return;
   }
@@ -3157,7 +3160,7 @@ function moveAnnotation(event){
     if(Math.hypot(event.clientX-touchReadTap.startX,event.clientY-touchReadTap.startY)>8)touchReadTap.moved=true;
     return;
   }
-  if(maskDrag&&p.rowMask){
+  if(rowMaskDragState&&p.rowMask){
     event.preventDefault();
     updateMaskDrag(p,pt);
     paintRowMask(p);
@@ -3186,7 +3189,7 @@ function endAnnotation(event){
     const duration=Date.now()-tap.startedAt;
     const distance=Math.hypot(event.clientX-tap.startX,event.clientY-tap.startY);
     const targetInsideChart=!!event.target.closest?.("#chart-stage .chart-canvas");
-    const canOpen=activeAnnotationTool==="touch"&&!tap.moved&&distance<8&&duration<500&&!drawingStroke&&!maskDrag&&!arrowDrag&&targetInsideChart&&tap.target;
+    const canOpen=activeAnnotationTool==="touch"&&!tap.moved&&distance<8&&duration<500&&!drawingStroke&&!rowMaskDragState&&!arrowDrag&&targetInsideChart&&tap.target;
     if(canOpen){
       event.preventDefault();
       handleTouchRead(tap.pt);
@@ -3194,7 +3197,7 @@ function endAnnotation(event){
     return;
   }
   touchReadTap=null;
-  if(maskDrag){maskDrag=null;saveProjectTouch(getProject());return;}
+  if(rowMaskDragState){rowMaskDragState=null;saveProjectTouch(getProject());return;}
   if(arrowDrag){arrowDrag=null;saveProjectTouch(getProject());return;}
   if(!drawingStroke)return;
   const p=getProject();
@@ -3212,13 +3215,13 @@ function updateArrowDrag(p,pt){
   else {ann.x1=Math.max(0,Math.min(1000,o.x1+dx));ann.y1=Math.max(0,Math.min(1000,o.y1+dy));ann.x2=Math.max(0,Math.min(1000,o.x2+dx));ann.y2=Math.max(0,Math.min(1000,o.y2+dy));}
 }
 function updateMaskDrag(p,pt){
-  const m=p.rowMask,o=maskDrag.original,dx=pt.x-maskDrag.start.x,dy=pt.y-maskDrag.start.y,min=32;
-  if(maskDrag.action==="move"){m.x=Math.max(0,Math.min(1000-o.width,o.x+dx));m.y=Math.max(0,Math.min(1000-o.height,o.y+dy));return;}
+  const m=p.rowMask,o=rowMaskDragState.original,dx=pt.x-rowMaskDragState.start.x,dy=pt.y-rowMaskDragState.start.y,min=32;
+  if(rowMaskDragState.action==="move"){m.x=Math.max(0,Math.min(1000-o.width,o.x+dx));m.y=Math.max(0,Math.min(1000-o.height,o.y+dy));return;}
   if(p.maskLockSize)return;
-  if(maskDrag.action.includes("e"))m.width=Math.max(min,Math.min(1000-m.x,o.width+dx));
-  if(maskDrag.action.includes("s"))m.height=Math.max(min,Math.min(1000-m.y,o.height+dy));
-  if(maskDrag.action.includes("w")){const nx=Math.max(0,Math.min(o.x+dx,o.x+o.width-min));m.width=o.width+(o.x-nx);m.x=nx;}
-  if(maskDrag.action.includes("n")){const ny=Math.max(0,Math.min(o.y+dy,o.y+o.height-min));m.height=o.height+(o.y-ny);m.y=ny;}
+  if(rowMaskDragState.action.includes("e"))m.width=Math.max(min,Math.min(1000-m.x,o.width+dx));
+  if(rowMaskDragState.action.includes("s"))m.height=Math.max(min,Math.min(1000-m.y,o.height+dy));
+  if(rowMaskDragState.action.includes("w")){const nx=Math.max(0,Math.min(o.x+dx,o.x+o.width-min));m.width=o.width+(o.x-nx);m.x=nx;}
+  if(rowMaskDragState.action.includes("n")){const ny=Math.max(0,Math.min(o.y+dy,o.y+o.height-min));m.height=o.height+(o.y-ny);m.y=ny;}
 }
 function paintRowMask(p){
   const el=document.querySelector("#chart-stage .row-mask"),m=p.rowMask;
@@ -3988,8 +3991,9 @@ async function removeProjectChartAsset(id){
   if(!asset)return toast("Chart file was already removed.");
   if(!confirm(`Remove "${asset.name||"this chart file"}" from this project? This cannot be undone.`))return;
   p.attachments=(p.attachments||[]).filter(a=>a.id!==id);
-  if(p.chart?.assetId===id)p.chart=p.attachments[0]?{name:p.attachments[0].name,type:p.attachments[0].type,data:null,assetId:p.attachments[0].id}:null;
-  if(p.activeChartAssetId===id)p.activeChartAssetId=p.attachments[0]?.id||null;
+  const [firstAttachment=null]=p.attachments;
+  if(p.chart?.assetId===id)p.chart=firstAttachment?{name:firstAttachment.name,type:firstAttachment.type,data:null,assetId:firstAttachment.id}:null;
+  if(p.activeChartAssetId===id)p.activeChartAssetId=firstAttachment?.id||null;
   if(p.patternSource?.originalFileBlobId===id)p.patternSource=normalizePatternSource({type:"none",fileType:"none",ocrStatus:"not-started",workspaceMode:"og-visual"},p);
   await deleteAsset(id);
   saveProjectTouch(p);
