@@ -27,7 +27,7 @@ assert.match(css, /\.primary-button,\n\.secondary-button,[\s\S]*min-height:var\(
 assert.match(css, /\.chip,\n\.pill-tab,[\s\S]*min-height:var\(--chip-height\)/, "Chips and pills should share the chip height token");
 assert.match(css, /\.ui-icon,\n\.button-icon,[\s\S]*width:var\(--icon-size\)/, "Icons should use the shared icon size token");
 assert.match(css, /input:not\(\[type="checkbox"\]\)[\s\S]*min-height:var\(--control-height\)/, "Form controls should use the shared control height token");
-assert.match(app, /counter-options-button" data-counter-more="\$\{s\.id\}">Options<\/button>/, "Repeat counter overflow action should read as Options");
+assert.match(app, /counter-overflow-button subcounter-menu" data-counter-more="\$\{s\.id\}" aria-label="More actions for \$\{escapeHtml\(s\.name\)\}">⋮<\/button>/, "Repeat counter overflow action uses a compact labelled menu button");
 assert.doesNotMatch(app, /data-counter-more="\$\{s\.id\}">More<\/button>/, "Repeat counter overflow action should not use the tiny More label");
 
 console.log("Design system contract passed.");

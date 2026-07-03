@@ -43,10 +43,10 @@ assert.match(source, /Pattern Language/, "Flow Mode exposes pattern language pre
 assert.match(source, /Abbreviations/, "Pattern language supports abbreviations");
 assert.match(source, /Full wording/, "Pattern language supports full wording");
 assert.match(source, /Pattern gauge/, "Project Setup collects pattern gauge");
-assert.match(source, /Pattern hook \/ needle size/, "Project Setup collects pattern tool size");
-assert.match(source, /Pattern yarn weight/, "Project Setup collects pattern yarn weight");
-assert.match(source, /Your hook \/ needle size/, "Project Setup collects user tool size");
-assert.match(source, /Your yarn weight/, "Project Setup collects user yarn weight");
+assert.match(source, /Hook \/ needle/, "Project Setup collects tool size");
+assert.match(source, /Yarn \/ yarn weight/, "Project Setup collects yarn weight");
+assert.match(source, /hookNeedle:value\("hookNeedle"\)/, "shared setup stores hook or needle size");
+assert.match(source, /yarnWeight:value\("yarnWeight"\)/, "shared setup stores yarn weight");
 assert.match(source, /Project type/, "Project Setup asks project type before measurements");
 assert.match(source, /Desired garment size/, "Project Setup collects desired size");
 assert.match(source, /Chest \/ bust cm/, "Project Setup supports body measurements");
@@ -61,8 +61,8 @@ assert.match(source, /For babies, embroidered eyes are safer than plastic safety
 assert.match(source, /Recommended size:/, "blanket presets guide beginners");
 assert.match(source, /readFlowSetupDetails/, "type-specific setup values are saved");
 assert.match(source, /p\.projectKind=setup\.projectType/, "project type mirrors to the project");
-assert.match(source, /These details are used by Flow Mode and project tools/, "Project section reuses the shared setup");
-assert.match(source, /Using your saved setup:/, "Tools section shows the shared setup context");
+assert.match(source, /Your setup is shared across this project, Flow Mode, and project tools\./, "Project section reuses the shared setup");
+assert.match(source, /Shared setup:/, "Tools section shows the shared setup context");
 assert.match(source, /Your .* is .* than the pattern/, "Flow Mode warns about tool mismatch");
 assert.match(source, /Your yarn is .* than the pattern yarn/, "Flow Mode warns about yarn mismatch");
 for (const label of ["Cast-on","Starting chain","Stitch count","Row count","Width","Length","Sleeve length","Body length","Shaping","Yarn"]) {
@@ -71,7 +71,7 @@ for (const label of ["Cast-on","Starting chain","Stitch count","Row count","Widt
 for (const field of ["flow-setup-stitch-count","flow-setup-row-count","flow-setup-width","flow-setup-length","flow-setup-sleeve-length","flow-setup-body-length","flow-setup-yarn-estimate"]) {
   assert.doesNotMatch(source, new RegExp(`id="${field}"`), `${field} is no longer an editable setup input`);
 }
-assert.match(source, /p\.setup=simpleSetup/, "Flow Mode saves the requested simple project.setup structure");
+assert.match(source, /p\.setup=setup/, "Flow Mode saves the shared project.setup structure");
 assert.doesNotMatch(source, /stitchCount:value\("flow-setup-stitch-count"\)/, "derived stitch count is not manually stored from an input");
 assert.doesNotMatch(source, /rowCount:value\("flow-setup-row-count"\)/, "derived row count is not manually stored from an input");
 assert.match(source, /Saved · Last saved on this device/, "Project Setup shows saved state");
@@ -82,9 +82,9 @@ assert.match(source, /Project Setup Summary/, "Flow Mode labels the calculation 
 assert.match(source, /result-summary-row/, "result summary renders separated rows");
 assert.match(source, /p\.projectCalculations=calculateFlowProjectPlan/, "calculated values are stored on the project");
 assert.match(source, /p\.projectSetup=setup/, "setup values are stored on the project");
-assert.match(source, /p\.gauge=setup\.patternGauge/, "setup gauge mirrors to project gauge");
-assert.match(source, /p\.needles=setup\.userToolSize\|\|setup\.patternToolSize/, "setup tool size mirrors to project tools");
-assert.match(source, /p\.yarn=setup\.userYarnWeight\|\|setup\.patternYarnWeight/, "setup yarn mirrors to project yarn");
+assert.match(source, /p\.gauge=setup\.gauge\|\|setup\.patternGauge/, "setup gauge mirrors to project gauge");
+assert.match(source, /p\.needles=setup\.hookNeedle\|\|setup\.userToolSize\|\|setup\.patternToolSize/, "setup tool size mirrors to project tools");
+assert.match(source, /p\.yarn=setup\.yarnName\|\|setup\.yarnWeight/, "setup yarn mirrors to project yarn");
 assert.match(source, /flow-current-row/, "current row selector is present");
 assert.match(source, /flow-prev-row/, "previous row button is present");
 assert.match(source, /flow-next-row/, "next row button is present");

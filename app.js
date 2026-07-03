@@ -212,22 +212,76 @@ function normalizePatternSource(source={},project={}){
     reviewedAt:source.reviewedAt||""
   };
 }
+function buildSetupFromLegacyProjectFields(project={}){
+  const fit=project.fitCheck||{},materials=project.materials||{},simple=project.setup||{};
+  return {
+    ...simple,
+    craftType:simple.craftType||simple.craft||project.craft||project.type,
+    projectType:simple.projectType||project.projectKind||project.size,
+    yarnWeight:simple.yarnWeight||simple.userYarnWeight||simple.patternYarnWeight||project.yarn,
+    yarnName:simple.yarnName||materials.yarnName||project.yarn,
+    yarnColour:simple.yarnColour||materials.yarnColour||materials.color||"",
+    dyeLot:simple.dyeLot||materials.dyeLot||"",
+    hookNeedle:simple.hookNeedle||simple.userToolSize||simple.patternToolSize||project.needles,
+    gauge:simple.gauge||simple.patternGauge||project.gauge,
+    startStitches:simple.startStitches||simple.castOn||project.castOn||simple.stitchCount||"",
+    rows:simple.rows||simple.rowCount||project.chartRows||project.totalRows||"",
+    bodyMeasurementCm:simple.bodyMeasurementCm||fit.bodyChest||simple.bodyMeasurements?.chest||"",
+    finishedWidthCm:simple.finishedWidthCm||fit.finishedChest||simple.width||"",
+    intendedEaseCm:simple.intendedEaseCm||fit.intendedEase||simple.easeCm||"",
+    targetLengthCm:simple.targetLengthCm||fit.targetLength||simple.length||"",
+    currentLengthCm:simple.currentLengthCm||fit.currentLength||"",
+    fitFeeling:simple.fitFeeling||fit.feeling||"",
+    tryOnNotes:simple.tryOnNotes||fit.notes||"",
+    notes:simple.notes||project.sizingNotes||"",
+    quantity:simple.quantity||materials.quantity||"",
+    materialStatus:simple.materialStatus||materials.status||"Owned"
+  };
+}
 function normalizeProjectSetup(setup={},project={}){
   const sizeOptions=["XXS","XS","S","M","L","XL","XXL","Custom"];
   const projectTypes=["Scarf","Socks","Hat / Beanie","Shawl","Bag","Blanket","Amigurumi","Top","Cardigan","Jumper / Sweater","Vest","Dress","Other"];
   const measurements=setup.bodyMeasurements||{};
   const details=setup.itemDetails||{};
   const numberText=value=>String(value??"").trim();
+  const craftSource=setup.craftType||setup.craft||project.type||"";
+  const craft=["Knitting","Crochet","Tunisian Crochet"].includes(craftSource)?craftSource:(/tunisian/i.test(craftSource)?"Tunisian Crochet":/crochet/i.test(craftSource||project.type||"")?"Crochet":"Knitting");
+  const projectType=projectTypes.includes(setup.projectType)?setup.projectType:projectTypes.includes(project.projectKind)?project.projectKind:"Other";
+  const yarnWeight=setup.yarnWeight||setup.userYarnWeight||setup.patternYarnWeight||project.yarn||"";
+  const hookNeedle=setup.hookNeedle||setup.userToolSize||setup.patternToolSize||setup.patternToolSizeMm||project.needles||"";
+  const gauge=setup.gauge||setup.patternGauge||project.gauge||"";
+  const bodyMeasurementCm=numberText(setup.bodyMeasurementCm||measurements.chest||project.fitCheck?.bodyChest);
+  const finishedWidthCm=numberText(setup.finishedWidthCm||setup.patternWidthCm||details.width||project.fitCheck?.finishedChest);
+  const targetLengthCm=numberText(setup.targetLengthCm||setup.patternLengthCm||details.length||project.fitCheck?.targetLength);
   return {
-    craft:["Knitting","Crochet"].includes(setup.craft)?setup.craft:(/crochet/i.test(project.type||"")?"Crochet":"Knitting"),
-    projectType:projectTypes.includes(setup.projectType)?setup.projectType:projectTypes.includes(project.projectKind)?project.projectKind:"Other",
-    patternGauge:setup.patternGauge||project.gauge||"",
-    patternToolSize:setup.patternToolSize||setup.patternToolSizeMm||project.needles||"",
-    patternYarnWeight:setup.patternYarnWeight||project.yarn||"",
-    userToolSize:setup.userToolSize||setup.userToolSizeMm||project.needles||"",
-    userYarnWeight:setup.userYarnWeight||project.yarn||"",
-    patternToolSizeMm:numberText(setup.patternToolSizeMm||setup.patternToolSize||project.needles),
-    userToolSizeMm:numberText(setup.userToolSizeMm||setup.userToolSize||project.needles),
+    craft,
+    craftType:craft,
+    projectType,
+    yarnWeight,
+    yarnName:setup.yarnName||project.yarn||"",
+    yarnColour:setup.yarnColour||setup.color||"",
+    dyeLot:setup.dyeLot||"",
+    hookNeedle,
+    gauge,
+    startStitches:numberText(setup.startStitches||setup.castOn||setup.originalPatternStitches),
+    rows:numberText(setup.rows||setup.rowCount||setup.originalPatternRows||project.chartRows||project.totalRows),
+    bodyMeasurementCm,
+    finishedWidthCm,
+    intendedEaseCm:numberText(setup.intendedEaseCm||setup.easeCm||project.fitCheck?.intendedEase),
+    targetLengthCm,
+    currentLengthCm:numberText(setup.currentLengthCm||project.fitCheck?.currentLength),
+    fitFeeling:setup.fitFeeling||project.fitCheck?.feeling||"Not checked yet",
+    tryOnNotes:setup.tryOnNotes||project.fitCheck?.notes||"",
+    notes:setup.notes||project.sizingNotes||"",
+    quantity:numberText(setup.quantity),
+    materialStatus:setup.materialStatus||"Owned",
+    patternGauge:setup.patternGauge||gauge,
+    patternToolSize:setup.patternToolSize||setup.patternToolSizeMm||hookNeedle,
+    patternYarnWeight:setup.patternYarnWeight||yarnWeight,
+    userToolSize:setup.userToolSize||setup.userToolSizeMm||hookNeedle,
+    userYarnWeight:setup.userYarnWeight||yarnWeight,
+    patternToolSizeMm:numberText(setup.patternToolSizeMm||setup.patternToolSize||hookNeedle),
+    userToolSizeMm:numberText(setup.userToolSizeMm||setup.userToolSize||hookNeedle),
     patternGaugeStitches:numberText(setup.patternGaugeStitches),
     patternGaugeRows:numberText(setup.patternGaugeRows),
     userGaugeStitches:numberText(setup.userGaugeStitches),
@@ -243,15 +297,15 @@ function normalizeProjectSetup(setup={},project={}){
     swatchWeightGrams:numberText(setup.swatchWeightGrams),
     patternYarnGrams:numberText(setup.patternYarnGrams),
     patternAreaCm2:numberText(setup.patternAreaCm2),
-    originalPatternStitches:numberText(setup.originalPatternStitches),
-    originalPatternRows:numberText(setup.originalPatternRows),
-    patternWidthCm:numberText(setup.patternWidthCm),
-    patternLengthCm:numberText(setup.patternLengthCm),
+    originalPatternStitches:numberText(setup.originalPatternStitches||setup.startStitches),
+    originalPatternRows:numberText(setup.originalPatternRows||setup.rows),
+    patternWidthCm:numberText(setup.patternWidthCm||finishedWidthCm),
+    patternLengthCm:numberText(setup.patternLengthCm||targetLengthCm),
     desiredSize:sizeOptions.includes(setup.desiredSize)?setup.desiredSize:(sizeOptions.includes(project.size)?project.size:"M"),
     customSize:setup.customSize||project.size||"",
     patternLanguage:["abbreviations","full"].includes(setup.patternLanguage)?setup.patternLanguage:"abbreviations",
     bodyMeasurements:{
-      chest:measurements.chest||"",
+      chest:measurements.chest||bodyMeasurementCm||"",
       waist:measurements.waist||"",
       hip:measurements.hip||"",
       sleeve:measurements.sleeve||"",
@@ -288,9 +342,9 @@ function normalizeProjectSetup(setup={},project={}){
       decreaseSections:details.decreaseSections||"8",
       finalTopStitchesPerSection:details.finalTopStitchesPerSection||"1",
       bagType:details.bagType||"Tote",
-      width:details.width||"",
+      width:details.width||finishedWidthCm||"",
       height:details.height||"",
-      length:details.length||"",
+      length:details.length||targetLengthCm||"",
       strapLength:details.strapLength||"",
       strapWidth:details.strapWidth||"",
       depth:details.depth||"",
@@ -332,9 +386,37 @@ function normalizeProjectSetup(setup={},project={}){
   };
 }
 function ensureProjectSetup(p){
-  p.projectSetup=normalizeProjectSetup(p.projectSetup,p);
-  p.projectCalculations=calculateFlowProjectPlan(p,p.projectSetup);
-  return p.projectSetup;
+  const setup=normalizeProjectSetup(p.setup||p.projectSetup||buildSetupFromLegacyProjectFields(p),p);
+  p.setup=setup;
+  p.projectSetup=setup;
+  p.projectCalculations=calculateFlowProjectPlan(p,setup);
+  return setup;
+}
+function applySharedProjectSetup(p,partialSetup={}){
+  const setup=normalizeProjectSetup({...ensureProjectSetup(p),...partialSetup,updatedAt:new Date().toISOString()},p);
+  p.setup=setup;
+  p.projectSetup=setup;
+  p.type=setup.craft;
+  p.projectKind=setup.projectType;
+  p.yarn=setup.yarnName||setup.yarnWeight||p.yarn||"";
+  p.needles=setup.hookNeedle||setup.userToolSize||setup.patternToolSize||p.needles||"";
+  p.gauge=setup.gauge||setup.patternGauge||p.gauge||"";
+  p.sizingNotes=setup.notes||p.sizingNotes||"";
+  p.fitCheck={
+    ...(p.fitCheck||{}),
+    bodyChest:setup.bodyMeasurementCm,
+    finishedChest:setup.finishedWidthCm,
+    intendedEase:setup.intendedEaseCm,
+    targetLength:setup.targetLengthCm,
+    currentLength:setup.currentLengthCm,
+    feeling:setup.fitFeeling,
+    notes:setup.tryOnNotes,
+    updatedAt:setup.updatedAt
+  };
+  p.projectCalculations=calculateFlowProjectPlan(p,setup);
+  if(setup.rows&&!p.chartRows)p.chartRows=Number(setup.rows)||p.chartRows;
+  if(setup.rows&&!p.totalRows)p.totalRows=Number(setup.rows)||p.totalRows;
+  return setup;
 }
 function firstNumber(value,fallback=0){
   const match=String(value||"").match(/-?\d+(?:\.\d+)?/);
@@ -509,6 +591,7 @@ function stableProjectId(project={},index=0){
 }
 function normalizeProjectRecord(p={},index=0){
   const now=new Date().toISOString(),id=stableProjectId(p,index),createdAt=p.createdAt || p.startedAt || p.startDate || p.updatedAt || now;
+  const sharedSetup=normalizeProjectSetup(p.setup||p.projectSetup||buildSetupFromLegacyProjectFields(p),p);
   const normalized={
     ...p,
     id,
@@ -561,7 +644,8 @@ function normalizeProjectRecord(p={},index=0){
     size:p.size || "",
     sizingNotes:p.sizingNotes || "",
     patternSource:normalizePatternSource(p.patternSource,p),
-    projectSetup:normalizeProjectSetup(p.projectSetup,p),
+    setup:sharedSetup,
+    projectSetup:sharedSetup,
     updatedAt:p.updatedAt || createdAt,
     chartAnalysis:p.chartAnalysis ? {
       ...p.chartAnalysis,
@@ -1178,40 +1262,12 @@ function friendlyChartBetaHtml(p){
     <div class="flow-hero"><p class="eyebrow">PROJECT CHART</p><h3>Flow Mode</h3><p>Let Yarncha help you follow your pattern one row at a time.</p><p class="muted-copy">Yarncha looks at your chart and helps you keep track of your place. If something looks unclear, we'll ask you to confirm it before continuing.</p></div>
     <section class="flow-ready-card ${ready?"ready":"almost"}"><h4>${ready?"Your chart is ready.":"You're almost ready."}</h4>${ready?`<p>✓ Chart added</p><p>✓ Ready to start</p>`:`<p>${hasChart?"Please review a few symbols before we begin.":"Add a chart, then Yarncha can guide you row by row."}</p>`}</section>
     <section class="flow-reader-panel flow-project-card"><p class="eyebrow">YOUR PROJECT</p><h4>${escapeHtml(p.name||"Current project")}</h4><p>${escapeHtml(setup.craft||p.type||"Pattern")} · You are on row ${p.row}${p.chartRows||p.totalRows?` of ${p.chartRows||p.totalRows}`:""}</p></section>
-    <section class="flow-reader-panel flow-setup-panel"><h4>Project Setup</h4><p class="muted-copy">Add the pattern details once. Yarncha will reuse them across this project.</p>
-      <div class="form-grid compact-form">
-        <div class="field"><label>Craft</label><select id="flow-setup-craft">${options(["Knitting","Crochet"],setup.craft)}</select></div>
-        <div class="field"><label>Pattern gauge</label><input id="flow-pattern-gauge" value="${escapeHtml(setup.patternGauge)}" placeholder="22 sts × 30 rows / 10 cm"></div>
-        <div class="field"><label>Pattern hook / needle size</label><input id="flow-pattern-tool" value="${escapeHtml(setup.patternToolSize)}" placeholder="4 mm"></div>
-        <div class="field"><label>Pattern yarn weight</label><input id="flow-pattern-yarn-weight" value="${escapeHtml(setup.patternYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
-        <div class="field"><label>Your hook / needle size</label><input id="flow-user-tool" value="${escapeHtml(setup.userToolSize)}" placeholder="4.5 mm"></div>
-        <div class="field"><label>Your yarn weight</label><input id="flow-user-yarn-weight" value="${escapeHtml(setup.userYarnWeight)}" placeholder="DK, Worsted, Sport..."></div>
-        <div class="field"><label>Pattern gauge stitches</label><input id="flow-pattern-gauge-stitches" type="number" step=".1" value="${escapeHtml(setup.patternGaugeStitches)}" placeholder="22"></div>
-        <div class="field"><label>Pattern gauge rows</label><input id="flow-pattern-gauge-rows" type="number" step=".1" value="${escapeHtml(setup.patternGaugeRows)}" placeholder="30"></div>
-        <div class="field"><label>Your gauge stitches</label><input id="flow-user-gauge-stitches" type="number" step=".1" value="${escapeHtml(setup.userGaugeStitches)}" placeholder="Enter your swatch"></div>
-        <div class="field"><label>Your gauge rows</label><input id="flow-user-gauge-rows" type="number" step=".1" value="${escapeHtml(setup.userGaugeRows)}" placeholder="Enter your swatch"></div>
-        <div class="field"><label>Gauge width cm</label><input id="flow-gauge-width" type="number" step=".1" value="${escapeHtml(setup.gaugeWidthCm||10)}" placeholder="10"></div>
-        <div class="field"><label>Gauge height cm</label><input id="flow-gauge-height" type="number" step=".1" value="${escapeHtml(setup.gaugeHeightCm||10)}" placeholder="10"></div>
-        <details class="flow-inline-advanced full"><summary>Helpful extras for better estimates</summary>
-          ${flowField("flow-repeat-multiple","Stitch repeat multiple",setup.stitchRepeatMultiple,"Optional")}
-          ${flowField("flow-edge-stitches","Edge stitches",setup.edgeStitches,"Optional")}
-          ${flowField("flow-swatch-width","Swatch width cm",setup.swatchWidthCm,"Optional")}
-          ${flowField("flow-swatch-height","Swatch height cm",setup.swatchHeightCm,"Optional")}
-          ${flowField("flow-swatch-weight","Swatch weight grams",setup.swatchWeightGrams,"Optional")}
-          ${flowField("flow-pattern-yarn-grams","Pattern yarn grams",setup.patternYarnGrams,"Optional")}
-          ${flowField("flow-pattern-area","Pattern area cm²",setup.patternAreaCm2,"Optional")}
-          ${flowField("flow-original-stitches","Original pattern stitches",setup.originalPatternStitches,"Optional")}
-          ${flowField("flow-original-rows","Original pattern rows",setup.originalPatternRows,"Optional")}
-          ${flowField("flow-pattern-width","Pattern finished width cm",setup.patternWidthCm,"Optional")}
-          ${flowField("flow-pattern-length","Pattern finished length cm",setup.patternLengthCm,"Optional")}
-        </details>
-        <div class="field full"><label>Project type</label><select id="flow-project-type">${options(projectTypes,setup.projectType)}</select></div>
-        ${flowProjectTypeFields(setup,options,sizeOptions)}
-      </div>
-      <div class="flow-setup-save-row"><button class="primary-button" id="save-flow-project-setup" type="button">Save project setup</button><button class="secondary-button manual-save-button" data-manual-save="Flow Mode" type="button">Save now</button><span id="flow-setup-save-status" class="setup-save-status saved" data-save-indicator>Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
+    ${flowProjectSetupSummaryHtml(p)}
+    <section class="flow-reader-panel flow-setup-results-panel">
       ${plan.warnings.length?`<div class="flow-warning-card"><strong>Before you begin</strong>${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<div class="flow-ready-card ready"><p>✓ Your hook or needle and yarn look close enough to the pattern to begin.</p></div>`}
       <div class="flow-ready-card ${plan.estimateOnly?"almost":"ready"}"><p>${plan.estimateOnly?"Estimate only":"Ready"} · ${escapeHtml(plan.summary||"Project setup summary is ready.")}</p></div>
       ${resultSummaryHtml("Project Setup Summary",flowCalculationItems(plan),"flow-calculation-summary")}
+      <div class="flow-setup-save-row"><button class="secondary-button manual-save-button" data-manual-save="Flow Mode" type="button">Save now</button><span id="flow-setup-save-status" class="setup-save-status saved" data-save-indicator>Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
       <button class="primary-button flow-start-button" id="start-flow-mode" type="button">Start Flow Mode</button>
     </section>
     <section class="flow-reader-panel flow-reading-mode-panel"><h4>Reading Progress</h4>
@@ -1381,8 +1437,8 @@ function sharedProjectSetupSummaryHtml(p){
     {label:"Start",value:`${plan.startingLabel||"Start"} ${plan.castOnOrChain||""}`.trim()},
     {label:"Rows",value:String(plan.rowCount||"Add gauge")}
   ];
-  return `<div class="card mobile-card shared-project-setup"><p class="eyebrow">SHARED SETUP</p><h2>Project guide</h2><p class="muted-copy">These details are used by Flow Mode and project tools so you do not need to enter them again.</p>
-    ${resultSummaryHtml("Saved project settings",summaryItems,"shared-setup-summary")}
+  return `<div class="card mobile-card shared-project-setup"><p class="eyebrow">PROJECT SETUP</p><h2>Project Setup</h2><p class="muted-copy">Your setup is shared across this project, Flow Mode, and project tools.</p>
+    ${resultSummaryHtml("Project setup summary",summaryItems,"shared-setup-summary")}
     ${plan.warnings.length?`<div class="flow-warning-card">${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<p class="shared-setup-note">Your yarn and hook or needle look close enough to begin.</p>`}
   </div>`;
 }
@@ -1434,6 +1490,131 @@ function projectFitCheckHtml(p){
     </div>
     <div class="fit-check-actions"><button class="secondary-button" id="save-fit-check">Save Fit Check</button><button class="mini-button" id="open-fit-tools">Open sizing tools</button></div>
   </section>`;
+}
+function projectSetupPanelHtml(p,{context="project",embedded=false}={}){
+  const setup=ensureProjectSetup(p),check=projectFitCheck(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup);
+  const value=name=>escapeHtml(setup[name]??"");
+  const select=(name,values,current=setup[name])=>`<select data-project-setup-field="${name}">${values.map(option=>`<option value="${escapeHtml(option)}" ${current===option?"selected":""}>${escapeHtml(option)}</option>`).join("")}</select>`;
+  const field=(name,label,placeholder="",type="text",full=false)=>`<div class="field ${full?"full":""}"><label>${escapeHtml(label)}</label><input data-project-setup-field="${name}" type="${type}" value="${value(name)}" placeholder="${escapeHtml(placeholder)}"></div>`;
+  const textArea=(name,label,placeholder="",rows=3)=>`<div class="field full"><label>${escapeHtml(label)}</label><textarea data-project-setup-field="${name}" rows="${rows}" placeholder="${escapeHtml(placeholder)}">${value(name)}</textarea></div>`;
+  const fitMetric=(label,metric,description="")=>`<article class="fit-check-metric"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(metric)}</p>${description?`<small>${escapeHtml(description)}</small>`:""}</article>`;
+  const easeText=check.ease===null?"Add body and finished width":`${check.ease>0?"+":""}${check.ease.toFixed(1)} cm`;
+  const lengthText=check.lengthGap===null?"Add current length":`${check.lengthGap>0?`${check.lengthGap.toFixed(1)} cm to go`:`${Math.abs(check.lengthGap).toFixed(1)} cm over`}`;
+  const lastSaved=setup.updatedAt||p.updatedAt;
+  return `<section class="card mobile-card project-setup-panel ${embedded?"embedded":""}" data-project-setup-form="${escapeHtml(context)}">
+    <div class="section-heading compact-row"><div><p class="eyebrow">PROJECT SETUP</p><h2>Project Setup</h2><p class="muted-copy">Your setup is shared across this project, Flow Mode, and project tools.</p></div><span class="fit-check-status ${check.status==="Looks close"?"ok":"warn"}">${escapeHtml(check.status)}</span></div>
+    <div class="project-setup-subsection">
+      <h3>Basic setup</h3>
+      <div class="project-setup-grid form-grid compact-form">
+        <div class="field"><label>Craft</label>${select("craftType",["Knitting","Crochet","Tunisian Crochet"],setup.craftType||setup.craft)}</div>
+        <div class="field"><label>Project type</label>${select("projectType",["Scarf","Socks","Hat / Beanie","Shawl","Bag","Blanket","Amigurumi","Top","Cardigan","Jumper / Sweater","Vest","Dress","Other"])}</div>
+        ${field("yarnWeight","Yarn / yarn weight","DK, Worsted, 8 ply...")}
+        ${field("hookNeedle","Hook / needle","4 mm circular, 5 mm hook...")}
+        ${field("gauge","Gauge","22 sts x 30 rows / 10 cm")}
+        ${field("startStitches","Cast-on / starting stitch count","60","number")}
+        ${field("rows","Rows / rounds","168","number")}
+        ${field("targetLengthCm","Target length cm","58","number")}
+        ${textArea("notes","Notes","Construction notes, sizing choices, or pattern reminders...",3)}
+      </div>
+    </div>
+    <div class="project-setup-subsection fit-check-card">
+      <div class="section-heading compact-row"><div><h3>Fit Check</h3><p class="muted-copy">Check measurements before continuing.</p></div></div>
+      <div class="fit-check-grid">
+        <div class="project-setup-grid form-grid compact-form">
+          ${field("bodyMeasurementCm","Body chest / main measurement cm","100","number")}
+          ${field("finishedWidthCm","Finished width / chest cm","108","number")}
+          ${field("intendedEaseCm","Intended ease cm","8","number")}
+          ${field("currentLengthCm","Current length cm","Measure now","number")}
+          <div class="field"><label>Fit feeling</label>${select("fitFeeling",["Not checked yet","Too tight","Feels right","Too loose","Length unsure"])}</div>
+          ${textArea("tryOnNotes","Try-on notes","Armhole, sleeve, length, shoulder, bust, waist...",3)}
+        </div>
+        <div class="fit-check-summary">
+          ${fitMetric("Actual ease",easeText,`Planned ease: ${setup.intendedEaseCm||check.intendedEase||"not set"} cm`)}
+          ${fitMetric("Length check",lengthText,`Target length: ${setup.targetLengthCm||check.targetLength||"not set"} cm`)}
+          ${fitMetric("Fit advice",check.action)}
+        </div>
+      </div>
+    </div>
+    <div class="project-setup-subsection">
+      <h3>Optional materials</h3>
+      <div class="project-setup-grid form-grid compact-form">
+        ${field("yarnName","Yarn name","Brand and yarn line")}
+        ${field("yarnColour","Yarn colour","Sage, Cream, 124...")}
+        ${field("dyeLot","Dye lot","Lot number")}
+        ${field("quantity","Quantity","3 balls","number")}
+        <div class="field"><label>Bought / owned status</label>${select("materialStatus",["Owned","Need to buy","Partly owned","Wishlist"])}</div>
+      </div>
+    </div>
+    <div class="project-setup-actions">
+      <button class="primary-button" data-save-project-setup type="button">Save setup</button>
+      <button class="mini-button" id="open-fit-tools" type="button">Open sizing tools</button>
+      <span class="setup-save-status saved" data-project-setup-status>Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span>
+      <span class="shared-setup-note">${escapeHtml(plan.summary||"Project setup summary is ready.")}</span>
+    </div>
+  </section>`;
+}
+function flowProjectSetupSummaryHtml(p){
+  const setup=ensureProjectSetup(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup);
+  const summary=[setup.craft,setup.projectType,setup.startStitches?`${setup.startStitches} cast-on`:plan.castOnOrChain?`${plan.castOnOrChain} start`:"Add start count",setup.rows?`${setup.rows} rows`:plan.rowCount?`${plan.rowCount} rows`:"Add rows"].filter(Boolean).join(" · ");
+  return `<section class="flow-reader-panel flow-setup-panel flow-project-setup-card"><div class="section-heading compact-row"><div><p class="eyebrow">PROJECT SETUP</p><h4>Using setup</h4><p class="muted-copy">${escapeHtml(summary)}</p></div><button class="secondary-button" data-toggle-flow-setup type="button">Edit Project Setup</button></div><div id="flow-project-setup-editor" hidden>${projectSetupPanelHtml(p,{context:"flow",embedded:true})}</div></section>`;
+}
+function collectProjectSetupPanel(form){
+  const value=name=>form.querySelector(`[data-project-setup-field="${name}"]`)?.value?.trim()||"";
+  return {
+    craftType:value("craftType"),
+    craft:value("craftType"),
+    projectType:value("projectType"),
+    yarnWeight:value("yarnWeight"),
+    yarnName:value("yarnName"),
+    yarnColour:value("yarnColour"),
+    dyeLot:value("dyeLot"),
+    hookNeedle:value("hookNeedle"),
+    gauge:value("gauge"),
+    startStitches:value("startStitches"),
+    rows:value("rows"),
+    bodyMeasurementCm:value("bodyMeasurementCm"),
+    finishedWidthCm:value("finishedWidthCm"),
+    intendedEaseCm:value("intendedEaseCm"),
+    targetLengthCm:value("targetLengthCm"),
+    currentLengthCm:value("currentLengthCm"),
+    fitFeeling:value("fitFeeling"),
+    tryOnNotes:value("tryOnNotes"),
+    notes:value("notes"),
+    quantity:value("quantity"),
+    materialStatus:value("materialStatus"),
+    patternGauge:value("gauge"),
+    patternToolSize:value("hookNeedle"),
+    userToolSize:value("hookNeedle"),
+    patternYarnWeight:value("yarnWeight"),
+    userYarnWeight:value("yarnWeight"),
+    originalPatternStitches:value("startStitches"),
+    originalPatternRows:value("rows"),
+    patternWidthCm:value("finishedWidthCm"),
+    patternLengthCm:value("targetLengthCm"),
+    bodyMeasurements:{chest:value("bodyMeasurementCm")},
+    itemDetails:{width:value("finishedWidthCm"),length:value("targetLengthCm")}
+  };
+}
+function bindProjectSetupPanels(p=getProject()){
+  document.querySelectorAll("[data-project-setup-form]").forEach(form=>{
+    const status=form.querySelector("[data-project-setup-status]");
+    const save=({render=false,notify=false}={})=>{
+      applySharedProjectSetup(p,collectProjectSetupPanel(form));
+      saveProjectTouch(p);
+      if(status){status.textContent=`✓ Setup saved · ${formatSavedTime(p.setup?.updatedAt||p.updatedAt)}`;status.classList.add("saved");status.classList.remove("unsaved");}
+      if(notify)toast("Project setup saved.");
+      if(render)renderProjectDetail();
+    };
+    form.addEventListener("input",()=>save({render:false}));
+    form.addEventListener("change",()=>save({render:false}));
+    form.querySelector("[data-save-project-setup]")?.addEventListener("click",()=>save({render:true,notify:true}));
+  });
+  document.querySelector("[data-toggle-flow-setup]")?.addEventListener("click",()=>{
+    const editor=document.getElementById("flow-project-setup-editor");
+    if(!editor)return;
+    editor.hidden=!editor.hidden;
+    document.querySelector("[data-toggle-flow-setup]").textContent=editor.hidden?"Edit Project Setup":"Hide Project Setup";
+  });
 }
 const flowExampleRows={
   crochet:"sc, 2(sc, inc, sc)",
@@ -1768,14 +1949,7 @@ function yarnchaAssistantChartHtml(p){
 
 function projectProjectHtml(p){
   return `<div class="project-info-grid">
-    ${sharedProjectSetupSummaryHtml(p)}
-    ${projectFitCheckHtml(p)}
-    <div class="card mobile-card"><p class="eyebrow">MATERIALS</p><h2>Project setup</h2><div class="form-grid compact-form">
-      <div class="field full"><label>Yarn</label><input id="project-yarn" value="${escapeHtml(p.yarn)}" placeholder="Fibre, weight, colour, dye lot"></div>
-      <div class="field"><label>Needles / hooks</label><input id="project-needles" value="${escapeHtml(p.needles)}" placeholder="e.g. 4 mm circular"></div>
-      <div class="field"><label>Gauge</label><input id="project-gauge" value="${escapeHtml(p.gauge)}" placeholder="e.g. 22 sts x 30 rows"></div>
-      <div class="field full"><label>Sizing notes</label><textarea id="project-sizing" rows="4">${escapeHtml(p.sizingNotes)}</textarea></div>
-    </div></div>
+    ${projectSetupPanelHtml(p,{context:"project"})}
     ${projectToolsHtml(p)}
     ${projectToolHistoryHtml(p)}
     ${projectBuyListHtml(p)}
@@ -2129,14 +2303,12 @@ function projectToolsHtml(p) {
   currentProjectTool=selected;
   const def=categoryId==="rendering"?{id:"rendering-studio",name:"Project Rendering Studio",desc:"Visual planning before making: grid, stripes and colour pooling in one tidy workspace.",crafts:["all"]}:toolkitToolDefs.find(t=>t.id===selected)||toolOptions[0]||toolkitToolDefs[0];
   const cat=categories.find(c=>c.id===categoryId)||projectToolkitCategories[0];
-  const tabs=categoryId==="rendering"?toolsInProjectCategory(p,"rendering"):[];
-  return `<div class="project-tools card toolkit-card compact-toolkit"><div class="section-heading" style="margin:0"><div><p class="eyebrow">PROJECT TOOLKIT</p><h2>Choose a focused tool</h2><p class="muted-copy">Showing ${escapeHtml(normalizeProjectType(p.type).toLowerCase())} tools plus shared tools. Budget stays in Buy List / Budget.</p><p class="unit-preference-note">Preferred units: ${escapeHtml(unitSystemLabel())}</p><p class="shared-tool-note">Using your saved setup: ${escapeHtml(sharedSetup.projectType)} · ${escapeHtml(sharedSetup.patternGauge||"add gauge")} · ${escapeHtml(sharedPlan.widthCm?`${sharedPlan.widthCm} cm wide`:"add size")}</p></div><label class="link-toggle"><input id="link-project-tools" type="checkbox" ${linked ? "checked" : ""}> Save results to this project</label></div>
+  return `<div class="project-tools card toolkit-card compact-toolkit"><div class="section-heading" style="margin:0"><div><p class="eyebrow">PROJECT TOOLKIT</p><h2>Choose a focused tool</h2><p class="muted-copy">Showing ${escapeHtml(normalizeProjectType(p.type).toLowerCase())} tools plus shared tools. Budget stays in Buy List / Budget.</p><p class="unit-preference-note">Preferred units: ${escapeHtml(unitSystemLabel())}</p><p class="shared-tool-note">Shared setup: ${escapeHtml(sharedSetup.projectType)} · ${escapeHtml(sharedSetup.patternGauge||"add gauge")} · ${escapeHtml(sharedPlan.widthCm?`${sharedPlan.widthCm} cm wide`:"add size")}</p></div><label class="link-toggle"><input id="link-project-tools" type="checkbox" ${linked ? "checked" : ""}> Save results to this project</label></div>
     <div class="toolkit-selector-panel">
       <div class="field"><label>Category</label><select id="project-tool-category">${categories.map(c=>`<option value="${c.id}" ${c.id===categoryId?"selected":""}>${escapeHtml(c.title)}</option>`).join("")}</select><small>${escapeHtml(cat.desc)}</small></div>
       <div class="field"><label>Tool</label><select id="project-tool-picker">${toolOptions.map(t=>`<option value="${t.id}" ${(categoryId==="rendering"&&t.id==="rendering-studio")||t.id===selected?"selected":""}>${escapeHtml(t.name)}</option>`).join("")}</select><small>${escapeHtml(projectToolModeCopy(p,def))}</small></div>
       <button class="secondary-button" id="open-selected-project-tool">Open Tool</button>
     </div>
-    ${categoryId==="rendering"?`<div class="studio-tabs" aria-label="Project Rendering Studio tabs">${tabs.map(t=>`<button class="pill-tab ${selected===t.id?"active":""}" data-rendering-tab="${t.id}">${escapeHtml(t.name.replace(" Generator","").replace(" Planner", ""))}</button>`).join("")}</div>`:""}
     <div class="selected-tool-summary"><span class="craft-pill">${escapeHtml(categoryId==="rendering"?"Shared":toolCraftLabel(def))}</span><div><h3>${escapeHtml(categoryId==="rendering"?"Project Rendering Studio":def.name)}</h3><p>${escapeHtml(projectToolModeCopy(p,def))}</p></div></div>
     <div id="project-tool-content">${projectToolContent(p,selected)}</div></div>`;
 }
@@ -2666,6 +2838,7 @@ function bindProjectDetail() {
   document.getElementById("add-analysis-row")?.addEventListener("click",()=>openChartRowModal());
   document.getElementById("run-cloud-analysis-local")?.addEventListener("click",()=>{const button=document.getElementById("run-cloud-analysis");if(button)button.click();else document.getElementById("run-flow-recognition")?.click();});
   document.getElementById("review-chart-cells-local")?.addEventListener("click",()=>{const button=document.getElementById("load-cloud-cells");if(button)button.click();else openChartLegendModal();});
+  bindProjectSetupPanels(p);
   bindFlowModeReader(p);
   document.getElementById("generate-final-pattern")?.addEventListener("click",generateFinalPattern);
   document.getElementById("review-pattern-source")?.addEventListener("click",()=>openPatternSourceReviewModal(p.patternSource?.originalFileBlobId||p.activeChartAssetId));
@@ -2746,7 +2919,6 @@ function bindProjectDetail() {
   document.getElementById("undo-annotation")?.addEventListener("click",undoAnnotation);
   document.getElementById("redo-annotation")?.addEventListener("click",redoAnnotation);
   document.getElementById("clear-annotations")?.addEventListener("click",()=>{pushAnnotationHistory(p);p.annotations=[];p.annotationRedo=[];saveProjectTouch(p);renderProjectDetail();});
-  ["project-yarn","project-needles","project-gauge","project-sizing"].forEach(id=>document.getElementById(id)?.addEventListener("input",e=>{const key={ "project-yarn":"yarn","project-needles":"needles","project-gauge":"gauge","project-sizing":"sizingNotes"}[id];p[key]=e.target.value;saveProjectTouch(p);}));
 }
 function bindYarnchaAssistant(p=getProject()){
   if(!document.querySelector(".yarncha-assistant-panel"))return;
@@ -2811,6 +2983,15 @@ function saveProjectFitCheck(){
     notes:value("fit-notes"),
     updatedAt:new Date().toISOString()
   };
+  applySharedProjectSetup(p,{
+    bodyMeasurementCm:p.fitCheck.bodyChest,
+    finishedWidthCm:p.fitCheck.finishedChest,
+    intendedEaseCm:p.fitCheck.intendedEase,
+    targetLengthCm:p.fitCheck.targetLength,
+    currentLengthCm:p.fitCheck.currentLength,
+    fitFeeling:p.fitCheck.feeling,
+    tryOnNotes:p.fitCheck.notes
+  });
   saveProjectTouch(p);
   renderProjectDetail();
   toast("Fit Check saved.");
@@ -2868,29 +3049,9 @@ function bindFlowModeReader(p){
     updatedAt:new Date().toISOString()
   },p);
   const saveFlowSetup=({render=true}={})=>{
-    const setup=setupForm();
-    p.projectSetup=setup;
-    p.type=setup.craft;
-    p.projectKind=setup.projectType;
-    p.gauge=setup.patternGauge;
-    p.needles=setup.userToolSize||setup.patternToolSize;
-    p.yarn=setup.userYarnWeight||setup.patternYarnWeight;
+    const sharedForm=document.querySelector('[data-project-setup-form="flow"]');
+    const setup=sharedForm?applySharedProjectSetup(p,collectProjectSetupPanel(sharedForm)):applySharedProjectSetup(p,setupForm());
     p.size=isGarmentProject(setup.projectType)?(setup.desiredSize==="Custom"?(setup.customSize||"Custom"):setup.desiredSize):setup.projectType;
-    p.sizingNotes=isGarmentProject(setup.projectType)?(setup.customSize||p.size||""):`${setup.projectType} setup saved`;
-    p.projectCalculations=calculateFlowProjectPlan(p,setup);
-    const simpleSetup={
-      craft:setup.craft,
-      patternGauge:setup.patternGauge,
-      stitchCount:p.projectCalculations.stitchCount,
-      rowCount:p.projectCalculations.rowCount,
-      width:p.projectCalculations.widthCm,
-      length:p.projectCalculations.lengthCm,
-      sleeveLength:p.projectCalculations.sleeveLengthCm,
-      bodyLength:p.projectCalculations.bodyLengthCm,
-      yarnEstimate:p.projectCalculations.estimatedYarnGrams,
-      updatedAt:new Date().toISOString()
-    };
-    p.setup=simpleSetup;
     if(p.projectCalculations?.rowCount){p.chartRows=p.chartRows||p.projectCalculations.rowCount;p.totalRows=p.totalRows||p.projectCalculations.rowCount;}
     saveProjectTouch(p);
     if(render)renderProjectDetail();
@@ -5070,7 +5231,6 @@ function renderTool(tool=currentProjectTool) {
   const search=currentToolSearch.trim().toLowerCase();
   const visible=cards.filter(t=>(currentToolCategory==="All"||toolsPageCategoryForTool(t)===currentToolCategory)&&(!search||`${t.name} ${t.desc} ${toolCraftLabel(t)} ${toolsPageCategoryForTool(t)}`.toLowerCase().includes(search)));
   const activeDef=selected==="rendering-studio"?cards.find(t=>t.id==="rendering-studio"):toolkitToolDefs.find(t=>t.id===currentProjectTool);
-  const renderingTabs=toolsInProjectCategory({type:"Mixed / Other"},"rendering");
   panel.innerHTML=`<div class="tools-page-shell">
     <div class="page-title tools-page-title"><p class="eyebrow">YARNCHA TOOLKIT</p><h1>Maker’s Toolkit</h1><p>Calculators, planners, and yarn math for knitting and crochet.</p></div>
     <section class="toolbox-browser card">
@@ -5082,7 +5242,6 @@ function renderTool(tool=currentProjectTool) {
     </section>
     <section class="toolbox-detail card">
       <div class="toolbox-detail-head"><div><p class="eyebrow">${escapeHtml(selected==="rendering-studio"?"PROJECT RENDERING":toolsPageCategoryForTool(activeDef||{}))}</p><h2>${escapeHtml(selected==="rendering-studio"?"Project Rendering Studio":activeDef?.name||"Choose a tool")}</h2><p class="muted-copy">${escapeHtml(selected==="rendering-studio"?"Grid, stripes and colour pooling share one focused studio.":activeDef?.desc||"Choose a tool to start calculating.")}</p></div><span class="craft-pill">${escapeHtml(selected==="rendering-studio"?"Shared":toolCraftLabel(activeDef||{}))}</span></div>
-      ${selected==="rendering-studio"?`<div class="studio-tabs" aria-label="Project Rendering Studio tabs">${renderingTabs.map(t=>`<button class="pill-tab ${currentProjectTool===t.id?"active":""}" data-global-rendering-tab="${t.id}">${escapeHtml(t.name.replace(" Generator","").replace(" Planner",""))}</button>`).join("")}</div>`:""}
       <input id="link-project-tools" type="checkbox" hidden>
       <div id="project-tool-content" class="tools-detail-content">${activeDef?projectToolContent(getProject(),currentProjectTool):`<div class="empty-state"><h3>Choose a tool to start calculating.</h3></div>`}</div>
     </section>
