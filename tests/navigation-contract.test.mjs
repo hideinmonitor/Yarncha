@@ -36,13 +36,16 @@ const shellClickHandlers = app.match(/document\.addEventListener\("click",handle
 assert.equal(shellClickHandlers.length, 1, "Only one app-shell click handler is registered");
 assert.doesNotMatch(app, /document\.querySelectorAll\("\.nav-item"\)\.forEach\(button => \{\s*button\.onclick/s, "Nav buttons do not use stale direct onclick handlers");
 assert.match(app, /window\.__yarnchaShellClickHandler[\s\S]*removeEventListener\("click",window\.__yarnchaShellClickHandler\)/, "Shell click handler is replaced on reload instead of leaving stale handlers");
-assert.match(app, /<button class="project-card card" type="button" data-project-id="\$\{p\.id\}" data-project="\$\{p\.id\}" aria-label="Open/, "Project cards are real buttons with stable project IDs");
+assert.match(app, /<div class="project-card card" role="button" tabindex="0" data-project-card data-project-id="\$\{p\.id\}" data-open-project="\$\{p\.id\}" aria-label="Open/, "Project cards avoid nested button-card Safari issues and keep stable project IDs");
+assert.doesNotMatch(app, /<button class="project-card card"/, "Project cards are not button cards in Safari");
 assert.doesNotMatch(app, /onclick="event\.stopPropagation\(\).*yarncha:open-project/, "Project cards do not stop the delegated app-shell click handler");
-assert.doesNotMatch(app, /function bindProjectGridNavigation/, "Project cards do not use stale direct grid onclick handlers");
-assert.doesNotMatch(app, /__yarnchaProjectCardClickHandler/, "Project cards do not use competing capture/pointer handlers");
-assert.match(app, /e\.target\.closest\("\[data-project-id\],\[data-project\]"\)/, "Project cards resolve from data-project-id");
+assert.match(app, /function bindProjectOpenControls\(root=document\)/, "Project cards have explicit Safari-safe click listeners after rendering");
+assert.match(app, /control\.addEventListener\("keydown",event=>\{[\s\S]*event\.key!=="Enter"&&event\.key!==" "/, "Project cards open with Enter or Space");
+assert.match(app, /e\.target\.closest\("\[data-open-project\],\[data-project-card\]"\)/, "Project open controls resolve from explicit project attributes");
 assert.match(app, /const innerAction=e\.target\.closest\("\[data-project-action\],a,button,input,select,textarea"\)/, "Inner project actions can avoid opening the card");
-assert.match(app, /innerAction&&innerAction!==project&&project\.contains\(innerAction\)/, "The project card itself is not blocked by the inner-action guard");
+assert.match(app, /projectOpener\.matches\("\[data-project-card\]"\)&&innerAction&&innerAction!==projectOpener&&projectOpener\.contains\(innerAction\)/, "The project card itself is not blocked by the inner-action guard");
+assert.match(app, /data-open-project="\$\{p\.id\}">Continue making/, "Continue making uses the central project opener");
+assert.match(app, /class="side-project" type="button" data-open-project="\$\{p\.id\}"/, "Sidebar projects use the central project opener");
 assert.match(app, /function stableProjectId\(project=\{\},index=0\)/, "Legacy projects missing ids receive stable local ids during load");
 assert.match(app, /function getProject\(id = currentProjectId\) \{ return state\.projects\.find\(p => String\(p\.id\) === String\(id\)\)/, "Project lookup tolerates string and numeric ids");
 assert.match(app, /function openProject\(id\)[\s\S]*state\.projects\.find\(p=>String\(p\.id\)===String\(id\)\)[\s\S]*showView\("project-detail"\)/, "Project card clicks validate the id and route to the project detail page");
@@ -52,6 +55,6 @@ assert.match(app, /queueMicrotask\(handleProjectHashRoute\)/, "Project hash rout
 assert.match(app, /console\.warn\("\[Yarncha project navigation\] Project not found"/, "Invalid project ids warn instead of silently failing");
 assert.match(app, /const showProject=openProject/, "Legacy project navigation alias still opens the project detail page");
 assert.match(css, /\.project-card:focus-visible/, "Project cards keep keyboard focus visible");
-assert.match(css, /\.project-card \{[^}]*display:block;/, "Project card buttons keep card styling");
+assert.match(css, /\.project-card \{[^}]*display:block;/, "Project cards keep card styling");
 
 console.log("Navigation contract passed");
