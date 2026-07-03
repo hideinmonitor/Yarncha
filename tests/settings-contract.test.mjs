@@ -29,7 +29,13 @@ assert.match(cloud,/email && value\.toLowerCase\(\) === email\.toLowerCase\(\)/,
 assert.match(cloud,/settings-cloud-sign-out/,"Cloud Account card exposes sign out");
 assert.doesNotMatch(cloud,/settings-cloud-migrate[\s\S]{0,260}settings-delete-account/,"Delete Account is not grouped with normal cloud sync actions");
 assert.doesNotMatch(cloud,/id="settings-cloud-account"[\s\S]{0,260}settings-delete-account/,"Cloud Account card contains no Delete Account action");
-assert.match(css,/\.settings-page-shell[^}]+grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/s,"desktop Settings uses the shared card grid");
+assert.match(app,/settings-panel-wide settings-preferences-card/,"Making preferences spans the desktop Settings content width");
+assert.match(app,/settings-panel-wide settings-backup-card/,"Projects and Backup spans the desktop Settings content width");
+assert.match(app,/settings-backup-layout/,"Projects and Backup has a dedicated desktop layout wrapper");
+assert.match(cloud,/settings-panel settings-panel-wide/,"cloud account card spans the Settings content width");
+assert.match(css,/@media \(min-width:1024px\)[\s\S]+\.view,\.topbar-inner \{ max-width:none; margin-inline:0; \}/,"desktop pages use the available width beside the sidebar");
+assert.match(css,/@media \(min-width:1024px\)[\s\S]+\.settings-page-shell \{ grid-template-columns:minmax\(0,1fr\);/,"desktop Settings uses a full-width dashboard column");
+assert.match(css,/@media \(min-width:1024px\)[\s\S]+\.settings-backup-layout \{ grid-template-columns:minmax\(0,1fr\) minmax\(300px,360px\);/,"desktop backup card uses a two-column layout");
 assert.match(css,/@media \(max-width: 900px\)[\s\S]+\.settings-page-shell[^}]+grid-template-columns:1fr/s,"Settings cards stack responsively");
 assert.match(css,/\.settings-danger-zone[^}]+border-color:color-mix\(in srgb,var\(--danger\)/,"Danger Zone has a visually distinct red border");
 assert.match(css,/\.settings-toggle-row[^}]+min-height:56px/s,"toggles exceed the 44px touch target");

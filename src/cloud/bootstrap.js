@@ -423,7 +423,7 @@ function renderSettingsSection(host) {
   accountTitle.innerHTML = `<p class="eyebrow">ACCOUNT & SYNC</p><h2>Account & Sync</h2>`;
   const section = document.createElement("section");
   section.id = "cloud-beta-settings";
-  section.className = "card mobile-card settings-panel";
+  section.className = "card mobile-card settings-panel settings-panel-wide";
   section.innerHTML = `<div class="settings-section-heading"><span class="settings-section-icon">${local().uiIcon("storage","ui-icon")}</span><div><p class="eyebrow">PRIVATE BETA CLOUD</p><h2>${cloud.user ? "Cloud account" : "Sign in and cloud backup"}</h2><p>${cloud.configured ? (cloud.user ? "Cloud sync is connected. Local drafts remain available offline." : "Create an email account to keep private projects across devices.") : "Supabase environment variables have not been configured for this build."}</p></div></div>
     <div class="settings-account-summary">
       <div><span>Email</span><strong>${cloud.user ? local().escapeHtml(email || "Yarncha user") : "Not signed in"}</strong></div>
@@ -457,7 +457,7 @@ function renderSettingsSection(host) {
   dangerTitle.innerHTML = `<p class="eyebrow">DANGER ZONE</p><h2>Danger Zone</h2>`;
   const danger = document.createElement("section");
   danger.id = "cloud-danger-zone";
-  danger.className = "card mobile-card settings-panel settings-danger-zone";
+  danger.className = "card mobile-card settings-panel settings-panel-wide settings-danger-zone";
   danger.innerHTML = `<div class="settings-section-heading"><span class="settings-section-icon danger-icon">${local().uiIcon("warning","ui-icon")}</span><div><p class="eyebrow">DANGER ZONE</p><h2>Danger Zone</h2><p>Keep permanent account actions separate from everyday sync settings.</p></div></div>
     <div class="danger-zone-copy"><strong>Delete account and cloud data</strong><p>This action cannot be undone.</p><p>Deleting your cloud account removes cloud projects, charts, generated patterns, and private storage. Local browser drafts are not deleted.</p></div>
     <div class="delete-confirmation">

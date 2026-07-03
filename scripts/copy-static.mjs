@@ -27,7 +27,7 @@ for (const file of rootAssets) {
 }
 
 const indexFile = resolve(distDir, "index.html");
-const assetVersion = "49";
+const assetVersion = "73-design-system-audit";
 const classicScripts = [
   `<script src="calculator-engine.js?v=${assetVersion}"></script>`,
   `<script src="symbol-database.js?v=${assetVersion}"></script>`,
