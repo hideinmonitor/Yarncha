@@ -28,11 +28,17 @@ function contrast(a, b) {
 }
 
 assert.equal(themePresets.length, 8, "Yarncha keeps eight theme identities");
-assert.equal(JSON.stringify(themePresets.map(theme => theme.id)), JSON.stringify(["vintage-paper","flower-blossom","sky-blessing","matcha-grove","ocean-mist","mediterranean-dream","sakura-milk","lavender-twilight"]), "theme gallery uses the requested theme set");
-assert.equal(themePresets[0].name, "Original Yarncha", "Original Yarncha is the first/default theme");
-assert.equal(themePresets[0].recommended, true, "Original Yarncha is recommended");
-assert.equal(themePresets[0].canDelete, false, "Original Yarncha cannot be deleted");
-assert.match(app, /theme:\{name:"vintage-paper"/, "starter theme defaults to Original Yarncha");
+assert.equal(JSON.stringify(themePresets.map(theme => theme.id)), JSON.stringify(["corner-of-light","flower-blossom","sky-blessing","matcha-grove","ocean-mist","mediterranean-dream","sakura-milk","lavender-twilight"]), "theme gallery uses the requested theme set");
+assert.equal(themePresets[0].name, "Corner of Light", "Corner of Light is the first/default theme");
+assert.equal(themePresets[0].badge, "Vintage", "Corner of Light uses the Vintage badge");
+assert.equal(themePresets[0].description, "Warm paper layers, earthy accents, and a grounded craft journal feel.", "Corner of Light uses the requested description");
+assert.equal(themePresets[0].primary, "#793409", "Corner of Light uses deep cocoa primary");
+assert.equal(themePresets[0].accent, "#C96C23", "Corner of Light uses burnt orange accent");
+assert.equal(themePresets[0].secondary, "#AD9E66", "Corner of Light uses dusty olive support");
+assert.equal(themePresets[0].highlight, "#FCC277", "Corner of Light uses soft amber highlight");
+assert.equal(themePresets[0].recommended, true, "Corner of Light is recommended");
+assert.equal(themePresets[0].canDelete, false, "Corner of Light cannot be deleted");
+assert.match(app, /theme:\{name:"corner-of-light"/, "starter theme defaults to Corner of Light");
 for (const theme of themePresets) {
   assert.equal("japaneseName" in theme, false, `${theme.id} is English-only in the theme system`);
   assert.ok(theme.description, `${theme.id} has a mood description`);
