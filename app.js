@@ -5,7 +5,7 @@ const BACKUP_VERSION = 2;
 const projectTypeOptions = ["Knitting","Crochet","Tunisian Crochet","Weaving","Other"];
 const projectStatusOptions = ["Planning","In progress","Paused","Finished","Frogged"];
 const themePresets=[
-  {id:"vintage-paper",name:"Original Yarncha",description:"The default calm paper theme for a warm handmade workspace.",recommended:true,canDelete:false,primary:"#6A5840",secondary:"#E5DDC7",accent:"#8B7346",background:"#F3EBDD",surface:"#FFF9ED",card:"#EFE1C8",border:"#CBB894",text:"#332B22",textSecondary:"#665A4C",button:"#6A5840",buttonText:"#FFFDF8",secondaryButton:"#E7D9BF",success:"#4F7846",warning:"#9C6215",danger:"#B2473E",highlight:"#D2A84E",link:"#6B5434",colors:{background:"#F3EBDD",surface:"#FFF9ED",surfaceSecondary:"#EFE1C8",primary:"#6A5840",primaryHover:"#574833",secondary:"#E5DDC7",accent:"#8B7346",border:"#CBB894",divider:"#E3D8C6",text:"#332B22",textSecondary:"#665A4C",success:"#4F7846",warning:"#9C6215",error:"#B2473E",chartCurrentRow:"#D2A84E",chartCompleted:"#E5DDC7",annotationPen:"#6A5840",annotationHighlight:"rgba(210,168,78,0.28)",voiceListening:"#8B7346",shadow:"rgba(51,43,34,0.08)"},dark:{background:"#15120E",surface:"#292218",card:"#342B1F",text:"#F7EFE1",textSecondary:"#D8C8AE",button:"#D0A95E",buttonText:"#11130F",secondary:"#3E3525",accent:"#B9C184",border:"#5B4C35",success:"#A4D08F",warning:"#E8B256",danger:"#FF8E84",highlight:"#E8C878",link:"#E8C878"}},
+  {id:"corner-of-light",name:"Corner of Light",badge:"Vintage",description:"Warm paper layers, earthy accents, and a grounded craft journal feel.",recommended:true,canDelete:false,primary:"#793409",secondary:"#AD9E66",accent:"#C96C23",background:"#F6EAD7",surface:"#FFF7E7",card:"#EFE2C1",border:"#717678",text:"#332211",textSecondary:"#5D6264",button:"#793409",buttonText:"#FFF8EA",secondaryButton:"#E7D9B8",success:"#6F7A3E",warning:"#C96C23",danger:"#A54824",highlight:"#FCC277",link:"#793409",colors:{background:"#F6EAD7",surface:"#FFF7E7",surfaceSecondary:"#EFE2C1",primary:"#793409",primaryHover:"#5F2807",secondary:"#AD9E66",accent:"#C96C23",accentSoft:"#FCC277",border:"#717678",divider:"#DCCB9F",text:"#332211",textSecondary:"#5D6264",success:"#6F7A3E",warning:"#C96C23",error:"#A54824",chartCurrentRow:"#FCC277",chartCompleted:"#E8D9B7",annotationPen:"#793409",annotationHighlight:"rgba(252,194,119,0.32)",voiceListening:"#C96C23",shadow:"rgba(121,52,9,0.10)"},dark:{background:"#1A120C",surface:"#2B1C12",card:"#352314",text:"#FFF1D7",textSecondary:"#D3C09A",button:"#FCC277",buttonText:"#241407",secondary:"#4B3D24",accent:"#C96C23",border:"#6F5730",success:"#B2B978",warning:"#FCC277",danger:"#E28A62",highlight:"#FCC277",link:"#FCC277"}},
   {id:"flower-blossom",name:"Flower Blossom",description:"Soft spring flowers with warm peach accents.",primary:"#958F42",secondary:"#EEBB9A",accent:"#FB9547",background:"#EBE6D9",surface:"#FFF9F2",card:"#F7EFE4",border:"#D8CDBE",text:"#3D372C",textSecondary:"#726A5E",button:"#958F42",buttonText:"#2A241C",secondaryButton:"#F7EFE4",success:"#8CA04D",warning:"#FB9547",danger:"#C96E72",highlight:"#DD8687",link:"#6F692D",colors:{background:"#EBE6D9",surface:"#FFF9F2",surfaceSecondary:"#F7EFE4",primary:"#958F42",primaryHover:"#7F7937",secondary:"#EEBB9A",accent:"#FB9547",border:"#D8CDBE",divider:"#E9E0D4",text:"#3D372C",textSecondary:"#726A5E",success:"#8CA04D",warning:"#FB9547",error:"#C96E72",chartCurrentRow:"#DD8687",chartCompleted:"#EEC8A8",annotationPen:"#958F42",annotationHighlight:"rgba(251,149,71,0.28)",voiceListening:"#FB9547",shadow:"rgba(61,55,44,0.08)"},dark:{background:"#17150F",surface:"#2B261D",card:"#352D22",text:"#F8F1E7",textSecondary:"#D8CCBD",button:"#D7D06C",buttonText:"#18150E",secondary:"#483628",accent:"#FFB172",border:"#5E4F3C",success:"#B8CD74",warning:"#FFB172",danger:"#FF9699",highlight:"#F2A4A5",link:"#FFD8A8"}},
   {id:"sky-blessing",name:"Sky Blessing",description:"Clear sky, soft mint, and golden sunshine for a fresh calm workspace.",tags:["fresh","green","yellow","soft","airy"],primary:"#404930",secondary:"#BDD3D0",accent:"#BD962F",background:"#F7FAF7",surface:"#FFFFFF",card:"#F1F5F1",border:"#D8DED6",text:"#2F3528",textSecondary:"#66705F",button:"#404930",buttonText:"#FFFFFF",secondaryButton:"#F1F5F1",success:"#5E7046",warning:"#BD962F",danger:"#B94A48",highlight:"#BDD3D0",link:"#404930",colors:{background:"#F7FAF7",surface:"#FFFFFF",surfaceSecondary:"#F1F5F1",primary:"#404930",primaryHover:"#313927",secondary:"#BDD3D0",accent:"#BD962F",accentSoft:"#EFD36D",border:"#D8DED6",divider:"#E8EDE6",text:"#2F3528",textSecondary:"#66705F",success:"#5E7046",warning:"#BD962F",error:"#B94A48",chartCurrentRow:"#BDD3D0",chartCompleted:"#EFD36D",annotationPen:"#404930",annotationHighlight:"rgba(239, 211, 109, 0.35)",voiceListening:"#BD962F",shadow:"rgba(47, 53, 40, 0.08)"},dark:{background:"#101510",surface:"#202A22",card:"#2A352C",text:"#F4FAF4",textSecondary:"#CAD8C8",button:"#BFD8C9",buttonText:"#11130F",secondary:"#31423E",accent:"#E4C15E",border:"#4A5D4D",success:"#9FBD81",warning:"#E4C15E",danger:"#FF8E8C",highlight:"#CFE6E1",link:"#EFD36D"}},
   {id:"matcha-grove",name:"Matcha Grove",description:"Quiet green shade with ink-like contrast.",primary:"#121810",secondary:"#3B5131",accent:"#768572",background:"#F3F2EF",surface:"#FFFFFF",card:"#ECEBE7",border:"#CFCFC8",text:"#1E241C",textSecondary:"#596255",button:"#121810",buttonText:"#FFFDF8",secondaryButton:"#ECEBE7",success:"#4E6943",warning:"#A08F54",danger:"#9A6767",highlight:"#768572",link:"#30482A",colors:{background:"#F3F2EF",surface:"#FFFFFF",surfaceSecondary:"#ECEBE7",primary:"#121810",primaryHover:"#0C100B",secondary:"#3B5131",accent:"#768572",border:"#CFCFC8",divider:"#E3E3DD",text:"#1E241C",textSecondary:"#596255",success:"#4E6943",warning:"#A08F54",error:"#9A6767",chartCurrentRow:"#768572",chartCompleted:"#BCBFB1",annotationPen:"#3B5131",annotationHighlight:"rgba(118,133,114,0.25)",voiceListening:"#3B5131",shadow:"rgba(18,24,16,0.08)"},dark:{background:"#0E120D",surface:"#1C2518",card:"#263020",text:"#F4F6EF",textSecondary:"#CBD4C4",button:"#B4C0A8",buttonText:"#11130F",secondary:"#304427",accent:"#94A58E",border:"#465740",success:"#8FB37E",warning:"#CDBA77",danger:"#D58D8D",highlight:"#94A58E",link:"#C8D7BC"}},
@@ -15,10 +15,10 @@ const themePresets=[
   {id:"lavender-twilight",name:"Lavender Twilight",description:"Dusky lavender with quiet blush and evening ink.",primary:"#4D516D",secondary:"#A8868C",accent:"#B5A4B4",background:"#FAF8FA",surface:"#FFFFFF",card:"#F4F1F4",border:"#DED9DD",text:"#3A3D4F",textSecondary:"#6F6A72",button:"#4D516D",buttonText:"#FFFDF8",secondaryButton:"#F4F1F4",success:"#8D8AA4",warning:"#C5A38E",danger:"#B06E83",highlight:"#B5A4B4",link:"#4D516D",colors:{background:"#FAF8FA",surface:"#FFFFFF",surfaceSecondary:"#F4F1F4",primary:"#4D516D",primaryHover:"#3F435B",secondary:"#A8868C",accent:"#B5A4B4",border:"#DED9DD",divider:"#ECE8EC",text:"#3A3D4F",textSecondary:"#6F6A72",success:"#8D8AA4",warning:"#C5A38E",error:"#B06E83",chartCurrentRow:"#B5A4B4",chartCompleted:"#DDDAD5",annotationPen:"#4D516D",annotationHighlight:"rgba(181,164,180,0.28)",voiceListening:"#4D516D",shadow:"rgba(58,61,79,0.08)"},dark:{background:"#11121A",surface:"#222433",card:"#2D3042",text:"#F3F1FA",textSecondary:"#D2CEDD",button:"#AEB6E3",buttonText:"#11130F",secondary:"#4A363E",accent:"#CFBBD0",border:"#55586F",success:"#B8B5D4",warning:"#DDBCA5",danger:"#D890A4",highlight:"#CFBBD0",link:"#CCD3FF"}}
 ];
 const designStyles=[
-  {id:"original-classic",name:"Original Classic",desc:"Balanced Yarncha look with soft cards and familiar controls."},
-  {id:"korean-soft",name:"Korean Soft",desc:"Rounded airy cards, soft spacing and gentle interface edges."},
-  {id:"minimal-clean",name:"Minimal Clean",desc:"Crisp spacing, simple cards and almost no decoration."},
-  {id:"artsy-journal",name:"Artsy Journal",desc:"Scrapbook-like texture, expressive cards and a creative desk feeling."}
+  {id:"original-classic",name:"Yarncha Default",tag:"Recommended",desc:"Balanced, calm, premium handmade base."},
+  {id:"warm-cozy",name:"Warm Cozy",tag:"Cozy",desc:"Soft, rounded, relaxed handmade workspace."},
+  {id:"modern-atelier",name:"Modern Atelier",tag:"Studio",desc:"Structured, calm, and studio-inspired."},
+  {id:"artsy-journal",name:"Artsy Journal",tag:"Creative",desc:"Creative, personal, and notebook-like."}
 ];
 const ideaCraftOptions=["Knitting","Crochet","Tunisian Crochet","Mixed / Other"];
 const ideaKindOptions=["Blanket","Sweater","Hat / beanie","Scarf","Socks pair","Amigurumi","Shawl","Gloves pair","Cardigan","Bag","Homeware","Custom idea"];
@@ -59,7 +59,7 @@ const starterData = {
   language:"en",
   unitSystem:"metric",
   appPreferences:{notifications:false,voice:true},
-  theme:{name:"vintage-paper",style:"original-classic",mode:"system"},
+  theme:{name:"corner-of-light",style:"original-classic",mode:"system"},
   onboardingComplete:false,
   onboardingStep:0,
   aiAccessConfirmed:false,
@@ -108,10 +108,13 @@ async function dataUrlToBlob(dataUrl){
   return response.blob();
 }
 function normalizeThemeName(name){
-  return { "soft-yarn":"vintage-paper", "creamy-vanilla":"vintage-paper", "cocoa-beige":"vintage-paper", sakura:"sakura-milk", forest:"matcha-grove", "matcha-latte":"matcha-grove", "peach-apricot":"sky-blessing", "soft-lavender":"lavender-twilight" }[name] || (themePresets.some(t=>t.id===name)?name:"vintage-paper");
+  const key=String(name||"").trim().toLowerCase();
+  if(key.includes("corner-of-light")||key.includes("corner of light")||key.includes("vintage-paper"))return "corner-of-light";
+  return { "soft-yarn":"corner-of-light", "creamy-vanilla":"corner-of-light", "cocoa-beige":"corner-of-light", sakura:"sakura-milk", forest:"matcha-grove", "matcha-latte":"matcha-grove", "peach-apricot":"sky-blessing", "soft-lavender":"lavender-twilight" }[key] || (themePresets.some(t=>t.id===key)?key:"corner-of-light");
 }
 function normalizeDesignStyle(style){
-  return designStyles.some(s=>s.id===style)?style:"original-classic";
+  const migrated={ "minimal-clean":"modern-atelier", "korean-soft":"original-classic", "classic-elegant":"original-classic", "corner-of-light":"original-classic", "corner-of-light-vintage-paper":"original-classic" }[style] || style;
+  return designStyles.some(s=>s.id===migrated)?migrated:"original-classic";
 }
 function normalizeProjectIdea(idea={}){
   const payload=idea.calculatorValues || idea.savedCalculatorResults?.[0] || null;
@@ -232,7 +235,12 @@ function loadState() {
     merged.language = saved.language || "en";
     merged.unitSystem = saved.unitSystem || "metric";
     merged.appPreferences = {...starterData.appPreferences,...(saved.appPreferences||{})};
-    merged.theme = {...structuredClone(starterData.theme), ...(saved.theme || {})};
+    const savedTheme = saved.theme || {};
+    merged.theme = {
+      name: savedTheme.name || starterData.theme.name,
+      style: savedTheme.style || starterData.theme.style,
+      mode: savedTheme.mode || starterData.theme.mode
+    };
     merged.theme.name = normalizeThemeName(merged.theme.name);
     merged.theme.style = normalizeDesignStyle(merged.theme.style);
     merged.theme.mode = ["light","dark","system"].includes(merged.theme.mode) ? merged.theme.mode : "system";
@@ -718,11 +726,20 @@ function themeGalleryCardHtml(t,activeTheme,index=0){
   return `<article class="theme-preview-card ${active?"active":""}" data-theme-card="${t.id}" role="button" tabindex="0" aria-pressed="${active}" aria-label="Choose ${escapeHtml(t.name)} theme" style="--preview-primary:${t.primary};--preview-secondary:${t.secondary};--preview-accent:${t.accent};--preview-bg:${t.background};--preview-card:${t.card};--preview-surface:${t.surface};--preview-text:${t.text};--preview-button:${t.button};--preview-button-text:${t.buttonText};--preview-highlight:${t.highlight};">
     <div class="theme-card-meta"><span class="theme-number">Theme ${String(index+1).padStart(2,"0")}</span>${active?`<span class="theme-active-badge" aria-label="Current Theme">✓ Active</span>`:""}</div>
     <div class="theme-preview-surface" aria-hidden="true"><i></i><b></b><em></em><span></span><strong></strong></div>
-    <div class="theme-card-copy"><h4>${escapeHtml(t.name)}${t.recommended?` <small>Default</small>`:""}</h4><p>${escapeHtml(t.description)}</p></div>
+    <div class="theme-card-copy"><h4>${escapeHtml(t.name)}${t.badge?` <small>${escapeHtml(t.badge)}</small>`:(t.recommended?` <small>Default</small>`:"")}</h4><p>${escapeHtml(t.description)}</p></div>
     <div class="swatch-row" aria-hidden="true">${swatches.map(color=>`<em style="background:${color}"></em>`).join("")}</div>
   </article>`;
 }
 function styleLabel(s){return designStyles.find(style=>style.id===normalizeDesignStyle(s))?.name||s;}
+function designStyleCardHtml(style,activeStyle){
+  const active=activeStyle===style.id;
+  return `<button class="style-preview-card ${escapeHtml(style.id)} ${active?"active":""}" data-style-name="${escapeHtml(style.id)}" type="button" aria-pressed="${active}">
+    <span class="style-card-top"><span><strong>${escapeHtml(style.name)}</strong></span><small>${escapeHtml(style.tag)}</small></span>
+    <span class="style-sample ${escapeHtml(style.id)}" aria-hidden="true"><i></i><b></b><em></em><span></span><strong>Row 12</strong></span>
+    <span class="style-card-copy">${escapeHtml(style.desc)}</span>
+    ${active?`<span class="theme-active-badge" aria-label="Current Design Style">✓ Selected</span>`:""}
+  </button>`;
+}
 
 function rowHighlightTop(p) { return `${p.chartRows ? Math.min(92, Math.max(0, (p.row / p.chartRows) * 92)) : 0}%`; }
 function chartAnalysisHtml(p){
@@ -2383,7 +2400,7 @@ function renderSettings(){
         <div class="appearance-heading"><h3>Mode</h3><span class="muted-copy">System follows your device setting.</span></div>
         <div class="theme-grid mode-grid">${["light","dark","system"].map(m=>`<button class="theme-choice ${state.theme.mode===m?"active":""}" data-theme-mode="${m}">${m}</button>`).join("")}</div>
         <div class="appearance-heading"><h3>Design style</h3><span class="muted-copy">Style affects spacing, card shape, shadows, texture and overall feel.</span></div>
-        <div class="appearance-grid style-preview-grid">${designStyles.map(s=>`<button class="style-preview-card ${activeStyle===s.id?"active":""}" data-style-name="${s.id}"><span class="style-sample ${s.id}"><i></i><i></i><i></i></span><strong>${escapeHtml(s.name)}</strong><small>${escapeHtml(s.desc)}</small></button>`).join("")}</div>
+        <div class="appearance-grid style-preview-grid">${designStyles.map(s=>designStyleCardHtml(s,activeStyle)).join("")}</div>
         <div class="settings-divider"></div><div class="settings-form-row"><div><strong>Language</strong><p>Choose the language used across Yarncha.</p></div><select id="settings-language" aria-label="App language"><option value="en" ${state.language==="en"?"selected":""}>English</option><option value="zh-HK" ${state.language==="zh-HK"?"selected":""}>繁體中文（香港）</option></select></div>
       </section>
       <section class="card mobile-card settings-panel"><div class="settings-section-heading"><span class="settings-section-icon">${uiIcon("preferences","ui-icon")}</span><div><p class="eyebrow">APP PREFERENCES</p><h2>Making preferences</h2><p>Set the defaults Yarncha uses while you work.</p></div></div><div class="settings-form-row settings-form-row-stack"><div><strong>Preferred units</strong><p>Calculators use this system by default.</p></div><div class="theme-grid mode-grid"><button class="theme-choice ${state.unitSystem!=="imperial"?"active":""}" data-unit-system="metric">UK / Metric<br><small>cm · mm · metres · grams</small></button><button class="theme-choice ${state.unitSystem==="imperial"?"active":""}" data-unit-system="imperial">US / Imperial<br><small>inches · yards · ounces</small></button></div></div><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Voice controls</strong><small>Allow hands-free row and note commands.</small></span><input type="checkbox" id="settings-voice" ${preferences.voice!==false?"checked":""}><i aria-hidden="true"></i></label><div class="settings-divider"></div><label class="settings-toggle-row"><span><strong>Notification prompts</strong><small>Remember whether Yarncha may offer browser reminders later.</small></span><input type="checkbox" id="settings-notifications" ${preferences.notifications?"checked":""}><i aria-hidden="true"></i></label></section>
