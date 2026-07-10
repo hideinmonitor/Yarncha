@@ -672,6 +672,20 @@ function normalizeProjectRecord(p={},index=0){
   return {...normalized,projectCalculations:calculateFlowProjectPlan(normalized,normalized.projectSetup)};
 }
 
+function hasMeaningfulSavedWorkspaceData(saved={}){
+  const nonEmptyArrays=[
+    "projects","inventory","purchaseHistory","cart","techniqueKnowledge","projectIdeas",
+    "symbolFavorites","symbolLearningLibrary","libraryBookmarks","libraryRecentlyViewed","libraryProjectChecklist","libraryReports"
+  ];
+  if(nonEmptyArrays.some(key=>Array.isArray(saved[key])&&saved[key].length>0))return true;
+  if(Array.isArray(saved.librarySections)&&saved.librarySections.some(section=>Array.isArray(section?.items)&&section.items.length>0))return true;
+  if(saved.libraryEntryNotes&&Object.keys(saved.libraryEntryNotes).length>0)return true;
+  if(saved.libraryPathProgress&&Object.keys(saved.libraryPathProgress).length>0)return true;
+  if(saved.userTechniqueReferences&&Object.keys(saved.userTechniqueReferences).length>0)return true;
+  if(saved.userSymbolsOverride&&Object.keys(saved.userSymbolsOverride).length>0)return true;
+  return false;
+}
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
@@ -707,11 +721,8 @@ function loadState() {
     merged.theme.name = normalizeThemeName(merged.theme.name);
     merged.theme.style = normalizeDesignStyle(merged.theme.style);
     merged.theme.mode = ["light","dark","system"].includes(merged.theme.mode) ? merged.theme.mode : "system";
-    const hasSavedProjects = Array.isArray(saved.projects) && saved.projects.length > 0;
-    const hasSavedLibrary = Array.isArray(saved.librarySections) && saved.librarySections.length > 0;
-    const hasSavedInventory = Array.isArray(saved.inventory) && saved.inventory.length > 0;
-    const isExistingSavedWorkspace = hasSavedProjects || hasSavedLibrary || hasSavedInventory || !!saved.lastSavedAt || Number(saved.schemaVersion) > 0;
-    merged.onboardingComplete = typeof saved.onboardingComplete === "boolean" ? saved.onboardingComplete : isExistingSavedWorkspace;
+    const isExistingSavedWorkspace = hasMeaningfulSavedWorkspaceData(saved);
+    merged.onboardingComplete = saved.onboardingComplete === true || isExistingSavedWorkspace;
     merged.onboardingStep = Number(saved.onboardingStep) || 0;
     merged.account = saved.account || structuredClone(starterData.account);
     merged.yarnMaterials = saved.yarnMaterials?.length ? saved.yarnMaterials : defaultYarnMaterials();
@@ -734,7 +745,31 @@ function loadState() {
     if(!merged.projects.some(p=>String(p.id)===String(merged.activeProjectId)))merged.activeProjectId=merged.projects[0]?.id||null;
     return merged;
   }
-  catch { return structuredClone(starterData); }
+  catch(error) {
+    const details=navigationErrorDetails(error);
+    console.error(`[Yarncha state] Load failed: ${details.message}\n${details.stack}`);
+    const fallback=structuredClone(starterData);
+    fallback.projects=fallback.projects.map((project,index)=>({
+      ...project,
+      id:stableProjectId(project,index),
+      activeTab:"track",
+      subCounters:Array.isArray(project.subCounters)?project.subCounters:[],
+      repeatRules:Array.isArray(project.repeatRules)?project.repeatRules:[],
+      rowReminders:Array.isArray(project.rowReminders)?project.rowReminders:[],
+      markers:Array.isArray(project.markers)?project.markers:[],
+      assistantMessages:Array.isArray(project.assistantMessages)?project.assistantMessages:[],
+      attachments:Array.isArray(project.attachments)?project.attachments:[],
+      annotations:Array.isArray(project.annotations)?project.annotations:[],
+      annotationHistory:Array.isArray(project.annotationHistory)?project.annotationHistory:[],
+      annotationRedo:Array.isArray(project.annotationRedo)?project.annotationRedo:[],
+      buyList:Array.isArray(project.buyList)?project.buyList:[],
+      projectTools:project.projectTools||{},
+      yarnchaAssistant:project.yarnchaAssistant||{},
+      patternPlan:project.patternPlan||{mode:"modified"},
+      chartReader:project.chartReader||{}
+    }));
+    return fallback;
+  }
 }
 let saveDebounceTimer=null;
 let saveDirty=false;
@@ -923,6 +958,9 @@ function navigationDebugLog(clickedPageId,before,after,component){
   const isLocal=["localhost","127.0.0.1",""].includes(location.hostname);
   if(isLocal)console.debug("[Yarncha navigation]",{clickedPageId,activePageBefore:before,activePageAfter:after,renderedComponent:component});
 }
+function navigationErrorDetails(error){
+  return {message:error?.message||String(error),stack:error?.stack||"No stack available"};
+}
 
 function routeForPage(pageId){
   const routes={
@@ -968,7 +1006,8 @@ async function showView(name) {
     navigationDebugLog(requested,before,activePage,renderedComponent);
     queueMicrotask(applyLanguage);
   }catch(error){
-    console.error("[Yarncha navigation] Render failed", {requested,before,component:route.component,error});
+    const details=navigationErrorDetails(error);
+    console.error(`[Yarncha navigation] Render failed: ${details.message}`, {requested,before,component:route.component,stack:details.stack});
     toast(`${route.label || "This section"} could not open. Please try again.`);
   }
 }
@@ -996,6 +1035,22 @@ function handleAppShellClick(e){
 if(window.__yarnchaShellClickHandler)document.removeEventListener("click",window.__yarnchaShellClickHandler);
 window.__yarnchaShellClickHandler=handleAppShellClick;
 document.addEventListener("click",handleAppShellClick);
+function bindDirectNavigation(control,action,diagnostic){
+  if(!control||control.dataset.directNavigationBound)return;
+  control.dataset.directNavigationBound="true";
+  control.addEventListener("click",event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    try{
+      Promise.resolve(action()).catch(error=>console.error("[Yarncha navigation] Direct click failed",{diagnostic,...navigationErrorDetails(error)}));
+    }catch(error){
+      console.error("[Yarncha navigation] Direct click failed",{diagnostic,...navigationErrorDetails(error)});
+    }
+  });
+}
+function bindPrimaryShellNavigation(){
+  bindDirectNavigation(document.querySelector('.nav-item[data-view="tools"]'),()=>showView("tools"),"Tools navigation");
+}
 function handleProjectHashRoute(){
   const match=location.hash.match(/^#project-(.+)$/);
   if(match)openProject(decodeURIComponent(match[1]));
@@ -1048,6 +1103,7 @@ function renderToday() {
       <button class="primary-button" data-project="${p.id}">Continue making →</button>
     </div>
   </article>`;
+  bindDirectNavigation(host.querySelector('[data-project]'),()=>openProject(p.id),'Today "Continue making"');
   hydrateProjectCovers();
 }
 
@@ -2259,8 +2315,8 @@ function chartSubCountersHtml(p){
     </div>
   </details>`;
 }
-function normalizeRowReminderVoice(settings={}){
-  return {speed:Math.max(.6,Math.min(1.5,Number(settings.speed)||1)),language:settings.language||state.language||"en",volume:Math.max(0,Math.min(1,Number(settings.volume??1)))};
+function normalizeRowReminderVoice(settings={},fallbackLanguage="en"){
+  return {speed:Math.max(.6,Math.min(1.5,Number(settings.speed)||1)),language:settings.language||fallbackLanguage,volume:Math.max(0,Math.min(1,Number(settings.volume??1)))};
 }
 function normalizeRowReminder(reminder={},index=0){
   const every=Math.max(1,Math.round(Number(reminder.every)||Number(reminder.interval)||1));
@@ -2306,7 +2362,7 @@ function triggerRowReminders(p=getProject(),row=p?.row){
   if(navigator.vibrate)navigator.vibrate([80,40,80]);
 }
 function readRowReminderAloud(p,reminder){
-  const settings=normalizeRowReminderVoice(p.rowReminderVoice);
+  const settings=normalizeRowReminderVoice(p.rowReminderVoice,state.language);
   speak(reminder.message,{rate:settings.speed,lang:settings.language==="yue"?"yue-Hant-HK":settings.language==="zh-Hant"?"zh-Hant-HK":"en-AU",volume:settings.volume});
 }
 function activeRowReminderHtml(p){
@@ -2319,7 +2375,7 @@ function rowReminderHtml(reminder){
   return `<article class="row-reminder-card ${r.paused?"paused":""}"><div><strong>${escapeHtml(r.name)}</strong><p>${escapeHtml(r.message)}</p><small>Every ${r.every} rows · starts row ${r.startRow}${r.endRow?` · ends row ${r.endRow}`:""} · ${r.voice?"Voice on":"Voice off"} · ${r.visual?"Visual on":"Visual off"} · ${r.repeat?"Repeats":"Once"}</small></div><div class="row-reminder-actions"><button class="mini-button button-secondary" data-test-reminder="${r.id}">Test voice</button><button class="mini-button button-ghost" data-toggle-reminder="${r.id}">${r.paused?"Resume":"Pause"}</button><details class="overflow-menu row-reminder-more"><summary class="button-icon reminder-menu-button reminder-overflow-button row-reminder-menu" aria-label="More reminder actions">⋮</summary><div><button class="button-ghost" data-edit-reminder="${r.id}">Edit</button><button class="danger-button" data-delete-reminder="${r.id}">Delete</button></div></details></div></article>`;
 }
 function rowRemindersPanelHtml(p){
-  const reminders=(p.rowReminders||[]).map(normalizeRowReminder),voice=normalizeRowReminderVoice(p.rowReminderVoice);
+  const reminders=(p.rowReminders||[]).map(normalizeRowReminder),voice=normalizeRowReminderVoice(p.rowReminderVoice,state.language);
   return `<div class="card mobile-card row-reminders-card"><div class="card-header"><div><h3>Row Reminders</h3><p class="muted-copy">Get a gentle visual or voice cue every few rows.</p></div><button class="mini-button button-secondary" id="add-row-reminder">+ Add reminder</button></div>
     <div class="flow-reading-controls row-reminder-voice-settings">
       <label>Reminder speed <input id="row-reminder-speed" type="range" min=".6" max="1.5" step=".05" value="${voice.speed}"><span>${voice.speed.toFixed(2)}x</span></label>
@@ -2890,7 +2946,8 @@ function activateProjectTab(tabId,p=getProject()){
   try{
     renderProjectDetail();
   }catch(error){
-    console.error("[Yarncha project tabs] Render failed", {tabId,projectId:p.id,error});
+    const details=navigationErrorDetails(error);
+    console.error(`[Yarncha project tabs] Render failed: ${details.message}\n${details.stack}`, {tabId,projectId:p.id});
     const host=document.querySelector(".project-tab-panel");
     if(host){
       host.innerHTML=tabId==="assistant"
@@ -2902,13 +2959,7 @@ function activateProjectTab(tabId,p=getProject()){
 }
 function bindProjectDetail() {
   const p = getProject();
-  document.querySelector(".project-tabs")?.addEventListener("click",event=>{
-    const button=event.target.closest("[data-project-tab]");
-    if(!button)return;
-    event.preventDefault();
-    activateProjectTab(button.dataset.projectTab,p);
-  });
-  document.querySelectorAll("[data-project-tab]").forEach(b => b.onclick = event => { event?.preventDefault?.(); event?.stopPropagation?.(); activateProjectTab(b.dataset.projectTab,p); });
+  document.querySelectorAll("[data-project-tab]").forEach(button=>bindDirectNavigation(button,()=>activateProjectTab(button.dataset.projectTab,p),`Project ${button.dataset.projectTab} tab`));
   document.querySelectorAll("[data-counter]").forEach(b => b.onclick = () => changeMainCounter(Number(b.dataset.counter)));
   document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => {
     const s = p.subCounters.find(x => x.id === b.dataset.sub);
@@ -6441,7 +6492,10 @@ function handleVoice(command) {
 }
 
 function maybeShowOnboarding(){
-  if(state.onboardingComplete)return;
+  if(state.onboardingComplete){
+    document.getElementById("onboarding-overlay")?.remove();
+    return;
+  }
   renderOnboarding();
 }
 function renderOnboarding(){
@@ -6539,6 +6593,7 @@ window.YarnchaLocal={
 };
 
 renderSidebar();
+bindPrimaryShellNavigation();
 renderToday();
 setActiveView("today");
 renderLibrary();
