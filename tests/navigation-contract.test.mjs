@@ -26,8 +26,13 @@ for (const tabId of ["track", "chart", "project", "assistant"]) {
 assert.match(app, /function routeForPage\(pageId\)/, "Navigation uses stable page IDs through routeForPage");
 assert.match(app, /function setActiveView\(viewId\)/, "Navigation switches the rendered view centrally");
 assert.match(app, /toggleAttribute\("hidden", !isActive\)/, "Inactive views are hidden so Today cannot remain visible");
+assert.match(app, /typeof saved\.onboardingComplete === "boolean" \? saved\.onboardingComplete : isExistingSavedWorkspace/, "Legacy saved workspaces without onboardingComplete do not get blocked by onboarding");
+assert.match(app, /const isExistingSavedWorkspace = hasSavedProjects \|\| hasSavedLibrary \|\| hasSavedInventory \|\| !!saved\.lastSavedAt \|\| Number\(saved\.schemaVersion\) > 0/, "Existing user state is detected before showing onboarding");
+assert.doesNotMatch(app, /merged\.onboardingComplete = !!saved\.onboardingComplete/, "Missing onboardingComplete is not coerced to false for legacy users");
+assert.match(app, /function maybeShowOnboarding\(\)[\s\S]*if\(state\.onboardingComplete\)return;[\s\S]*renderOnboarding\(\)/, "Onboarding still appears for genuinely new users");
 assert.doesNotMatch(app, /activePage = \$\{activePage\} \| renderedComponent = \$\{renderedComponent\}/, "Visible route debug text is removed");
 assert.match(app, /\[Yarncha navigation\]/, "Development navigation logging is present");
+assert.match(app, /try\{[\s\S]*route\.render\(\)[\s\S]*\}catch\(error\)\{[\s\S]*console\.error\("\[Yarncha navigation\] Render failed"/, "Navigation render failures are logged instead of failing silently");
 assert.match(css, /\.view\[hidden\] \{ display:none !important; \}/, "Hidden views cannot render over the active page");
 assert.doesNotMatch(css, /\.content-route-debug/, "Visible route debug badge styles are removed");
 assert.match(css, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/, "Mobile toolbar is exactly six sections");
@@ -36,6 +41,8 @@ const shellClickHandlers = app.match(/document\.addEventListener\("click",handle
 assert.equal(shellClickHandlers.length, 1, "Only one app-shell click handler is registered");
 assert.doesNotMatch(app, /document\.querySelectorAll\("\.nav-item"\)\.forEach\(button => \{\s*button\.onclick/s, "Nav buttons do not use stale direct onclick handlers");
 assert.match(app, /window\.__yarnchaShellClickHandler[\s\S]*removeEventListener\("click",window\.__yarnchaShellClickHandler\)/, "Shell click handler is replaced on reload instead of leaving stale handlers");
+assert.match(app, /const nav = e\.target\.closest\("\[data-view\]"\); if \(nav\) \{ e\.preventDefault\(\); showView\(nav\.dataset\.view\)\.catch/, "Sidebar navigation clicks prevent default and report failures");
+assert.match(app, /showView\("tools"\)\.then\(\(\)=>renderTool\(tool\.dataset\.tool\)\)\.catch/, "Tool shortcuts wait for the Tools page before rendering a selected tool");
 assert.match(app, /<button class="project-card card" type="button" data-project-id="\$\{p\.id\}" data-project="\$\{p\.id\}" aria-label="Open/, "Project cards are real buttons with stable project IDs");
 assert.doesNotMatch(app, /onclick="event\.stopPropagation\(\).*yarncha:open-project/, "Project cards do not stop the delegated app-shell click handler");
 assert.doesNotMatch(app, /function bindProjectGridNavigation/, "Project cards do not use stale direct grid onclick handlers");
@@ -54,6 +61,11 @@ assert.match(app, /window\.addEventListener\("hashchange",window\.__yarnchaHashP
 assert.match(app, /queueMicrotask\(handleProjectHashRoute\)/, "Project hash route fallback runs on initial load");
 assert.match(app, /console\.warn\("\[Yarncha project navigation\] Project not found"/, "Invalid project ids warn instead of silently failing");
 assert.match(app, /const showProject=openProject/, "Legacy project navigation alias still opens the project detail page");
+assert.match(app, /function activateProjectTab\(tabId,p=getProject\(\)\)/, "Project tabs use a central activation function");
+assert.match(app, /const validTabs=\["track","chart","project","assistant"\]/, "Project tab activation accepts Track, Chart, Project, and Assistant");
+assert.match(app, /console\.error\("\[Yarncha project tabs\] Render failed"/, "Project tab render failures are logged");
+assert.match(app, /Assistant is ready[\s\S]*Add your question, row issue, sizing issue, or troubleshooting note/, "Assistant tab has a safe fallback empty state");
+assert.match(app, /Project setup is ready[\s\S]*Some details are missing/, "Project tab has a safe fallback empty state");
 assert.match(css, /\.project-card:focus-visible/, "Project cards keep keyboard focus visible");
 assert.match(css, /\.project-card \{[^}]*display:block;/, "Project card buttons keep card styling");
 
