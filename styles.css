@@ -2070,7 +2070,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view .wiki-entry-card { box-shadow:none; display:flex; justify-content:space-between; gap:24px; }
 #library-view .wiki-entry-card h3 { font-size:18px; }
 #library-view .wiki-entry-card > div:first-child { max-width:760px; }
-#library-view .wiki-detail { max-width:900px; margin:0 auto; padding:0; gap:30px; }
+#library-view .wiki-detail { max-width:820px; margin:0 auto; padding:0; gap:34px; }
 #library-view .article-header { display:grid; gap:14px; }
 #library-view .article-header h1 { margin:0; }
 #library-view .wiki-summary { font-size:18px; line-height:1.65; max-width:760px; }
@@ -2082,7 +2082,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view .wiki-more-actions > div { position:absolute; z-index:5; right:0; top:48px; min-width:180px; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-button); box-shadow:var(--shadow); display:grid; }
 #library-view .wiki-overview-card { display:grid; gap:24px; padding:28px; }
 #library-view .wiki-overview-card > .eyebrow { margin:0; }
-#library-view .wiki-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px 38px; }
+#library-view .wiki-detail-grid { display:grid; grid-template-columns:1fr; gap:30px; max-width:72ch; }
 #library-view .wiki-detail-grid section { padding:0; border:0; border-radius:0; background:transparent; }
 #library-view .wiki-detail-grid h3,
 #library-view .wiki-overview-card h3,
@@ -2094,7 +2094,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view .wiki-detail-grid p,
 #library-view .wiki-detail-grid li { font-size:16px; line-height:1.7; }
 #library-view .wiki-visual-section { padding-top:10px; }
-#library-view .diagnostic-groups { display:grid; grid-template-columns:1fr; gap:28px; }
+#library-view .diagnostic-groups { display:grid; grid-template-columns:1fr; gap:30px; max-width:72ch; }
 #library-view .diagnostic-groups > section { padding:0; border:0; background:transparent; }
 #library-view .diagnostic-groups h3 { font-family:var(--font-heading) !important; font-size:22px; line-height:1.2; margin:0 0 12px; }
 #library-view .diagnostic-groups ul,
