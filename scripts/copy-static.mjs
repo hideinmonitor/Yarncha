@@ -31,7 +31,7 @@ for (const file of rootAssets) {
 }
 
 const indexFile = resolve(distDir, "index.html");
-const assetVersion = "108-repeat-modal-colour-field";
+const assetVersion = "112-live-repeat-fix";
 const classicScripts = [
   `<script src="src/data/sizeReference.js?v=${assetVersion}"></script>`,
   `<script src="src/calculations/core.js?v=${assetVersion}"></script>`,

@@ -70,7 +70,15 @@ const starterData = {
   symbolFavorites:[],
   userTechniqueReferences:{},
   userSymbolsOverride:{},
-  symbolLearningLibrary:[]
+  symbolLearningLibrary:[],
+  libraryBookmarks:[],
+  libraryEntryNotes:{},
+  libraryVisualReferences:{},
+  librarySuggestedEdits:[],
+  libraryRecentlyViewed:[],
+  libraryProjectChecklist:[],
+  libraryPathProgress:{},
+  libraryReports:[]
 };
 
 let hasLoadedSavedState = false;
@@ -80,6 +88,9 @@ let currentProjectId = state.activeProjectId;
 let activePage = "today";
 let renderedComponent = "TodayPage";
 let currentLibrarySection = null;
+let currentLibraryEntryId = null;
+let currentLibraryPathId = null;
+let libraryWikiFilters = {search:"",craft:"All",level:"All",category:"All",projectType:"All",tool:"All",path:"All"};
 let currentSymbolId = null;
 let symbolFilters = { search:"", craft:"All", category:"All", difficulty:"All", terminology:"All", verification:"All", sort:"Default" };
 let currentProjectTool = "swatch";
@@ -662,6 +673,21 @@ function normalizeProjectRecord(p={},index=0){
   return {...normalized,projectCalculations:calculateFlowProjectPlan(normalized,normalized.projectSetup)};
 }
 
+function hasMeaningfulSavedWorkspaceData(saved={}){
+  const nonEmptyArrays=[
+    "projects","inventory","purchaseHistory","cart","techniqueKnowledge","projectIdeas",
+    "symbolFavorites","symbolLearningLibrary","libraryBookmarks","libraryRecentlyViewed","libraryProjectChecklist","libraryReports"
+  ];
+  if(nonEmptyArrays.some(key=>Array.isArray(saved[key])&&saved[key].length>0))return true;
+  if(Array.isArray(saved.librarySections)&&saved.librarySections.some(section=>Array.isArray(section?.items)&&section.items.length>0))return true;
+  if(saved.libraryEntryNotes&&Object.keys(saved.libraryEntryNotes).length>0)return true;
+  if(saved.libraryVisualReferences&&Object.values(saved.libraryVisualReferences).some(references=>Array.isArray(references)&&references.length>0))return true;
+  if(saved.libraryPathProgress&&Object.keys(saved.libraryPathProgress).length>0)return true;
+  if(saved.userTechniqueReferences&&Object.keys(saved.userTechniqueReferences).length>0)return true;
+  if(saved.userSymbolsOverride&&Object.keys(saved.userSymbolsOverride).length>0)return true;
+  return false;
+}
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
@@ -697,7 +723,8 @@ function loadState() {
     merged.theme.name = normalizeThemeName(merged.theme.name);
     merged.theme.style = normalizeDesignStyle(merged.theme.style);
     merged.theme.mode = ["light","dark","system"].includes(merged.theme.mode) ? merged.theme.mode : "system";
-    merged.onboardingComplete = !!saved.onboardingComplete;
+    const isExistingSavedWorkspace = hasMeaningfulSavedWorkspaceData(saved);
+    merged.onboardingComplete = saved.onboardingComplete === true || isExistingSavedWorkspace;
     merged.onboardingStep = Number(saved.onboardingStep) || 0;
     merged.account = saved.account || structuredClone(starterData.account);
     merged.yarnMaterials = saved.yarnMaterials?.length ? saved.yarnMaterials : defaultYarnMaterials();
@@ -708,12 +735,44 @@ function loadState() {
     merged.symbolLearningLibrary = (saved.symbolLearningLibrary || []).map(normalizeLearningRecord);
     merged.projectIdeas = (saved.projectIdeas || []).map(normalizeProjectIdea);
     merged.ideaFilters = saved.ideaFilters || {search:"",craft:"All",kind:"All",showArchived:false};
+    merged.libraryBookmarks = Array.isArray(saved.libraryBookmarks)?saved.libraryBookmarks:[];
+    merged.libraryEntryNotes = saved.libraryEntryNotes && typeof saved.libraryEntryNotes==="object" ? saved.libraryEntryNotes : {};
+    merged.libraryVisualReferences = saved.libraryVisualReferences && typeof saved.libraryVisualReferences==="object" ? saved.libraryVisualReferences : {};
+    merged.librarySuggestedEdits = Array.isArray(saved.librarySuggestedEdits)?saved.librarySuggestedEdits:[];
+    merged.libraryRecentlyViewed = Array.isArray(saved.libraryRecentlyViewed)?saved.libraryRecentlyViewed:[];
+    merged.libraryProjectChecklist = Array.isArray(saved.libraryProjectChecklist)?saved.libraryProjectChecklist:[];
+    merged.libraryPathProgress = saved.libraryPathProgress && typeof saved.libraryPathProgress==="object" ? saved.libraryPathProgress : {};
+    merged.libraryReports = Array.isArray(saved.libraryReports)?saved.libraryReports:[];
     merged.schemaVersion = Number(saved.schemaVersion)||PROJECT_SCHEMA_VERSION;
     merged.projects = (saved.projects || starterData.projects).map(normalizeProjectRecord);
     if(!merged.projects.some(p=>String(p.id)===String(merged.activeProjectId)))merged.activeProjectId=merged.projects[0]?.id||null;
     return merged;
   }
-  catch { return structuredClone(starterData); }
+  catch(error) {
+    const details=navigationErrorDetails(error);
+    console.error(`[Yarncha state] Load failed: ${details.message}\n${details.stack}`);
+    const fallback=structuredClone(starterData);
+    fallback.projects=fallback.projects.map((project,index)=>({
+      ...project,
+      id:stableProjectId(project,index),
+      activeTab:"track",
+      subCounters:Array.isArray(project.subCounters)?project.subCounters:[],
+      repeatRules:Array.isArray(project.repeatRules)?project.repeatRules:[],
+      rowReminders:Array.isArray(project.rowReminders)?project.rowReminders:[],
+      markers:Array.isArray(project.markers)?project.markers:[],
+      assistantMessages:Array.isArray(project.assistantMessages)?project.assistantMessages:[],
+      attachments:Array.isArray(project.attachments)?project.attachments:[],
+      annotations:Array.isArray(project.annotations)?project.annotations:[],
+      annotationHistory:Array.isArray(project.annotationHistory)?project.annotationHistory:[],
+      annotationRedo:Array.isArray(project.annotationRedo)?project.annotationRedo:[],
+      buyList:Array.isArray(project.buyList)?project.buyList:[],
+      projectTools:project.projectTools||{},
+      yarnchaAssistant:project.yarnchaAssistant||{},
+      patternPlan:project.patternPlan||{mode:"modified"},
+      chartReader:project.chartReader||{}
+    }));
+    return fallback;
+  }
 }
 let saveDebounceTimer=null;
 let saveDirty=false;
@@ -773,6 +832,15 @@ function saveStateSoon(delay=350){
 }
 function updateSaveStatus(text,tone=""){const el=document.getElementById("save-status");if(el){el.textContent=text;el.dataset.tone=tone;}updateSaveIndicators(text,tone);}
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
+function collapsibleSectionHtml({eyebrow="",title="",description="",defaultOpen=false,children="",rightMeta="",className="",summaryClass=""}={}){
+  return `<details class="collapsible-section ${escapeHtml(className)}" ${defaultOpen?"open":""}>
+    <summary class="collapsible-summary ${escapeHtml(summaryClass)}">
+      <span class="collapsible-summary-copy">${eyebrow?`<span class="eyebrow">${escapeHtml(eyebrow)}</span>`:""}<strong>${escapeHtml(title)}</strong>${description?`<span>${escapeHtml(description)}</span>`:""}</span>
+      <span class="collapsible-summary-side">${rightMeta?`<em>${escapeHtml(rightMeta)}</em>`:""}<i class="collapsible-chevron" aria-hidden="true"></i></span>
+    </summary>
+    <div class="collapsible-content">${children}</div>
+  </details>`;
+}
 async function manualSave(context="Project"){
   const hadPending=saveDirty||!!saveDebounceTimer||!!saveInFlight||lastSaveFailed;
   try{
@@ -893,6 +961,9 @@ function navigationDebugLog(clickedPageId,before,after,component){
   const isLocal=["localhost","127.0.0.1",""].includes(location.hostname);
   if(isLocal)console.debug("[Yarncha navigation]",{clickedPageId,activePageBefore:before,activePageAfter:after,renderedComponent:component});
 }
+function navigationErrorDetails(error){
+  return {message:error?.message||String(error),stack:error?.stack||"No stack available"};
+}
 
 function routeForPage(pageId){
   const routes={
@@ -923,27 +994,33 @@ async function showView(name) {
   const requested = name === "yarnStash" ? "market" : String(name || "today");
   const before = activePage;
   const route = routeForPage(requested);
-  route.render();
-  activePage = requested;
-  renderedComponent = route.component;
-  setActiveView(route.viewId);
-  document.querySelectorAll(".nav-item").forEach(item => {
-    const navId = item.dataset.view === "yarnStash" ? "market" : item.dataset.view;
-    item.classList.toggle("active", navId === requested);
-  });
-  document.getElementById("breadcrumb").textContent = route.label;
-  document.getElementById("header-context").textContent = route.viewId === "project-detail" ? "Projects" : "Workspace";
-  document.querySelector(".sidebar").classList.remove("open");
-  navigationDebugLog(requested,before,activePage,renderedComponent);
-  queueMicrotask(applyLanguage);
+  try{
+    route.render();
+    activePage = requested;
+    renderedComponent = route.component;
+    setActiveView(route.viewId);
+    document.querySelectorAll(".nav-item").forEach(item => {
+      const navId = item.dataset.view === "yarnStash" ? "market" : item.dataset.view;
+      item.classList.toggle("active", navId === requested);
+    });
+    document.getElementById("breadcrumb").textContent = route.label;
+    document.getElementById("header-context").textContent = route.viewId === "project-detail" ? "Projects" : "Workspace";
+    document.querySelector(".sidebar").classList.remove("open");
+    navigationDebugLog(requested,before,activePage,renderedComponent);
+    queueMicrotask(applyLanguage);
+  }catch(error){
+    const details=navigationErrorDetails(error);
+    console.error(`[Yarncha navigation] Render failed: ${details.message}`, {requested,before,component:route.component,stack:details.stack});
+    toast(`${route.label || "This section"} could not open. Please try again.`);
+  }
 }
 
 
 function handleAppShellClick(e){
   const manualSaveButton=e.target.closest("[data-manual-save]");
   if(manualSaveButton){e.preventDefault();manualSave(manualSaveButton.dataset.manualSave||"Project");return;}
-  const nav = e.target.closest("[data-view]"); if (nav) { showView(nav.dataset.view); return; }
-  const go = e.target.closest("[data-go]"); if (go) { showView(go.dataset.go); return; }
+  const nav = e.target.closest("[data-view]"); if (nav) { e.preventDefault(); showView(nav.dataset.view).catch(error=>console.error("[Yarncha navigation] Click failed", {target:"data-view",view:nav.dataset.view,error})); return; }
+  const go = e.target.closest("[data-go]"); if (go) { e.preventDefault(); showView(go.dataset.go).catch(error=>console.error("[Yarncha navigation] Click failed", {target:"data-go",view:go.dataset.go,error})); return; }
   const project = e.target.closest("[data-project-id],[data-project]");
   if(project){
     const innerAction=e.target.closest("[data-project-action],a,button,input,select,textarea");
@@ -954,13 +1031,29 @@ function handleAppShellClick(e){
     return;
   }
   const add = e.target.closest("[data-add-project]"); if (add) { openProjectModal(); return; }
-  const tool = e.target.closest("[data-tool]"); if (tool&&!tool.closest(".annotation-toolbar")) { showView("tools"); renderTool(tool.dataset.tool); return; }
+  const tool = e.target.closest("[data-tool]"); if (tool&&!tool.closest(".annotation-toolbar")) { e.preventDefault(); showView("tools").then(()=>renderTool(tool.dataset.tool)).catch(error=>console.error("[Yarncha navigation] Tool click failed", {tool:tool.dataset.tool,error})); return; }
   const tab = e.target.closest("[data-tool-tab]"); if (tab) { renderTool(tab.dataset.toolTab); return; }
   const space=e.target.closest("[data-library-space]"); if(space){currentLibrarySection=space.dataset.librarySpace;renderLibrary();}
 }
 if(window.__yarnchaShellClickHandler)document.removeEventListener("click",window.__yarnchaShellClickHandler);
 window.__yarnchaShellClickHandler=handleAppShellClick;
 document.addEventListener("click",handleAppShellClick);
+function bindDirectNavigation(control,action,diagnostic){
+  if(!control||control.dataset.directNavigationBound)return;
+  control.dataset.directNavigationBound="true";
+  control.addEventListener("click",event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    try{
+      Promise.resolve(action()).catch(error=>console.error("[Yarncha navigation] Direct click failed",{diagnostic,...navigationErrorDetails(error)}));
+    }catch(error){
+      console.error("[Yarncha navigation] Direct click failed",{diagnostic,...navigationErrorDetails(error)});
+    }
+  });
+}
+function bindPrimaryShellNavigation(){
+  bindDirectNavigation(document.querySelector('.nav-item[data-view="tools"]'),()=>showView("tools"),"Tools navigation");
+}
 function handleProjectHashRoute(){
   const match=location.hash.match(/^#project-(.+)$/);
   if(match)openProject(decodeURIComponent(match[1]));
@@ -1013,6 +1106,7 @@ function renderToday() {
       <button class="primary-button" data-project="${p.id}">Continue making →</button>
     </div>
   </article>`;
+  bindDirectNavigation(host.querySelector('[data-project]'),()=>openProject(p.id),'Today "Continue making"');
   hydrateProjectCovers();
 }
 
@@ -1081,7 +1175,7 @@ function renderProjectDetail() {
         <div class="detail-actions project-actions"><button class="project-action-button ghost" id="edit-project-name">Edit Project</button><button class="project-action-button secondary manual-save-button" data-manual-save="Project" type="button">Save</button><button class="project-action-button secondary" id="speak-row">Read row</button><button class="project-action-button primary voice-button voice-button--header voice-icon-button" id="voice-project" aria-label="Voice controls" title="Voice controls">${uiIcon("voice","voice-button-icon")}</button></div>
       </div>
       <div class="project-tabs" role="tablist" aria-label="Project sections">
-        ${["track","chart","project","assistant"].map(id=>`<button class="${tab===id?"active":""}" data-project-tab="${id}">${id[0].toUpperCase()+id.slice(1)}</button>`).join("")}
+        ${["track","chart","project","assistant"].map(id=>`<button type="button" role="tab" aria-selected="${tab===id}" class="${tab===id?"active":""}" data-project-tab="${id}">${id[0].toUpperCase()+id.slice(1)}</button>`).join("")}
       </div>
       ${activeRowReminderHtml(p)}
       <section class="project-tab-panel">${tab==="track"?projectTrackHtml(p):tab==="chart"?projectChartHtml(p):tab==="project"?projectProjectHtml(p):projectAssistantTabHtml(p)}</section>
@@ -1564,7 +1658,7 @@ function projectSetupPanelHtml(p,{context="project",embedded=false}={}){
 function flowProjectSetupSummaryHtml(p){
   const setup=ensureProjectSetup(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup);
   const summary=[setup.craft,setup.projectType,setup.startStitches?`${setup.startStitches} cast-on`:plan.castOnOrChain?`${plan.castOnOrChain} start`:"Add start count",setup.rows?`${setup.rows} rows`:plan.rowCount?`${plan.rowCount} rows`:"Add rows"].filter(Boolean).join(" · ");
-  return `<section class="flow-reader-panel flow-setup-panel flow-project-setup-card"><div class="section-heading compact-row"><div><p class="eyebrow">PROJECT SETUP</p><h4>Using setup</h4><p class="muted-copy">${escapeHtml(summary)}</p></div><button class="secondary-button" data-toggle-flow-setup type="button">Edit Project Setup</button></div><div id="flow-project-setup-editor" hidden>${projectSetupPanelHtml(p,{context:"flow",embedded:true})}</div></section>`;
+  return collapsibleSectionHtml({eyebrow:"PROJECT SETUP",title:"Project guide",description:"Saved craft, project type, yarn, hook/needle, start, and rows for Flow Mode and project tools.",rightMeta:summary,className:"flow-reader-panel flow-setup-panel flow-project-setup-card",children:`<div id="flow-project-setup-editor">${projectSetupPanelHtml(p,{context:"flow",embedded:true})}</div>`});
 }
 function collectProjectSetupPanel(form){
   const value=name=>form.querySelector(`[data-project-setup-field="${name}"]`)?.value?.trim()||"";
@@ -1616,12 +1710,6 @@ function bindProjectSetupPanels(p=getProject()){
     form.addEventListener("input",()=>save({render:false}));
     form.addEventListener("change",()=>save({render:false}));
     form.querySelector("[data-save-project-setup]")?.addEventListener("click",()=>save({render:true,notify:true}));
-  });
-  document.querySelector("[data-toggle-flow-setup]")?.addEventListener("click",()=>{
-    const editor=document.getElementById("flow-project-setup-editor");
-    if(!editor)return;
-    editor.hidden=!editor.hidden;
-    document.querySelector("[data-toggle-flow-setup]").textContent=editor.hidden?"Edit Project Setup":"Hide Project Setup";
   });
 }
 const flowExampleRows={
@@ -1757,7 +1845,7 @@ const projectContextService={
   },
   getCurrentProjectContext(){
     const project=this.getCurrentProject(),setup=ensureProjectSetup(project||{}),chart=this.getCurrentChartContext(project),row=this.getCurrentRowContext(project),symbol=this.getCurrentSymbolContext(project),memory=learningMemoryService.getLearningMemory(project?.id||"");
-    return {projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",savedProgress:row.savedProgress,subCounters:this.getSubCounterContext(project),verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}};
+    return {projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),projectType:setup.projectType||project?.projectKind||project?.type||"",yarnWeight:setup.yarnWeight||project?.yarnWeight||"",fibreContent:setup.fibreContent||project?.fibreContent||"",toolSize:setup.toolSize||setup.hookSize||setup.needleSize||project?.hookSize||project?.needleSize||"",patternGauge:setup.patternGauge||setup.patternStitchesPer10cm||"",userGauge:setup.userGauge||setup.userStitchesPer10cm||"",targetMeasurement:setup.targetMeasurement||setup.targetLengthCm||project?.fitCheck?.targetLength||"",currentMeasurement:setup.currentMeasurement||project?.fitCheck?.currentLength||"",blockedState:setup.blockedState||project?.fitCheck?.blockedState||"",measurements:setup.bodyMeasurements||project?.fitCheck||null,skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",savedProgress:row.savedProgress,subCounters:this.getSubCounterContext(project),verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}};
   }
 };
 function subCounterRowsUntilNext(counter,currentRow=0){
@@ -1911,6 +1999,33 @@ const yarnchaAssistantService={
     if(projectContext.subCounters?.length)bits.push(`Sub counters: ${assistantSubCounterSummary(projectContext.subCounters)}`);
     return bits.join(" · ");
   },
+  diagnosticContext(projectContext={},question=""){
+    const q=String(question||"").toLowerCase();
+    const wanted=[
+      ["craftType","craft type"],
+      ["projectName","project name"],
+      ["projectType","project type"],
+      ["yarnWeight","yarn weight"],
+      ["fibreContent","fibre content"],
+      ["toolSize","hook or needle size"],
+      ["patternGauge","pattern gauge"],
+      ["userGauge","your gauge"],
+      ["currentRow","current row/round"],
+      ["expectedStitchCount","expected stitch count"],
+      ["targetMeasurement","target measurement"],
+      ["currentMeasurement","current measurement"],
+      ["skillLevel","user skill level"],
+      ["blockedState","blocked or unblocked state"]
+    ];
+    const missing=wanted.filter(([key])=>!projectContext[key]).map(([,label])=>label);
+    if(/chart|symbol|row|pattern/.test(q)&&!projectContext.currentChart)missing.push("uploaded pattern/chart context");
+    if(/measure|fit|size|sleeve|garment|hat|sock/.test(q)&&!projectContext.measurements)missing.push("measurements");
+    const assumptions=[];
+    if(projectContext.craftType)assumptions.push(`Using ${assistantCraftLabel(projectContext.craftType)} terminology.`);
+    else assumptions.push("Giving general craft advice because craft type is missing.");
+    if(!projectContext.rowInstruction)assumptions.push("No exact pattern row was provided, so guidance stays general.");
+    return {missingInformation:[...new Set(missing)].slice(0,8),assumptions};
+  },
   async askYarnchaAssistant({question="",projectContext={},skillLevel="beginner",craftType="knitting"}={}){
     const q=String(question||"").trim(),lower=q.toLowerCase();
     learningMemoryService.saveFrequentQuestion(q);
@@ -1919,14 +2034,19 @@ const yarnchaAssistantService={
     let questionType=this.classifyQuestion(q);
     if(/sub.?counter|counter|repeat counter|cable repeat|lace repeat|increase counter|next increase/i.test(q)){
       const summary=assistantSubCounterSummary(context.subCounters);
-      return {questionType:"counterStatus",quickAnswer:summary,whatToDoNow:context.subCounters?.length?"Use the Sub Row Counters panel under the chart row counter to adjust, pause, duplicate, or edit these counters while reading.":"Add a Sub Row Counter below the chart row counter, then Yarncha can reference it while you read.",steps:(context.subCounters||[]).map(counter=>counter.nextIn!==null?`${counter.name}: current count ${counter.count}; next update in ${counter.nextIn} row${counter.nextIn===1?"":"s"}.`:`${counter.name}: current count ${counter.count}.`),checkBeforeContinuing:["Make sure the counter anchor row matches where that section begins.","Use manual + or - if you intentionally adjust the repeat count.","If the pattern has an 8-row repeat, set Update every X rows to 8 so Flow Mode has a better hint."],commonMistakes:["Starting a sleeve or neckline counter too early.","Forgetting to set an anchor row for shaping that begins later.","Using a voice reminder on backward row movement; Yarncha only speaks these while moving forward."],relatedTechniques:["row tracking","reading repeats","chart reading"],libraryLinks:[{title:"Reading Repeats",target:"library:reading-repeats"}],contextNote:this.contextNote(context),confidence:"medium",sourceType:"local-rule-based"};
+      const diagnostic=this.diagnosticContext(context,q);
+      return {questionType:"counterStatus",quickAnswer:summary,whatToDoNow:context.subCounters?.length?"Use the Sub Row Counters panel under the chart row counter to adjust, pause, duplicate, or edit these counters while reading.":"Add a Sub Row Counter below the chart row counter, then Yarncha can reference it while you read.",generalLibraryAdvice:"Counters are a tracking aid; they do not replace the pattern's repeat instructions.",projectSpecificAdvice:context.subCounters?.length?`Your current counter context: ${summary}`:"No project counter is active yet.",assumptions:diagnostic.assumptions,missingInformation:diagnostic.missingInformation,steps:(context.subCounters||[]).map(counter=>counter.nextIn!==null?`${counter.name}: current count ${counter.count}; next update in ${counter.nextIn} row${counter.nextIn===1?"":"s"}.`:`${counter.name}: current count ${counter.count}.`),checkBeforeContinuing:["Make sure the counter anchor row matches where that section begins.","Use manual + or - if you intentionally adjust the repeat count.","If the pattern has an 8-row repeat, set Update every X rows to 8 so Flow Mode has a better hint."],commonMistakes:["Starting a sleeve or neckline counter too early.","Forgetting to set an anchor row for shaping that begins later.","Using a voice reminder on backward row movement; Yarncha only speaks these while moving forward."],relatedTechniques:["row tracking","reading repeats","chart reading"],libraryLinks:[{title:"Reading Repeats",target:"library:reading-repeats"}],contextNote:this.contextNote(context),confidence:"medium",sourceType:"local-rule-based"};
     }
     if(context.selectedTechnique&&(questionType==="generalQuestion"||questionType==="stitchTechnique"))questionType="stitchTechnique";
     if(context.selectedTechnique&&/selected technique|technique help|help me with|how do i work|how do i do/i.test(q))questionType="stitchTechnique";
     const base=questionType==="stitchCountProblem"?troubleshootingService.troubleshootStitchCount(context,skillLevel,craftType):questionType==="droppedStitch"?troubleshootingService.troubleshootDroppedStitch(context,skillLevel,craftType):questionType==="symbolMeaning"?teachingService.explainSymbol(context.currentSymbol||"this symbol",craftType,skillLevel,context):questionType==="abbreviation"?teachingService.explainAbbreviation(this.extractAbbreviation(q),craftType,skillLevel,context):questionType==="patternReading"||questionType==="rowInstruction"?teachingService.explainPatternLine(context.rowInstruction,craftType,skillLevel,context):questionType==="gaugeProblem"?troubleshootingService.troubleshootGaugeIssue(context,skillLevel):questionType==="projectLooksDifferent"?troubleshootingService.troubleshootProjectLooksDifferent(context,skillLevel):teachingService.explainTechnique(context.selectedTechnique,craftType,skillLevel,context);
     const missing=!context.rowInstruction&&/(row|instruction|pattern line|repeat)/i.test(q)?"I need the exact pattern line to be exact. ":!context.expectedStitchCount&&/count|stitch/i.test(q)?"I need the pattern's expected stitch count to be exact. ":"";
     const checkBeforeContinuing=base.checkBeforeContinuing||[context.expectedStitchCount?"Compare your current stitch count with the expected stitch count.":"Check the pattern notes for the expected stitch count or row count.",context.rowInstruction?"Read the current row instruction once more before moving on.":"Paste or select the exact row if you want Yarncha to be more precise.","If the fabric looks wrong, stop at the end of the row or round before undoing anything."];
-    return {...base,questionType,contextNote:this.contextNote(context),whatToDoNow:`${missing}${base.whatToDoNow||"Start by checking the exact stitch, row, or symbol involved, then compare it with the pattern notes."}`,checkBeforeContinuing,confidence:context.currentRow||context.rowInstruction||context.currentSymbol?"medium":"general",sourceType:"local-rule-based"};
+    const approvedEntries=findLibraryEntriesForAssistant(q,craftType,3);
+    const diagnostic=this.diagnosticContext(context,q);
+    const libraryLinks=[...(base.libraryLinks||[]),...approvedEntries.map(entry=>({title:entry.title,target:`library:${entry.id}`}))].filter((link,index,all)=>all.findIndex(item=>item.target===link.target)===index);
+    const relatedTools=[...(base.relatedTools||[]),...approvedEntries.flatMap(entry=>entry.relatedTools||[])].filter((tool,index,all)=>all.indexOf(tool)===index).slice(0,5);
+    return {...base,questionType,contextNote:this.contextNote(context),generalLibraryAdvice:base.quickAnswer||"Use the Library guide as general technique help first.",projectSpecificAdvice:context.projectName?`For ${context.projectName}, check the current row, count, gauge, yarn, and measurement notes before changing the work.`:"Project-specific advice needs more project details before Yarncha can be exact.",assumptions:diagnostic.assumptions,missingInformation:diagnostic.missingInformation,whatToDoNow:`${missing}${base.whatToDoNow||"Start by checking the exact stitch, row, or symbol involved, then compare it with the pattern notes."}`,checkBeforeContinuing,libraryLinks,relatedTools,approvedLibraryEntries:approvedEntries.map(entry=>entry.title),confidence:context.currentRow||context.rowInstruction||context.currentSymbol?"medium":"general",sourceType:"local-library-rule-based"};
   }
 };
 function yarnchaAssistantAnswerHtml(answer){
@@ -1934,7 +2054,9 @@ function yarnchaAssistantAnswerHtml(answer){
   const labels=techniqueHelpLabels.en;
   const list=(title,items,extraClass="")=>items?.length?`<section class="${extraClass}"><h4>${title}</h4><ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`:"";
   const related=answer.relatedTechniques?.length?`<section><h4>${labels.relatedTechniques}</h4><div class="assistant-library-links">${answer.relatedTechniques.map(label=>`<button class="chip" data-library-link="library:${escapeHtml(label)}">${escapeHtml(label)}</button>`).join("")}</div></section>`:"";
-  return `<article class="yarncha-assistant-answer">${answer.contextNote?`<section class="assistant-project-context"><h4>${labels.projectContext}</h4><p>${escapeHtml(answer.contextNote)}</p></section>`:""}${answer.techniqueName?`<section class="assistant-technique-card"><h4>${labels.technique}</h4><p>${escapeHtml(answer.techniqueName)}${answer.techniqueCategory?` · ${escapeHtml(titleCaseTechnique(answer.techniqueCategory))}`:""}</p></section>`:""}<section><h4>${labels.quickAnswer}</h4><p>${escapeHtml(answer.quickAnswer||"")}</p></section><section><h4>${labels.whatToDoNow}</h4><p>${escapeHtml(answer.whatToDoNow||"")}</p></section>${answer.steps?.length?`<details class="assistant-step-accordion" open><summary>${labels.stepByStep}</summary><ol>${answer.steps.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></details>`:""}${list(labels.checkBeforeContinuing,answer.checkBeforeContinuing,"assistant-count-check")}${list(labels.commonMistakes,answer.commonMistakes)}${related}<section><h4>Library links</h4><div class="assistant-library-links">${(answer.libraryLinks||[]).map(link=>`<button class="chip" data-library-link="${escapeHtml(link.target)}">${escapeHtml(link.title)}</button>`).join("")}</div></section><p class="assistant-source-note">${escapeHtml(answer.questionType||"generalQuestion")} · ${escapeHtml(answer.sourceType||"local-rule-based")} · confidence ${escapeHtml(answer.confidence||"general")}</p></article>`;
+  const tools=answer.relatedTools?.length?`<section><h4>Related tools</h4><div class="assistant-library-links">${answer.relatedTools.map(tool=>`<button class="chip" data-assistant-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></section>`:"";
+  const basedOn=answer.approvedLibraryEntries?.length?`Based on: ${answer.approvedLibraryEntries.join(", ")}.`:"Based on: Yarncha local guide rules.";
+  return `<article class="yarncha-assistant-answer">${answer.contextNote?`<section class="assistant-project-context"><h4>${labels.projectContext}</h4><p>${escapeHtml(answer.contextNote)}</p></section>`:""}${answer.techniqueName?`<section class="assistant-technique-card"><h4>${labels.technique}</h4><p>${escapeHtml(answer.techniqueName)}${answer.techniqueCategory?` · ${escapeHtml(titleCaseTechnique(answer.techniqueCategory))}`:""}</p></section>`:""}<section><h4>${labels.quickAnswer}</h4><p>${escapeHtml(answer.quickAnswer||"")}</p></section>${answer.generalLibraryAdvice?`<section><h4>General Library advice</h4><p>${escapeHtml(answer.generalLibraryAdvice)}</p></section>`:""}${answer.projectSpecificAdvice?`<section><h4>Project-specific advice</h4><p>${escapeHtml(answer.projectSpecificAdvice)}</p></section>`:""}<section><h4>${labels.whatToDoNow}</h4><p>${escapeHtml(answer.whatToDoNow||"")}</p></section>${answer.assumptions?.length?list("Assumptions",answer.assumptions):""}${answer.missingInformation?.length?list("Missing information",answer.missingInformation,"assistant-count-check"):""}${answer.steps?.length?`<details class="assistant-step-accordion" open><summary>${labels.stepByStep}</summary><ol>${answer.steps.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></details>`:""}${list(labels.checkBeforeContinuing,answer.checkBeforeContinuing,"assistant-count-check")}${list(labels.commonMistakes,answer.commonMistakes)}${related}${tools}<section><h4>Library links</h4><div class="assistant-library-links">${(answer.libraryLinks||[]).map(link=>`<button class="chip" data-library-link="${escapeHtml(link.target)}">${escapeHtml(link.title)}</button>`).join("")}</div></section><p class="assistant-source-note">${escapeHtml(basedOn)} ${escapeHtml(answer.questionType||"generalQuestion")} · ${escapeHtml(answer.sourceType||"local-rule-based")} · confidence ${escapeHtml(answer.confidence||"general")}</p></article>`;
 }
 function yarnchaAssistantChartHtml(p){
   const assistant=p.yarnchaAssistant||{},context=projectContextService.getCurrentProjectContext(),skill=normalizeAssistantSkill(assistant.skillLevel||context.skillLevel),craft=normalizeAssistantCraft(assistant.craftType||context.craftType),answer=assistant.lastAnswer;
@@ -1951,7 +2073,7 @@ function yarnchaAssistantChartHtml(p){
     <div class="assistant-suggestion-row">${suggestions.map(text=>`<button class="chip" data-assistant-suggestion="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div>
     <div class="assistant-ask-row"><textarea id="chart-assistant-question" rows="3" placeholder="Ask about a stitch, symbol, row, mistake, or pattern line...">${escapeHtml(assistant.draftQuestion||"")}</textarea><button class="primary-button" id="ask-chart-assistant">Ask</button></div>
     <div id="chart-assistant-answer" aria-live="polite">${yarnchaAssistantAnswerHtml(answer)}</div>
-    <div class="assistant-memory-actions"><button class="mini-button" data-assistant-memory="save-explanation">Save explanation</button><button class="mini-button" data-assistant-memory="add-notes">Add to project notes</button><button class="mini-button" data-assistant-memory="remember-correction">Remember correction</button><button class="mini-button" data-assistant-memory="verify-symbol">Mark symbol as verified</button></div>
+    <div class="assistant-memory-actions"><button class="mini-button" data-assistant-memory="save-explanation">Save explanation</button><button class="mini-button" data-assistant-memory="add-notes">Add to project notes</button><button class="mini-button" data-assistant-memory="add-checklist">Add checklist</button><button class="mini-button" data-assistant-memory="save-troubleshooting">Save troubleshooting</button><button class="mini-button" data-assistant-memory="create-calculator-input">Create calculator input</button><button class="mini-button" data-assistant-memory="link-library">Link Library entries</button><button class="mini-button" data-assistant-memory="remember-correction">Remember correction</button><button class="mini-button" data-assistant-memory="verify-symbol">Mark symbol as verified</button></div>
   </section>`;
 }
 
@@ -2183,7 +2305,7 @@ function subCounterHtml(counter,{chart=false,currentRow=0}={}) {
 function unifiedRepeatCountersHtml(p,{chart=false}={}){
   const counters=(p.subCounters||[]).map(normalizeSubCounter);
   return `<section class="repeat-section unified-repeat-section ${chart?"chart-repeat-section":""}" aria-label="Repeat and sub-counters">
-    <div class="repeat-section-header unified-repeat-heading"><div class="repeat-section-title-group"><p class="section-kicker repeat-section-kicker">REPEAT / SUB-COUNTER</p><h3 class="section-title repeat-section-title">${counters.length?"Repeat / Sub-Counter":"No repeat counter yet"}</h3></div><button class="button-secondary add-subcounter-button mini-button" id="add-sub-counter">+ Add</button></div>
+    <div class="repeat-section-header unified-repeat-heading"><div class="repeat-section-title-group"><h3 class="section-title repeat-section-title">${counters.length?"Repeat / Sub-Counter":"No repeat counter yet"}</h3></div><button class="button-secondary add-subcounter-button mini-button" id="add-sub-counter">+ Add</button></div>
     <div id="sub-counters" class="unified-repeat-list">${counters.length?counters.map(counter=>subCounterHtml(counter,{chart,currentRow:p.row})).join(""):`<p class="muted-copy">Add sleeve shaping, cable repeats, lace repeats, colour changes, or any section that needs its own count.</p>`}</div>
   </section>`;
 }
@@ -2196,8 +2318,8 @@ function chartSubCountersHtml(p){
     </div>
   </details>`;
 }
-function normalizeRowReminderVoice(settings={}){
-  return {speed:Math.max(.6,Math.min(1.5,Number(settings.speed)||1)),language:settings.language||state.language||"en",volume:Math.max(0,Math.min(1,Number(settings.volume??1)))};
+function normalizeRowReminderVoice(settings={},fallbackLanguage="en"){
+  return {speed:Math.max(.6,Math.min(1.5,Number(settings.speed)||1)),language:settings.language||fallbackLanguage,volume:Math.max(0,Math.min(1,Number(settings.volume??1)))};
 }
 function normalizeRowReminder(reminder={},index=0){
   const every=Math.max(1,Math.round(Number(reminder.every)||Number(reminder.interval)||1));
@@ -2243,7 +2365,7 @@ function triggerRowReminders(p=getProject(),row=p?.row){
   if(navigator.vibrate)navigator.vibrate([80,40,80]);
 }
 function readRowReminderAloud(p,reminder){
-  const settings=normalizeRowReminderVoice(p.rowReminderVoice);
+  const settings=normalizeRowReminderVoice(p.rowReminderVoice,state.language);
   speak(reminder.message,{rate:settings.speed,lang:settings.language==="yue"?"yue-Hant-HK":settings.language==="zh-Hant"?"zh-Hant-HK":"en-AU",volume:settings.volume});
 }
 function activeRowReminderHtml(p){
@@ -2256,7 +2378,7 @@ function rowReminderHtml(reminder){
   return `<article class="row-reminder-card ${r.paused?"paused":""}"><div><strong>${escapeHtml(r.name)}</strong><p>${escapeHtml(r.message)}</p><small>Every ${r.every} rows · starts row ${r.startRow}${r.endRow?` · ends row ${r.endRow}`:""} · ${r.voice?"Voice on":"Voice off"} · ${r.visual?"Visual on":"Visual off"} · ${r.repeat?"Repeats":"Once"}</small></div><div class="row-reminder-actions"><button class="mini-button button-secondary" data-test-reminder="${r.id}">Test voice</button><button class="mini-button button-ghost" data-toggle-reminder="${r.id}">${r.paused?"Resume":"Pause"}</button><details class="overflow-menu row-reminder-more"><summary class="button-icon reminder-menu-button reminder-overflow-button row-reminder-menu" aria-label="More reminder actions">⋮</summary><div><button class="button-ghost" data-edit-reminder="${r.id}">Edit</button><button class="danger-button" data-delete-reminder="${r.id}">Delete</button></div></details></div></article>`;
 }
 function rowRemindersPanelHtml(p){
-  const reminders=(p.rowReminders||[]).map(normalizeRowReminder),voice=normalizeRowReminderVoice(p.rowReminderVoice);
+  const reminders=(p.rowReminders||[]).map(normalizeRowReminder),voice=normalizeRowReminderVoice(p.rowReminderVoice,state.language);
   return `<div class="card mobile-card row-reminders-card"><div class="card-header"><div><h3>Row Reminders</h3><p class="muted-copy">Get a gentle visual or voice cue every few rows.</p></div><button class="mini-button button-secondary" id="add-row-reminder">+ Add reminder</button></div>
     <div class="flow-reading-controls row-reminder-voice-settings">
       <label>Reminder speed <input id="row-reminder-speed" type="range" min=".6" max="1.5" step=".05" value="${voice.speed}"><span>${voice.speed.toFixed(2)}x</span></label>
@@ -2710,7 +2832,7 @@ function handleStudioAction(action){
 function copyStudioText(text,message){navigator.clipboard?.writeText(text).then(()=>toast(message)).catch(()=>toast("Copy is blocked in this browser."));}
 function exportStudioImage(studio){
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d"),w=1200,h=760;
-  canvas.width=w;canvas.height=h;ctx.fillStyle="#fff9f0";ctx.fillRect(0,0,w,h);ctx.fillStyle="#5a4632";ctx.font="700 34px system-ui";ctx.fillText(`${studio.projectType} - ${studio.mode}`,48,70);ctx.font="18px system-ui";ctx.fillText(studioPaletteText(studio),48,108);
+  canvas.width=w;canvas.height=h;ctx.fillStyle="#fff9f0";ctx.fillRect(0,0,w,h);ctx.fillStyle="#5a4632";ctx.font="700 34px Inter";ctx.fillText(`${studio.projectType} - ${studio.mode}`,48,70);ctx.font="18px Inter";ctx.fillText(studioPaletteText(studio),48,108);
   const x=80,y=150,pw=1040,ph=520;
   if(studio.mode==="Grid Mode"){
     const cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14),cell=Math.min(pw/cols,ph/rows);
@@ -2811,9 +2933,36 @@ function saveScannedYarn(values){
   else state.inventory.push(item);
   saveState();closeModal();renderMarket();toast("Yarn saved to Yarn Stash.");
 }
+function activateProjectTab(tabId,p=getProject()){
+  const validTabs=["track","chart","project","assistant"];
+  if(!p)return showView("projects");
+  if(!validTabs.includes(tabId)){
+    console.warn("[Yarncha project tabs] Unknown tab", {tabId,projectId:p.id});
+    toast("That project section is not available yet.");
+    return;
+  }
+  p.activeTab=tabId;
+  p.readingMode=false;
+  p.yarnchaAssistant=p.yarnchaAssistant||{};
+  p.projectTools=p.projectTools||{};
+  saveProjectTouch(p);
+  try{
+    renderProjectDetail();
+  }catch(error){
+    const details=navigationErrorDetails(error);
+    console.error(`[Yarncha project tabs] Render failed: ${details.message}\n${details.stack}`, {tabId,projectId:p.id});
+    const host=document.querySelector(".project-tab-panel");
+    if(host){
+      host.innerHTML=tabId==="assistant"
+        ? `<div class="empty-state card"><h3>Assistant is ready</h3><p>Add your question, row issue, sizing issue, or troubleshooting note.</p></div>`
+        : `<div class="empty-state card"><h3>Project setup is ready</h3><p>Some details are missing. Add yarn, hook/needle, gauge, or notes to improve suggestions.</p></div>`;
+    }
+    toast(`${tabId[0].toUpperCase()+tabId.slice(1)} could not fully load. Your project is still saved.`);
+  }
+}
 function bindProjectDetail() {
   const p = getProject();
-  document.querySelectorAll("[data-project-tab]").forEach(b => b.onclick = () => { p.activeTab=b.dataset.projectTab; p.readingMode=false; saveProjectTouch(p); renderProjectDetail(); });
+  document.querySelectorAll("[data-project-tab]").forEach(button=>bindDirectNavigation(button,()=>activateProjectTab(button.dataset.projectTab,p),`Project ${button.dataset.projectTab} tab`));
   document.querySelectorAll("[data-counter]").forEach(b => b.onclick = () => changeMainCounter(Number(b.dataset.counter)));
   document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => {
     const s = p.subCounters.find(x => x.id === b.dataset.sub);
@@ -2962,7 +3111,8 @@ function bindYarnchaAssistant(p=getProject()){
   document.querySelectorAll("[data-assistant-suggestion]").forEach(button=>button.onclick=()=>{const box=document.getElementById("chart-assistant-question");if(box){box.value=suggestionPrompts[button.dataset.assistantSuggestion]||button.dataset.assistantSuggestion;box.focus();p.yarnchaAssistant.draftQuestion=box.value;saveStateSoon();}});
   document.getElementById("ask-chart-assistant")?.addEventListener("click",()=>askChartYarnchaAssistant(p));
   document.querySelectorAll("[data-assistant-memory]").forEach(button=>button.onclick=()=>handleAssistantMemoryAction(button.dataset.assistantMemory,p));
-  document.querySelectorAll("[data-library-link]").forEach(button=>button.onclick=()=>toast(button.textContent.trim()+" is saved in Yarncha Library references."));
+  document.querySelectorAll("[data-library-link]").forEach(button=>button.onclick=()=>openLibraryWikiEntry(button.dataset.libraryLink));
+  document.querySelectorAll("[data-assistant-tool]").forEach(button=>button.onclick=()=>{const match=toolkitToolDefs.find(tool=>tool.name===button.dataset.assistantTool||tool.name.includes(button.dataset.assistantTool.split(" ")[0]));if(match){showView("tools");renderTool(match.id);}else toast(`${button.dataset.assistantTool} is in the Tool Manual.`);});
 }
 async function askChartYarnchaAssistant(p=getProject()){
   p.yarnchaAssistant=p.yarnchaAssistant||{};
@@ -2983,6 +3133,10 @@ function handleAssistantMemoryAction(action,p=getProject()){
   const summary=answer.quickAnswer||assistant.lastQuestion||"Yarncha Assistant explanation";
   if(action==="save-explanation"){learningMemoryService.saveProjectNote(p.id,summary);toast("Explanation saved to local learning memory.");}
   if(action==="add-notes"){p.notes=`${p.notes||""}${p.notes?"\n\n":""}Yarncha Assistant: ${summary}`;saveProjectTouch(p);toast("Added to project notes.");}
+  if(action==="add-checklist"){state.libraryProjectChecklist=[{id:`assistant-check${Date.now()}`,projectId:p.id,text:summary,source:"Yarncha Assistant",createdAt:new Date().toISOString()},...(state.libraryProjectChecklist||[])];saveState();toast("Assistant advice added as a checklist item.");}
+  if(action==="save-troubleshooting"){p.troubleshootingNotes=[{id:`trouble${Date.now()}`,question:assistant.lastQuestion||"",summary,missingInformation:answer.missingInformation||[],relatedTools:answer.relatedTools||[],createdAt:new Date().toISOString()},...(p.troubleshootingNotes||[])];saveProjectTouch(p);toast("Troubleshooting result saved to this project.");}
+  if(action==="create-calculator-input"){p.assistantCalculatorInputs=[{id:`calc-input${Date.now()}`,source:"Yarncha Assistant",question:assistant.lastQuestion||"",suggestedTool:(answer.relatedTools||[])[0]||"Gauge / Swatch Adapter",summary,createdAt:new Date().toISOString()},...(p.assistantCalculatorInputs||[])];saveProjectTouch(p);toast("Calculator input draft saved to this project.");}
+  if(action==="link-library"){p.linkedLibraryEntries=[...new Set([...(p.linkedLibraryEntries||[]),...(answer.libraryLinks||[]).map(link=>String(link.target||"").replace("library:","")).filter(Boolean)])];saveProjectTouch(p);toast("Library entries linked to this project.");}
   if(action==="remember-correction"){learningMemoryService.saveUserCorrection({projectId:p.id,question:assistant.lastQuestion,correction:summary,craftType:assistant.craftType});toast("Correction remembered locally.");}
   if(action==="verify-symbol"){learningMemoryService.saveVerifiedSymbol(p.id,{symbol:context.currentSymbol||assistant.lastQuestion,meaning:summary,question:assistant.lastQuestion});toast("Symbol marked as verified locally.");}
   renderProjectDetail();
@@ -4516,11 +4670,13 @@ function librarySectionCount(section){
   if(section.id==="materials")return state.yarnMaterials.length;
   if(section.id==="symbols")return window.YarnchaSymbolDatabase?mergedSymbolEntries().length:0;
   if(section.id==="tool-manual")return toolkitToolDefs.length;
-  if(section.id==="theory")return Object.values(theoryTopics).reduce((sum,items)=>sum+items.length,0);
+  if(section.id==="theory")return libraryWikiEntries.length;
   if(section.id==="ideas")return (state.projectIdeas||[]).length;
   return (section.items||[]).length;
 }
 function librarySectionIcon(sectionId){return uiIcon(({"personal-references":"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
+function libraryPageHeroHtml({eyebrow,title,description,actions=""}){return `<header class="page-title split-title library-page-hero"><div><p class="eyebrow">${escapeHtml(eyebrow)}</p><h1 class="library-page-title">${escapeHtml(title)}</h1><p class="library-body-text">${escapeHtml(description)}</p></div>${actions?`<div class="library-page-actions">${actions}</div>`:""}</header>`;}
+function libraryCategoryCardHtml(section){return `<button class="library-space library-category-card card" data-library-space="${section.id}"><span class="library-space-count">${librarySectionCount(section)} items</span><div class="library-space-icon">${librarySectionIcon(section.id)}</div><div class="library-category-copy"><h2 class="library-content-title">${escapeHtml(section.name)}</h2><p class="library-body-text">${escapeHtml(section.description)}</p></div></button>`;}
 function symbolRegionBadges(entry){return (entry.regionTags||[]).map(tag=>`<span class="symbol-region-badge">${escapeHtml(tag)}</span>`).join("");}
 const symbolSvgPaths={
   knit:'<path d="M32 10v44"></path>',
@@ -4959,16 +5115,18 @@ function renderLibrary() {
     saveState();
   }
   if(!currentLibrarySection){
-    host.innerHTML=`<div class="page-title split-title"><div><p class="eyebrow">YOUR MAKING WIKI</p><h1>Library</h1><p>A flexible home for your symbols, pattern files, notes and ideas.</p></div><button class="secondary-button" id="add-library-space">+ Custom space</button></div>
-      <div class="library-home-grid">${state.librarySections.map(s=>`<button class="library-space card" data-library-space="${s.id}"><span class="library-space-count">${librarySectionCount(s)} items</span><div class="library-space-icon">${librarySectionIcon(s.id)}</div><h2>${escapeHtml(s.name)}</h2><p>${escapeHtml(s.description)}</p></button>`).join("")}</div>`;
+    host.innerHTML=`${libraryPageHeroHtml({eyebrow:"YOUR MAKING WIKI",title:"Library",description:"A flexible home for your symbols, pattern files, notes and ideas.",actions:'<button class="secondary-button" id="add-library-space">+ Custom space</button>'})}
+      <div class="library-home-grid">${state.librarySections.map(libraryCategoryCardHtml).join("")}</div>`;
     document.getElementById("add-library-space").onclick=()=>openLibrarySpaceModal();
   } else {
     const section=state.librarySections.find(s=>s.id===currentLibrarySection);
     if(!section){currentLibrarySection=null;return renderLibrary();}
-    host.innerHTML=`<button class="text-button library-back" id="library-back">← All library spaces</button><div class="page-title split-title"><div><p class="eyebrow">PERSONAL LIBRARY</p><h1>${escapeHtml(section.name)}</h1><p>${escapeHtml(section.description)}</p></div>${section.id==="symbols"?"":`<div><button class="secondary-button" id="rename-library">Rename</button> <button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button></div>`}</div>
+    const isTheoryDetail=section.id==="theory"&&(currentLibraryEntryId||currentLibraryPathId);
+    const sectionActions=section.id==="symbols"?"":`<button class="secondary-button" id="rename-library">Rename</button><button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button>`;
+    host.innerHTML=`${isTheoryDetail?"":`<button class="text-button library-back" id="library-back">← All library spaces</button>${libraryPageHeroHtml({eyebrow:"PERSONAL LIBRARY",title:section.name,description:section.description,actions:sectionActions})}`}
       ${section.id==="materials"?yarnMaterialReferenceHtml():section.id==="symbols"?symbolDatabaseHtml():section.id==="tool-manual"?toolManualHtml():section.id==="theory"?theoryFoundationHtml():section.id==="ideas"?projectIdeasHtml():""}
       <div class="notion-list">${["symbols","ideas"].includes(section.id)?"":section.items.length?section.items.map(item=>`<div class="notion-row"><div>${item.fileData||item.assets?.length?"▧":"□"}</div><div><h3>${escapeHtml(item.name)}</h3><p>${item.craft?`${escapeHtml(item.craft)} · `:""}${escapeHtml(item.notes||"No notes")}${item.assets?.length?` · ${item.assets.length} files`:item.fileName?` · ${escapeHtml(item.fileName)}`:""}</p></div><div class="row-actions"><button class="mini-button" data-edit-item="${item.id}">Edit</button>${item.fileData||item.assets?.length?`<button class="mini-button" data-open-item="${item.id}">View files</button>`:""}</div></div>`).join(""):["materials","tool-manual","theory","ideas"].includes(section.id)?"":`<div class="empty-state"><h3>This space is ready for your own pages</h3><p>Add a named section, note or PDF tutorial.</p></div>`}</div>`;
-    document.getElementById("library-back").onclick=()=>{currentLibrarySection=null;renderLibrary();};
+    document.getElementById("library-back")?.addEventListener("click",()=>{currentLibrarySection=null;renderLibrary();});
     document.getElementById("add-library-item")?.addEventListener("click",()=>section.id==="materials"?openYarnMaterialModal():section.id==="ideas"?openProjectIdeaModal():openLibraryItemModal(section.id));
     document.getElementById("rename-library")?.addEventListener("click",()=>openLibrarySpaceModal(section.id));
     document.querySelectorAll("[data-open-item]").forEach(b=>b.onclick=()=>openLibraryAssets(section.items.find(i=>i.id===b.dataset.openItem)));
@@ -4976,9 +5134,106 @@ function renderLibrary() {
     document.querySelectorAll("[data-edit-material]").forEach(b=>b.onclick=()=>openYarnMaterialModal(b.dataset.editMaterial));
     bindProjectIdeas();
     bindSymbolDatabase();
+    bindLibraryWiki();
     hydrateMaterialImages();
   }
   queueMicrotask(applyLanguage);
+}
+function openLibraryWikiEntry(entryId){
+  const entry=libraryWikiEntryById(String(entryId||"").replace(/^library:/,""));
+  if(!entry)return toast("Library entry not found yet.");
+  currentLibrarySection="theory";
+  currentLibraryEntryId=entry.id;
+  currentLibraryPathId=null;
+  state.libraryRecentlyViewed=[entry.id,...(state.libraryRecentlyViewed||[]).filter(id=>id!==entry.id)].slice(0,12);
+  saveStateSoon();
+  if(activePage!=="library")showView("library");
+  else renderLibrary();
+}
+function openLibraryLearningPath(pathId){
+  if(!libraryLearningPaths.some(path=>path.id===pathId))return toast("Learning path not found yet.");
+  currentLibrarySection="theory";
+  currentLibraryPathId=pathId;
+  currentLibraryEntryId=null;
+  if(activePage!=="library")showView("library");
+  else renderLibrary();
+}
+function toggleLibraryBookmark(entryId){
+  const bookmarks=new Set(state.libraryBookmarks||[]);
+  bookmarks.has(entryId)?bookmarks.delete(entryId):bookmarks.add(entryId);
+  state.libraryBookmarks=[...bookmarks];
+  saveState();
+  renderLibrary();
+  toast(bookmarks.has(entryId)?"Entry saved.":"Entry removed from saved entries.");
+}
+function addLibraryEntryToProjectNotes(entryId){
+  const entry=libraryWikiEntryById(entryId),project=getProject();
+  if(!entry||!project)return;
+  project.notes=`${project.notes||""}${project.notes?"\n\n":""}Library: ${entry.title}\n${entry.summary}`;
+  saveProjectTouch(project);
+  toast("Added to project notes.");
+}
+function addLibraryEntryToChecklist(entryId){
+  const entry=libraryWikiEntryById(entryId),project=getProject();
+  if(!entry||!project)return;
+  const item={id:`wiki-check-${Date.now()}`,projectId:project.id,entryId,title:entry.title,createdAt:new Date().toISOString(),done:false};
+  state.libraryProjectChecklist=[item,...(state.libraryProjectChecklist||[])].slice(0,80);
+  project.libraryChecklist=[item,...(project.libraryChecklist||[])].slice(0,40);
+  saveProjectTouch(project);
+  toast("Added to project checklist.");
+}
+function openLibrarySuggestEdit(entryId){
+  const entry=libraryWikiEntryById(entryId);
+  if(!entry)return;
+  openModal(`<p class="eyebrow">SUGGEST EDIT</p><h2>${escapeHtml(entry.title)}</h2><p class="muted-copy">Suggestions are stored locally for now. Future community review can submit these to moderators.</p><div class="field full"><label>What should change?</label><textarea id="wiki-suggest-text" rows="6" placeholder="Add a correction, missing tip, clearer wording, or source note."></textarea></div><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-wiki-suggestion">Save suggestion</button></div>`);
+  document.getElementById("save-wiki-suggestion").onclick=()=>{const text=document.getElementById("wiki-suggest-text").value.trim();if(!text)return toast("Write the suggestion first.");state.librarySuggestedEdits=[{id:`suggest${Date.now()}`,entryId,text,status:"local-draft",createdAt:new Date().toISOString()},...(state.librarySuggestedEdits||[])];saveState();closeModal();toast("Suggestion saved locally.");};
+}
+function askAssistantAboutLibraryEntry(entryId){
+  const entry=libraryWikiEntryById(entryId),project=getProject();
+  if(!entry)return;
+  if(project){
+    project.yarnchaAssistant={...(project.yarnchaAssistant||{}),draftQuestion:`Help me understand ${entry.title}. ${entry.summary}`,selectedLibraryEntryId:entry.id};
+    saveProjectTouch(project);
+    currentProjectId=project.id;
+    showView("project-detail").then(()=>{document.querySelector('[data-project-tab="assistant"]')?.click?.();});
+  }else toast(`Ask Assistant: ${entry.title}`);
+}
+function updateLibraryPathProgress(pathId,reset=false){
+  const path=libraryLearningPaths.find(item=>item.id===pathId);
+  if(!path)return;
+  state.libraryPathProgress=state.libraryPathProgress||{};
+  state.libraryPathProgress[pathId]=reset?0:Math.min(path.orderedEntries.length,Number(state.libraryPathProgress[pathId]||0)+1);
+  saveState();
+  renderLibrary();
+}
+function openLibraryReport(entryId){
+  const entry=libraryWikiEntryById(entryId);
+  if(!entry)return toast("Library entry not found.");
+  openModal(`<p class="eyebrow">COPYRIGHT / CONTENT REPORT</p><h2>${escapeHtml(libraryCopyrightPolicy.reportLabel)}</h2><p class="muted-copy">${escapeHtml(libraryCopyrightPolicy.summary)}</p><label class="field full">What looks copied or suspicious?<textarea id="wiki-report-text" rows="5" placeholder="Describe copied pattern text, chart content, designer material, or another concern."></textarea></label><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-wiki-report">Save report locally</button></div>`);
+  document.getElementById("save-wiki-report").onclick=()=>{const text=document.getElementById("wiki-report-text").value.trim();if(!text)return toast("Add a short report note first.");state.libraryReports=[{id:`report${Date.now()}`,entryId,text,status:"local-review-needed",createdAt:new Date().toISOString()},...(state.libraryReports||[])];saveState();closeModal();toast("Report saved locally for review.");};
+}
+function bindLibraryWiki(){
+  if(currentLibrarySection!=="theory")return;
+  document.getElementById("wiki-entry-back")?.addEventListener("click",()=>{currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();});
+  document.getElementById("wiki-search")?.addEventListener("input",event=>{libraryWikiFilters.search=event.target.value;libraryWikiFilters.path="All";currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();requestAnimationFrame(()=>document.getElementById("wiki-search")?.focus());});
+  [["wiki-craft","craft"],["wiki-level","level"],["wiki-category","category"],["wiki-project-type","projectType"],["wiki-tool","tool"]].forEach(([id,key])=>document.getElementById(id)?.addEventListener("change",event=>{libraryWikiFilters[key]=event.target.value;libraryWikiFilters.path="All";currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();}));
+  document.querySelectorAll("[data-wiki-path]").forEach(button=>button.onclick=()=>{const path=button.dataset.wikiPath;libraryWikiFilters={search:"",craft:["knitting","crochet","tunisian"].includes(path)?path:"All",level:path==="beginner"?"beginner":"All",category:libraryWikiCategories.includes(path)?path:"All",projectType:"All",tool:"All",path};currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();});
+  document.querySelectorAll("[data-wiki-path-progress]").forEach(button=>button.onclick=()=>updateLibraryPathProgress(button.dataset.wikiPathProgress));
+  document.querySelectorAll("[data-wiki-path-reset]").forEach(button=>button.onclick=()=>updateLibraryPathProgress(button.dataset.wikiPathReset,true));
+  document.querySelectorAll("[data-wiki-entry]").forEach(button=>button.onclick=()=>openLibraryWikiEntry(button.dataset.wikiEntry));
+  document.querySelectorAll("[data-wiki-save]").forEach(button=>button.onclick=()=>toggleLibraryBookmark(button.dataset.wikiSave));
+  document.querySelectorAll("[data-wiki-project-note]").forEach(button=>button.onclick=()=>addLibraryEntryToProjectNotes(button.dataset.wikiProjectNote));
+  document.querySelectorAll("[data-wiki-checklist]").forEach(button=>button.onclick=()=>addLibraryEntryToChecklist(button.dataset.wikiChecklist));
+  document.querySelectorAll("[data-wiki-suggest]").forEach(button=>button.onclick=()=>openLibrarySuggestEdit(button.dataset.wikiSuggest));
+  document.querySelectorAll("[data-wiki-report]").forEach(button=>button.onclick=()=>openLibraryReport(button.dataset.wikiReport));
+  document.querySelectorAll("[data-wiki-ask]").forEach(button=>button.onclick=()=>askAssistantAboutLibraryEntry(button.dataset.wikiAsk));
+  document.querySelectorAll("[data-wiki-tool]").forEach(button=>button.onclick=()=>{const match=toolkitToolDefs.find(tool=>tool.name===button.dataset.wikiTool||tool.name.includes(button.dataset.wikiTool.split(" ")[0]));if(match){showView("tools");renderTool(match.id);}else toast(`${button.dataset.wikiTool} is in the Tool Manual.`);});
+  document.querySelector("[data-wiki-note]")?.addEventListener("input",event=>{state.libraryEntryNotes={...(state.libraryEntryNotes||{}),[event.target.dataset.wikiNote]:event.target.value};saveStateSoon();});
+  document.querySelector("[data-visual-upload]")?.addEventListener("change",event=>{const file=event.target.files?.[0];if(file)addVisualReference(event.target.dataset.visualUpload,file);});
+  document.querySelectorAll("[data-visual-view]").forEach(button=>button.onclick=()=>openVisualReference(visualReferenceById(currentLibraryEntryId,button.dataset.visualView)));
+  document.querySelectorAll("[data-visual-edit]").forEach(button=>button.onclick=()=>editVisualReference(currentLibraryEntryId,button.dataset.visualEdit));
+  document.querySelectorAll("[data-visual-delete]").forEach(button=>button.onclick=()=>removeVisualReference(currentLibraryEntryId,button.dataset.visualDelete));
+  hydrateVisualReferenceImages().catch(error=>console.error("[Yarncha Library] Visual references failed to load",error));
 }
 function yarnMaterialReferenceHtml(){return `<div class="material-reference"><div class="material-source-note">Quick fibre comparison. Final feel also depends on spin, blend, gauge and fabric density.</div><div class="material-grid">${state.yarnMaterials.map(m=>{const r=materialRatings(m);return `<article class="material-card card">${m.imageAsset?`<img class="material-photo" data-material-image="${m.imageAsset}" alt="">`:""}<h3>${escapeHtml(m.name)}</h3><span>${escapeHtml(m.category||m.origin)}</span><div class="rating-grid"><div><small>Warmth</small><strong>${r.warmth}/5</strong></div><div><small>Drape</small><strong>${r.drape}/5</strong></div><div><small>Elasticity</small><strong>${r.elasticity}/5</strong></div><div><small>Care</small><strong>${r.care}/5</strong></div></div><dl><dt>Best season</dt><dd>${escapeHtml(m.season)}</dd><dt>Substitutions</dt><dd>${escapeHtml(r.substitutions)}</dd><dt>Best uses</dt><dd>${escapeHtml(r.uses)}</dd><dt>Texture</dt><dd>${escapeHtml((m.textures||[]).join(", ")||m.texture||"Not specified")}</dd><dt>Useful to know</dt><dd>${escapeHtml(m.features)}</dd></dl><div class="row-actions"><button class="mini-button" data-edit-material="${m.id}">Edit</button></div></article>`}).join("")}</div></div>`;}
 function materialRatings(m){
@@ -5014,29 +5269,300 @@ function manualDetailsForTool(tool){
 function toolManualHtml(){
   return `<div class="manual-grid">${toolkitToolDefs.map(tool=>{const m=manualDetailsForTool(tool);return `<article class="manual-card card"><p class="eyebrow">${escapeHtml(tool.category)} · ${escapeHtml(toolCraftLabel(tool))}</p><h3>${escapeHtml(tool.name)}</h3><dl><dt>What it is for</dt><dd>${escapeHtml(m.what)}</dd><dt>When to use it</dt><dd>${escapeHtml(m.when)}</dd><dt>Inputs explained</dt><dd>${escapeHtml(m.inputs)}</dd><dt>Output explained</dt><dd>${escapeHtml(m.outputs)}</dd><dt>Beginner example</dt><dd>${escapeHtml(m.example)}</dd><dt>Common mistake</dt><dd>${escapeHtml(m.mistake)}</dd><dt>Related tools</dt><dd>${escapeHtml(m.related)}</dd></dl></article>`;}).join("")}</div>`;
 }
-const theoryTopics={
-  Beginner:["Yarn weight","Needle and hook size","Gauge basics","Tension","Reading labels","Basic stitch anatomy","Rows vs rounds","Why swatching matters"],
-  Intermediate:["Ease","Shaping","Increases and decreases","Pattern repeats","Stitch multiples","Blocking","Yarn substitution","Working from charts"],
-  Advanced:["Garment construction","Sleeve shaping","Raglan, yoke, drop shoulder, set-in sleeve","Lace and cable logic","Crochet shaping","Tunisian crochet structure","Calculating modifications"],
-  Expert:["Grading sizes","Pattern design math","Advanced gauge adjustment","Fibre behavior","Drape and fabric density","Professional fit checking","Multi-size garment planning"]
+const libraryWikiCategories=[
+  "Foundations","Knitting Knowledge","Crochet Knowledge","Tunisian Crochet Knowledge","Troubleshooting Hub","Project Planning","Pattern & Chart Reading","Modification & Design Math","Yarn & Fibre Library","Tool Manual Integration"
+];
+const libraryCraftLabels={shared:"Shared",knitting:"Knitting",crochet:"Crochet",tunisian:"Tunisian crochet"};
+const libraryLevelLabels={beginner:"Beginner",intermediate:"Intermediate",advanced:"Advanced",expert:"Expert"};
+const libraryReliabilityStatuses=["Official Yarncha Guide","Draft","Needs Review","User Submitted","Community Reviewed","Expert Reviewed"];
+const libraryCopyrightPolicy={
+  summary:"Yarncha Library teaches general technique, planning, and troubleshooting. It must not store, reproduce, or share full paid pattern instructions, copyrighted charts, copied designer content, or public community submissions that paste protected pattern text.",
+  privateNotes:"Private notes are allowed for a user's own reference, but public/community submissions must be original summaries or general technique guidance.",
+  assistantBoundary:"Yarncha Assistant may explain general techniques, troubleshoot user-provided numbers, and respond to pasted snippets supplied by the user, but it must not claim designer pattern content belongs to Yarncha.",
+  reportLabel:"Report copied or suspicious content"
 };
-function theoryFoundationHtml(){
-  const related={Gauge:"Gauge / Swatch Adapter",Yarn:"Yarn Estimator",Needle:"Needle / Hook Adjustment",hook:"Needle / Hook Adjustment",Shaping:"Increase & Decrease Planner",Ease:"Garment Resizer",Pattern:"Repeat Calculator",Blocking:"Gauge / Swatch Adapter"};
-  return `<div class="theory-levels">${Object.entries(theoryTopics).map(([level,topics])=>`<section class="theory-level card"><p class="eyebrow">${level}</p><h2>${level} foundations</h2><div class="theory-topic-list">${topics.map(topic=>{const relatedTool=Object.entries(related).find(([key])=>topic.includes(key))?.[1]||"Tool Manual";return `<article><h3>${escapeHtml(topic)}</h3><p><strong>Short explanation:</strong> ${escapeHtml(theoryExplanation(topic))}</p><p><strong>Why it matters:</strong> It helps you predict size, fabric, fit or yarn use before the project becomes expensive to undo.</p><p><strong>Practical example:</strong> Try the related calculator with your own pattern numbers before changing the project.</p><p><strong>Common mistakes:</strong> Mixing units, skipping a swatch, or trusting one number without checking the fabric.</p><small>Related tool: ${escapeHtml(relatedTool)}</small></article>`}).join("")}</div></section>`).join("")}</div>`;
+const libraryTerminologyVariants=[
+  {term:"US/UK crochet terms",aliases:["single crochet / double crochet UK","double crochet / treble UK","half double crochet / half treble UK"]},
+  {term:"AU/UK yarn terms",aliases:["8 ply","DK","10 ply","Aran","4 ply","fingering"]},
+  {term:"US yarn weights",aliases:["CYC 0 lace","CYC 1 super fine","CYC 3 DK","CYC 4 worsted"]},
+  {term:"Hook and needle sizes",aliases:["mm hook","US needle","UK needle","metric diameter"]},
+  {term:"Bind off / cast off",aliases:["bind off","cast off"]},
+  {term:"Gauge / tension",aliases:["gauge","tension","stitches per 10 cm"]},
+  {term:"Frogging / ripping back",aliases:["frog back","rip back","undo rows"]}
+];
+const libraryMeasurementGuides=[
+  "bust/chest","shoulder width","armhole depth","sleeve length","upper arm","wrist","body length","hip","neck opening","head circumference","foot length","foot circumference","hand circumference","blanket size","scarf size","hat size","sock size","bag size","amigurumi size"
+];
+const libraryCraftSafetyNotes=[
+  "Baby items should avoid unsafe buttons, long ties, and safety eyes; embroidered features are safer for babies.",
+  "Acrylic can melt near heat and should be kept away from hot surfaces.",
+  "Cotton can stretch, sag, or become heavy in large garments.",
+  "Wool may irritate sensitive skin and some yarns pill with friction.",
+  "Bags need durable fibre, firm fabric, reinforced handles, and careful lining choices.",
+  "Steam blocking can damage acrylic or heat-sensitive fibres; test a swatch first.",
+  "Garments can grow after washing or blocking, especially cotton, alpaca, bamboo, linen, and superwash yarns."
+];
+const libraryProblemSearchMap=[
+  {phrases:["crochet circle wavy","wavy circle","circle ripples"],entries:["crochet-circle-formula","project-too-big-small"],tools:["Blocking Calculator"],assistantSuggestion:"Check increase rate, hook size, and whether the circle is gaining too many stitches."},
+  {phrases:["knitting rolling","edge curling","stockinette curls"],entries:["knitting-curling","blocking"],tools:["Blocking Calculator"],assistantSuggestion:"Stockinette curls naturally; add border, ribbing, garter edge, or plan blocking expectations."},
+  {phrases:["tunisian curl","tunisian curling"],entries:["tunisian-curling","tunisian-forward-return-pass"],tools:["Needle / Hook Adjustment"],assistantSuggestion:"Try a larger Tunisian hook, softer edge, looser foundation, or blocking plan."},
+  {phrases:["wrong count","extra stitch","too few stitches"],entries:["stitch-count-troubleshooting","reading-repeats"],tools:["Row / Round Counter Helper"],assistantSuggestion:"Pause at the end of the row, count repeats, and compare increases/decreases with the pattern."},
+  {phrases:["too tight cast on","cast on too tight","bind off too tight","cast off too tight"],entries:["cast-on-bind-off","stitch-count-troubleshooting"],tools:["Needle / Hook Adjustment"],assistantSuggestion:"Use a stretchier cast-on or bind-off, relax the edge tension, and compare the edge with the fabric width."},
+  {phrases:["8 ply instead of DK","dk instead of worsted","substitute yarn"],entries:["yarn-substitution","yarn-weight"],tools:["Yarn Substitution Helper"],assistantSuggestion:"Compare meterage per 100 g, fibre behavior, gauge, and swatch before substituting."},
+  {phrases:["sleeve longer","sleeve too long","arm length wrong"],entries:["garment-modification","measurement-guide"],tools:["Sleeve Calculator"],assistantSuggestion:"Check row gauge, arm measurement, and shaping interval before removing length."},
+  {phrases:["how much yarn","running out yarn","not enough yarn"],entries:["running-out-of-yarn","yarn-substitution"],tools:["Yarn Estimator"],assistantSuggestion:"Compare total meterage, add buffer, and plan contrast sections if needed."},
+  {phrases:["read chart","chart symbol","pattern chart"],entries:["reading-charts","stitch-anatomy"],tools:["Symbol Database"],assistantSuggestion:"Start with the legend, direction of reading, repeat boundaries, and current row marker."}
+];
+function libraryReviewStatusLabel(value="official"){
+  return value==="official"?"Official Yarncha Guide":libraryReliabilityStatuses.includes(value)?value:"Needs Review";
 }
-function theoryExplanation(topic){
-  if(/Yarn weight/.test(topic))return "Yarn weight describes yarn thickness; it affects gauge, drape and yardage.";
-  if(/Needle|hook/.test(topic))return "Tool size changes stitch size, which changes the finished measurement.";
-  if(/Gauge|swatching/.test(topic))return "Gauge is stitches and rows per measured area, usually checked on a swatch.";
-  if(/Tension/.test(topic))return "Tension is how tightly or loosely you hold and form stitches.";
-  if(/Ease/.test(topic))return "Ease is the difference between body measurement and garment measurement.";
-  if(/Shaping|Increases|decreases/.test(topic))return "Shaping changes stitch counts to form curves, sleeves, armholes and fit.";
-  if(/repeats|multiples/.test(topic))return "Repeats and multiples are pattern blocks that must fit cleanly into your stitch count.";
-  if(/Blocking/.test(topic))return "Blocking relaxes and sets fabric, often changing final measurements.";
-  if(/construction|Raglan|Sleeve|shoulder/.test(topic))return "Garment construction describes how the body and sleeves are built and joined.";
-  if(/Tunisian/.test(topic))return "Tunisian crochet keeps loops on the hook and often creates denser fabric with curl.";
-  if(/Fibre|Drape|density/.test(topic))return "Fibre and fabric density decide warmth, stretch, flow and durability.";
-  return "This concept helps connect pattern instructions to real fabric behavior.";
+function defaultVisualAssetsForEntry(id,title,craftTypes=["shared"],level="beginner",troubleshooting=[]){
+  const craft=craftTypes.includes("tunisian")?"Tunisian crochet":craftTypes.includes("crochet")?"Crochet":craftTypes.includes("knitting")?"Knitting":"Shared";
+  const visualTopics={
+    "stitch-anatomy":["Stitch anatomy comparison","Front loop, back loop, stitch legs, vertical bars, and chain spaces"],
+    "knit-and-purl":["Knitting structure","Knit V, purl bump, right-side and wrong-side fabric"],
+    "tunisian-forward-return-pass":["Tunisian structure","Forward pass loops and return pass chains"],
+    "crochet-circle-formula":["Circle shaping","Round-by-round increase placement and wavy/cupped circle comparison"],
+    "swatching":["Gauge swatch measuring","Where to place the ruler before and after blocking"],
+    "blocking":["Blocking before/after","Fabric before blocking and relaxed finished measurements"],
+    "stitch-count-troubleshooting":["Mistakes and fixes","Missing stitch, accidental increase, and repeat marker checks"],
+    "reading-charts":["Chart symbol guide","Legend, repeat box, row direction, and current row marker"],
+    "chart-reading":["Chart symbol guide","Legend, repeat box, row direction, and current row marker"],
+    "cast-on-bind-off":["Cast-on and bind-off structure","Starting edge, live stitches, bind-off chain, and tight-edge comparison"],
+    "yarn-over-increases-decreases":["Yarn over, increases, and decreases","How yarn overs add stitches and decreases consume stitches"]
+  };
+  const [caption,topic]=visualTopics[id]||[`${title} visual guide`,troubleshooting[0]||"Step-by-step reference panel"];
+  return [{id:`visual-${id}`,type:"diagram",altText:`Diagram for ${title}: ${topic}.`,caption,craftType:craft,level,relatedEntry:id,troubleshootingTopic:topic,futureAnimationReady:true}];
+}
+function defaultDiagnosticFlow(entry){
+  const symptom=entry.troubleshooting?.[0]||`The ${entry.title.toLowerCase()} result does not look or behave as expected.`;
+  return {symptoms:[symptom],likelyCauses:entry.commonMistakes?.slice(0,3)||["Gauge, count, yarn, or tool mismatch."],quickChecks:["Check craft type, project type, yarn weight/fibre, hook or needle size, stitch count, row count, measurements, blocked state, skill level, and any uploaded pattern/chart context."],decisionPath:["Identify the visible symptom.","Compare the project against gauge, count, yarn, and measurement notes.","Use the related Yarncha tool if numbers need recalculating.","Save the result to Project Notes before continuing."],fixes:entry.troubleshooting?.slice(0,4)||entry.stepByStep?.slice(0,4)||[],prevention:entry.nextLearningSteps?.map(step=>`Review ${step} before starting a similar project.`)||[],relatedEntries:entry.relatedEntries||[],relatedTools:entry.relatedTools||[],saveToProjectAction:true};
+}
+function safetyNotesForEntry(entry){
+  const text=[entry.title,entry.summary,...(entry.keywords||[]),...(entry.relatedProjectTypes||[])].join(" ").toLowerCase();
+  return libraryCraftSafetyNotes.filter(note=>{
+    const lower=note.toLowerCase();
+    return (/baby|amigurumi|toy/.test(text)&&/baby|safety eyes|long ties/.test(lower))||(/acrylic|blocking/.test(text)&&/acrylic|steam/.test(lower))||(/cotton|garment|top|sweater/.test(text)&&/cotton|garments/.test(lower))||(/wool|fibre|yarn/.test(text)&&/wool|pilling/.test(lower))||(/bag/.test(text)&&/bags/.test(lower));
+  }).slice(0,3);
+}
+function wikiEntry({id,title,category,subcategory,craftTypes=["shared"],level="beginner",summary,fullExplanation,whenToUse,whyItMatters,miniExample,stepByStep=[],commonMistakes=[],troubleshooting=[],relatedTools=[],relatedProjectTypes=[],relatedEntries=[],nextLearningSteps=[],keywords=[],aliases=[],difficulty,estimatedReadTime="4 min",verifiedStatus="official",visualAssets=null,diagnosticFlow=null,terminologyAliases=[],measurements=[],safetyNotes=[],createdAt="2026-07-05",updatedAt="2026-07-05",version="1.0.0",author="Yarncha Library Team",source="Yarncha original guide",editHistory=[],changelog=[]}){
+  const base={id,title,slug:id,category,subcategory,craftTypes,level,summary,fullExplanation,whenToUse,whyItMatters,miniExample,stepByStep,commonMistakes,troubleshooting,relatedTools,relatedProjectTypes,relatedEntries,nextLearningSteps,keywords,aliases:[...aliases,...terminologyAliases],difficulty:difficulty||level,estimatedReadTime,userNotesEnabled:true,communitySubmissionEnabled:true,verifiedStatus,sourceQuality:libraryReviewStatusLabel(verifiedStatus),reliabilityStatus:libraryReviewStatusLabel(verifiedStatus),copyrightPolicy:libraryCopyrightPolicy,createdAt,updatedAt,lastUpdated:updatedAt,version,author,source,editHistory:editHistory.length?editHistory:[{date:updatedAt,summary:"Initial Yarncha guide version."}],changelog:changelog.length?changelog:["Created structured Library guide."],previousVersions:[],relatedAppVersion:"Yarncha Library Wiki MVP 2026-07-05",restoreSupported:true};
+  base.visualAssets=visualAssets||defaultVisualAssetsForEntry(id,title,craftTypes,level,troubleshooting);
+  base.diagnosticFlow=diagnosticFlow||defaultDiagnosticFlow(base);
+  base.terminologyAliases=terminologyAliases;
+  base.measurements=measurements;
+  base.safetyNotes=safetyNotes.length?safetyNotes:safetyNotesForEntry(base);
+  return base;
+}
+const libraryWikiEntries=[
+  wikiEntry({id:"gauge-basics",title:"Gauge Basics",category:"Foundations",subcategory:"Gauge and swatching",craftTypes:["shared"],level:"beginner",summary:"Gauge is how many stitches and rows fit into a measured area. It controls finished size, drape, and yarn use.",fullExplanation:"Gauge connects your hands, yarn, hook or needle, and pattern numbers. A small difference across 10 cm can become several centimetres across a sweater, blanket, sleeve, or hat.",whenToUse:"Use this before starting any fitted project, when substituting yarn, or when your finished size looks wrong.",whyItMatters:"Gauge is the bridge between instructions and real fabric. Without it, even correct stitches can create the wrong size.",miniExample:"If a pattern expects 20 stitches per 10 cm and you get 18, your fabric is wider. A 100-stitch panel becomes about 55.5 cm instead of 50 cm.",stepByStep:["Make a swatch larger than 10 cm using the pattern stitch.","Wash or block it the way the finished project will be treated.","Measure stitches across 10 cm away from the edges.","Measure rows across 10 cm if length or shaping matters.","Compare your stitch and row gauge with the pattern before changing size."],commonMistakes:["Measuring over only 2 or 3 cm.","Measuring before the swatch relaxes.","Fixing stitch gauge while ignoring row gauge on sleeves, yokes, or armholes."],troubleshooting:["If you have fewer stitches per 10 cm, try a smaller hook or needle.","If you have more stitches per 10 cm, try a larger hook or needle.","If stitch gauge matches but row gauge does not, plan row/length adjustments instead of changing the tool immediately."],relatedTools:["Gauge / Swatch Adapter","Needle / Hook Adjustment","Pattern Resizer","Garment Resizer"],relatedProjectTypes:["Garments","Hats","Socks","Blankets"],relatedEntries:["swatching","tension-control","gauge-adjustment"],nextLearningSteps:["Swatching","Gauge Adjustment","Yarn Substitution"],keywords:["gauge","stitch gauge","row gauge","swatch","size"],aliases:["gauge basics","swatch gauge","stitches per 10 cm"]}),
+  wikiEntry({id:"swatching",title:"Swatching",category:"Foundations",subcategory:"Gauge and swatching",craftTypes:["shared"],level:"beginner",summary:"A swatch is a small test fabric that shows gauge, drape, stitch definition, colour behaviour, and blocking changes.",fullExplanation:"Swatching is not only a measurement task. It lets you test whether the fabric feels right for the project before you spend days making the full item.",whenToUse:"Use before garments, fitted accessories, yarn substitutions, colourwork, lace, cables, Tunisian fabric, and anything where size matters.",whyItMatters:"A swatch can reveal a fabric that is too stiff, too loose, too transparent, too heavy, or too different after washing.",miniExample:"For a summer top, a cotton swatch may grow after washing. Measuring only before washing can make the top too wide.",stepByStep:["Make the swatch in the same stitch pattern as the project.","Make it wider than the measurement area so edges do not distort the count.","Treat it like the finished project: wash, steam, pin, or lay flat as appropriate.","Measure gauge and note the fabric feel.","Save the result in Project Notes or the Gauge tool."],commonMistakes:["Swatching in stockinette when the project uses lace or ribbing.","Skipping blocking even when the pattern gauge is blocked.","Using a tiny swatch that edge stitches distort."],troubleshooting:["If the swatch is stiff, try a larger tool or softer fibre.","If the swatch is loose or holey, try a smaller tool or firmer yarn.","If it grows after washing, adjust length and width planning before starting."],relatedTools:["Gauge / Swatch Adapter","Blocking Calculator","Project Notes"],relatedProjectTypes:["Sweaters","Tops","Shawls","Tunisian blankets"],relatedEntries:["gauge-basics","blocking","fabric-density"],nextLearningSteps:["Blocking","Fabric Density","Gauge Adjustment"],keywords:["swatch","test square","fabric test","blocked gauge"]}),
+  wikiEntry({id:"yarn-weight",title:"Yarn Weight",category:"Foundations",subcategory:"Yarn basics",craftTypes:["shared"],level:"beginner",summary:"Yarn weight describes thickness, not how heavy the ball feels. It affects gauge, drape, stitch size, and yardage.",fullExplanation:"Two yarns can both be DK or worsted and still behave differently because fibre, spin, ply, and construction affect the fabric. Weight is a starting point, not a full substitution rule.",whenToUse:"Use when choosing yarn, reading yarn labels, estimating yardage, or replacing the pattern yarn.",whyItMatters:"Changing yarn weight changes stitch size and can make a project too big, too small, too stiff, or too open.",miniExample:"A worsted yarn usually creates bigger stitches than DK. If you use worsted in a DK scarf without changing stitch count, the scarf will likely be wider.",stepByStep:["Find the yarn weight on the label or pattern.","Compare recommended hook or needle sizes.","Check meterage or yardage per 100 g, not just the weight category.","Make a gauge swatch if size matters.","Use substitution tools before buying a full sweater quantity."],commonMistakes:["Assuming grams equal yarn length.","Substituting by colour only.","Using a heavier yarn without recalculating stitch count."],troubleshooting:["If fabric is too dense, the yarn may be too heavy or the tool too small.","If fabric is too loose, yarn may be too light or the tool too large.","If yarn runs out, compare meterage per ball with the pattern yarn."],relatedTools:["Yarn Weight Converter","Yarn Substitution Helper","Yarn Estimator","Needle / Hook Adjustment"],relatedProjectTypes:["All projects"],relatedEntries:["yarn-substitution","reading-yarn-labels","fabric-density"],nextLearningSteps:["Yarn Substitution","Reading Yarn Labels","Yarn Fibre Types"],keywords:["yarn weight","dk","worsted","aran","fingering","bulky"],aliases:["wpi","cyc weight","yarn category"]}),
+  wikiEntry({id:"yarn-fibre-types",title:"Yarn Fibre Types",category:"Yarn & Fibre Library",subcategory:"Fibre behaviour",craftTypes:["shared"],level:"beginner",summary:"Fibre affects warmth, stretch, drape, durability, pilling, care, and blocking behaviour.",fullExplanation:"Wool, cotton, linen, alpaca, acrylic, nylon, silk, bamboo, mohair, cashmere, and blends can all make the same pattern behave differently. Fibre choice is part of fit and function.",whenToUse:"Use when choosing yarn for garments, socks, bags, blankets, amigurumi, baby items, summer tops, or winter wear.",whyItMatters:"The right fibre helps the project work for its purpose. Socks need durability, tops need drape and comfort, and amigurumi often needs firm structure.",miniExample:"Cotton can make a crisp summer top but may sag in a heavy sweater. Wool has more bounce and recovery for fitted garments.",stepByStep:["Identify whether the fibre is animal, plant, synthetic, or blended.","Match fibre behaviour to the project purpose.","Check care instructions and washing behaviour.","Compare stretch and drape with the pattern yarn.","Swatch and wash before committing to fit."],commonMistakes:["Using alpaca for a garment that needs bounce.","Using cotton for ribbing that must spring back.","Ignoring superwash growth after washing."],troubleshooting:["If fabric stretches out, check fibre recovery and blocking behaviour.","If socks wear through quickly, add nylon or a hard-wearing blend.","If amigurumi stuffing shows, use a firmer yarn or smaller hook."],relatedTools:["Yarn Substitution Helper","Yarn Estimator","Blocking Calculator","Project Notes"],relatedProjectTypes:["Garments","Socks","Bags","Blankets","Amigurumi","Baby items"],relatedEntries:["yarn-substitution","drape","fabric-density"],nextLearningSteps:["Yarn Substitution","Drape","Care Instructions"],keywords:["wool","merino","alpaca","cotton","linen","silk","acrylic","nylon","bamboo","mohair","cashmere","superwash","blend"]}),
+  wikiEntry({id:"reading-yarn-labels",title:"Reading Yarn Labels",category:"Foundations",subcategory:"Yarn basics",craftTypes:["shared"],level:"beginner",summary:"A yarn label usually tells you fibre, weight, ball weight, meterage or yardage, gauge, care, colour number, dye lot, and suggested tools.",fullExplanation:"The label is a planning tool, but it is not a promise that your project will match the pattern. Suggested hook and needle sizes are starting points only.",whenToUse:"Use when buying yarn, scanning stash yarn, checking dye lots, estimating quantity, or comparing substitutes.",whyItMatters:"Label details help you avoid mismatched dye lots, wrong yardage, and fabric that behaves unlike the pattern sample.",miniExample:"Two balls may share a colour name but have different dye lots. In a garment, that difference can show as a stripe.",stepByStep:["Check fibre content and care first.","Check meterage or yardage per ball.","Record colour name, colour number, and dye lot.","Compare recommended gauge and tool size with the pattern.","Save the yarn in Yarn Stash if you plan to use it later."],commonMistakes:["Buying by grams instead of meterage.","Ignoring dye lot.","Treating suggested needle size as the required size."],troubleshooting:["If the barcode identifies yarn but not shade, scan label text or capture yarn colour.","If colour is missing, save product info and add colour manually.","If yardage is short, add extra buffer before starting."],relatedTools:["Scan Yarn","Yarn Estimator","Buy List","Yarn Stash","Yarn Substitution Helper"],relatedProjectTypes:["All projects"],relatedEntries:["yarn-weight","yarn-fibre-types","running-out-of-yarn"],nextLearningSteps:["Yarn Stash","Yarn Substitution","Yarn Amount Planning"],keywords:["label","dye lot","colour number","yardage","meterage","barcode","stash"]}),
+  wikiEntry({id:"stitch-anatomy",title:"Stitch Anatomy",category:"Foundations",subcategory:"Fabric structure",craftTypes:["shared"],level:"beginner",summary:"Stitch anatomy helps you see where to insert the hook or needle and how rows, loops, legs, bars, and spaces form fabric.",fullExplanation:"Knitting, crochet, and Tunisian crochet have different stitch structures. Learning the parts of a stitch makes chart reading, fixing mistakes, and clean edges much easier.",whenToUse:"Use when a pattern says front loop, back loop, vertical bar, post, stitch top, right leg, wrong-side row, or chain space.",whyItMatters:"Most mistakes come from putting the tool into the wrong part of the stitch or counting the wrong loop as a stitch.",miniExample:"In crochet, working into the back loop only leaves the front loop visible as a ridge. In Tunisian simple stitch, you insert under the front vertical bar.",stepByStep:["Identify the top loops or stitch legs first.","Find the working direction of the row or round.","Locate special parts: chain space, post, front/back loop, vertical bar, edge stitch.","Work slowly through one repeat and inspect the fabric.","Mark confusing spots with a stitch marker."],commonMistakes:["Counting turning chains incorrectly.","Working into a chain space when the pattern means the stitch top.","Twisting a knitted stitch by inserting through the wrong leg."],troubleshooting:["If edges are uneven, check first and last stitch placement.","If fabric twists, check stitch mount and direction.","If stitch count changes unexpectedly, check whether you skipped a loop or worked twice into one stitch."],relatedTools:["Symbol Database","Chart Annotation / OG Mode","Row / Round Counter Helper"],relatedProjectTypes:["All projects"],relatedEntries:["crochet-stitch-height","tunisian-forward-return-pass","knit-and-purl"],nextLearningSteps:["Pattern Reading","Chart Reading","Fixing Mistakes"],keywords:["stitch anatomy","front loop","back loop","vertical bar","post stitch","chain space","right leg","wrong side"]}),
+  wikiEntry({id:"knit-and-purl",title:"Knit Stitch and Purl Stitch",category:"Knitting Knowledge",subcategory:"Basic stitches",craftTypes:["knitting"],level:"beginner",summary:"Knit and purl are the foundation movements of knitting. Their combinations create stockinette, garter, ribbing, seed stitch, moss stitch, and many textures.",fullExplanation:"Knit stitches make a V on the front; purl stitches make a bump. The same stitch can look different depending on which side of the fabric you are viewing.",whenToUse:"Use when learning written knitting patterns, checking right side/wrong side, or troubleshooting twisted stitches and uneven tension.",whyItMatters:"Almost every knitting pattern builds from knit and purl placement. Reading the fabric helps you fix mistakes without guessing.",miniExample:"Stockinette is knit on the right side and purl on the wrong side when worked flat. Garter is knit every row when worked flat.",stepByStep:["Check whether you are on the right side or wrong side.","For knit, keep yarn at the back and insert through the front leg from left to right.","For purl, bring yarn to the front and insert from right to left.","After a few stitches, look at the fabric: Vs are knit side, bumps are purl side.","Count stitches before and after shaping rows."],commonMistakes:["Leaving yarn in front when knitting.","Twisting stitches by entering the back leg unintentionally.","Losing track of right-side and wrong-side rows."],troubleshooting:["If stitches look crossed, check stitch mount.","If ribbing is messy, read each stitch before working it.","If stockinette curls, that is normal fabric behaviour; add border, ribbing, or blocking expectations."],relatedTools:["Row / Round Counter Helper","Chart Annotation / OG Mode","Symbol Database"],relatedProjectTypes:["Scarves","Sweaters","Hats","Blankets"],relatedEntries:["reading-knitting-patterns","knitting-curling","tension-control"],nextLearningSteps:["Ribbing","Increases and Decreases","Reading Knitting Charts"],keywords:["knit","purl","stockinette","garter","ribbing","seed stitch","moss stitch"]}),
+  wikiEntry({id:"knitting-construction",title:"Knitting Garment Construction",category:"Knitting Knowledge",subcategory:"Garment construction",craftTypes:["knitting"],level:"advanced",summary:"Garment construction describes how a sweater or cardigan is built: raglan, yoke, drop shoulder, set-in sleeve, seams, bands, neckline, and sleeve shaping.",fullExplanation:"Construction affects fit, ease, modification options, and the order of knitting. Understanding the structure helps you adjust body length, sleeve length, neckline, and armhole depth.",whenToUse:"Use before starting or modifying sweaters, cardigans, tops, vests, and fitted garments.",whyItMatters:"A sleeve-length change is simple in some constructions and complicated in others. The construction tells you where shaping happens.",miniExample:"A raglan uses diagonal increases or decreases from neckline to underarm. A drop shoulder often has a straighter body and easier sleeve adjustment.",stepByStep:["Identify construction from pattern notes or schematic.","Find where the garment starts: top-down, bottom-up, or pieces.","Mark shaping areas: raglan lines, yoke rounds, armholes, sleeve caps, neckline, button bands.","Compare finished measurements with body measurements and desired ease.","Record modification decisions in Project Notes before casting on."],commonMistakes:["Changing body length without checking waist or hip shaping.","Changing sleeve length after shaping is complete.","Ignoring button-band pickup ratio."],troubleshooting:["If armhole feels tight, check armhole depth and upper sleeve circumference.","If neckline gaps, check shaping, pickup rate, and bind-off firmness.","If sleeves are wrong length, compare row gauge and shaping interval."],relatedTools:["Garment Resizer","Sleeve Calculator","Raglan Calculator","Pattern Resizer","Project Notes"],relatedProjectTypes:["Sweaters","Cardigans","Tops","Vests"],relatedEntries:["ease","gauge-adjustment","modifying-garment-size"],nextLearningSteps:["Ease","Sleeve Shaping","Professional Fit Checking"],keywords:["raglan","yoke","drop shoulder","set-in sleeve","sleeve shaping","button band","neck shaping","garment fitting"]}),
+  wikiEntry({id:"crochet-stitch-height",title:"Crochet Stitch Height and Turning Chains",category:"Crochet Knowledge",subcategory:"Basic stitches",craftTypes:["crochet"],level:"beginner",summary:"Crochet stitches have different heights. Chains, slip stitches, single crochet, half double crochet, double crochet, and treble crochet build rows with different proportions.",fullExplanation:"Turning chains lift the row to the height of the next stitch. Whether they count as a stitch depends on the pattern, and that choice affects edges and stitch counts.",whenToUse:"Use when edges wobble, counts are off, or a pattern says chain 1, chain 2, turning chain counts, or turning chain does not count.",whyItMatters:"Crochet edges and counts often go wrong at the first or last stitch of the row.",miniExample:"If a ch-3 counts as the first double crochet, you usually work the next stitch into the second stitch. If it does not count, work the first double crochet into the first stitch.",stepByStep:["Read whether the turning chain counts as a stitch.","Mark the first and last stitch of a row.","Count stitch tops, not just tall posts.","Use consistent turning-chain height.","Check edges every few rows."],commonMistakes:["Working into the first stitch twice when the turning chain already counts.","Skipping the first stitch when the chain does not count.","Making turning chains too loose."],troubleshooting:["If edges lean outward, check accidental increases at row ends.","If edges shrink inward, check skipped first or last stitches.","If gaps appear, try a standing stitch, stacked stitch, or shorter turning chain."],relatedTools:["Row / Round Counter Helper","Pattern Resizer","Crochet Chart Reading"],relatedProjectTypes:["Scarves","Blankets","Garments","Granny squares"],relatedEntries:["crochet-circle-formula","stitch-anatomy","stitch-count-troubleshooting"],nextLearningSteps:["Crochet Increases and Decreases","Reading Crochet Patterns"],keywords:["chain","slip stitch","single crochet","half double crochet","double crochet","treble crochet","turning chain","stitch height"]}),
+  wikiEntry({id:"crochet-circle-formula",title:"Crochet Circle Formula",category:"Crochet Knowledge",subcategory:"Shape formulas",craftTypes:["crochet"],level:"intermediate",summary:"A flat crochet circle needs evenly spaced increases. Too many increases make waves; too few make a bowl.",fullExplanation:"Most flat circles add the same number of stitches each round as the first round. The increase placement can be staggered to avoid visible corners.",whenToUse:"Use for hats, bags, coasters, motifs, amigurumi starts, mandalas, and any circular base.",whyItMatters:"Circle shape problems are easier to fix early than after many rounds.",miniExample:"Starting with 6 single crochet usually increases by 6 stitches each round: 6, 12, 18, 24, 30.",stepByStep:["Count the first round stitches.","Add that same number of stitches each round for a flat circle.","Space increases evenly around the round.","Stagger increases if the circle becomes hexagonal.","Lay the circle flat every few rounds and check the edge."],commonMistakes:["Increasing every stitch for too many rounds.","Not increasing enough after the circle gets wider.","Changing hook size instead of checking the increase count."],troubleshooting:["If the circle is wavy, use fewer increases or add a plain round.","If it cups, add more increases or check tension.","If joins are visible, move the join or use continuous spiral rounds when appropriate."],relatedTools:["Circle Calculator","Amigurumi Shape Guide","Granny Square Planner"],relatedProjectTypes:["Amigurumi","Hats","Bags","Motifs"],relatedEntries:["crochet-stitch-height","amigurumi-shaping","crochet-circle-wavy"],nextLearningSteps:["Oval Formula","Cone Shaping","Amigurumi Basics"],keywords:["circle","flat circle","magic ring","spiral rounds","joining rounds","wavy circle","curling circle"]}),
+  wikiEntry({id:"amigurumi-shaping",title:"Amigurumi Shaping",category:"Crochet Knowledge",subcategory:"3D crochet",craftTypes:["crochet"],level:"intermediate",summary:"Amigurumi uses increases, decreases, stuffing, yarn firmness, and hook size to make stable 3D shapes.",fullExplanation:"Small changes in hook size, yarn, stuffing firmness, and stitch placement can distort the final toy or make stuffing show through.",whenToUse:"Use before making animals, dolls, plushies, spheres, cones, cylinders, ovals, or safety-eye projects.",whyItMatters:"Amigurumi is structural. The fabric must be firm enough to hold stuffing and safe enough for the recipient.",miniExample:"If stuffing shows through, use a smaller hook or firmer yarn rather than simply stuffing less.",stepByStep:["Use a hook small enough for dense fabric.","Mark the start of each round.","Count every round, especially increase/decrease rounds.","Stuff gradually and shape with small amounts at a time.","Use embroidered eyes for babies or pets instead of safety eyes."],commonMistakes:["Overstuffing one area and distorting the shape.","Using a loose gauge so stuffing shows.","Placing safety eyes before checking final face position."],troubleshooting:["If shape is lumpy, redistribute stuffing and check increase placement.","If fabric gaps, use smaller hook or tighter tension.","If the piece twists, check spiral marker placement and stitch count."],relatedTools:["Amigurumi Shape Guide","Circle Calculator","Oval Calculator","Cone Calculator","Cylinder Calculator"],relatedProjectTypes:["Amigurumi","Toys","Decor"],relatedEntries:["crochet-circle-formula","stitch-count-troubleshooting","yarn-fibre-types"],nextLearningSteps:["Oval Formula","Cone Shaping","Safety Eyes"],keywords:["amigurumi","stuffing","safety eyes","sphere","oval","cone","cylinder","distortion"]}),
+  wikiEntry({id:"tunisian-forward-return-pass",title:"Tunisian Forward Pass and Return Pass",category:"Tunisian Crochet Knowledge",subcategory:"Core structure",craftTypes:["tunisian"],level:"beginner",summary:"Tunisian crochet rows are built in two passes: a forward pass that picks up loops and a return pass that works them off.",fullExplanation:"Tunisian crochet is its own fabric system. The forward pass creates loops on the hook; the return pass closes them. Counting rows and stitches requires understanding both passes.",whenToUse:"Use when learning Tunisian simple stitch, knit stitch, purl stitch, full stitch, reverse stitch, colourwork, lace, cables, or entrelac.",whyItMatters:"Many Tunisian mistakes come from missing the last edge stitch, tightening the return pass, or treating passes as separate rows.",miniExample:"In Tunisian simple stitch, insert under each front vertical bar on the forward pass, then yarn over and pull through loops on the return pass.",stepByStep:["Start the forward pass with one loop already on the hook.","Insert into each stitch or vertical bar as instructed and pull up loops.","Do not skip the final edge stitch.","For the return pass, yarn over and pull through one loop first.","Then yarn over and pull through two loops repeatedly until one loop remains."],commonMistakes:["Skipping the final edge stitch.","Pulling the return pass too tight.","Counting forward and return passes as two rows when the pattern counts them as one."],troubleshooting:["If edges are uneven, check the last edge stitch.","If fabric is stiff, loosen the return pass or use a larger hook.","If loops are hard to work off, reduce tension and keep loops even on the hook."],relatedTools:["Needle / Hook Adjustment","Gauge / Swatch Adapter","Row / Round Counter Helper"],relatedProjectTypes:["Blankets","Scarves","Bags","Panels"],relatedEntries:["tunisian-curling","fabric-density","stitch-anatomy"],nextLearningSteps:["Tunisian Simple Stitch","Tunisian Curling","Tunisian Gauge"],keywords:["Tunisian crochet","forward pass","return pass","vertical bar","edge stitch","TSS","TKS","TPS"]}),
+  wikiEntry({id:"tunisian-curling",title:"Why Tunisian Crochet Curls",category:"Tunisian Crochet Knowledge",subcategory:"Troubleshooting",craftTypes:["tunisian"],level:"beginner",summary:"Tunisian crochet often curls because the front of the fabric is tighter and denser than the back.",fullExplanation:"Curl is normal in many Tunisian stitches, especially Tunisian simple stitch. Hook size, fibre, stitch choice, border, blocking, and project type decide whether the curl is acceptable.",whenToUse:"Use when Tunisian fabric rolls at the bottom edge, feels stiff, or refuses to lie flat.",whyItMatters:"Curl can be planned around. Fighting it too late may not fully fix a dense fabric.",miniExample:"A Tunisian scarf in simple stitch may curl strongly unless worked with a larger hook, added border, or blocked firmly.",stepByStep:["Use a hook larger than the yarn label suggests.","Keep the return pass relaxed.","Add a non-curling border or stitch section.","Swatch and block before starting a large panel.","Choose projects where dense fabric is helpful if curl remains strong."],commonMistakes:["Using the same hook size as regular crochet.","Tightening every return-pass loop.","Expecting blocking alone to fix very dense fabric."],troubleshooting:["If curling is mild, block and add border.","If curling is severe, use a larger hook or different stitch.","If fabric is too stiff, choose softer fibre or looser gauge."],relatedTools:["Needle / Hook Adjustment","Blocking Calculator","Gauge / Swatch Adapter"],relatedProjectTypes:["Scarves","Blankets","Bags","Panels"],relatedEntries:["tunisian-forward-return-pass","fabric-density","blocking"],nextLearningSteps:["Tunisian Full Stitch","Blocking Tunisian Crochet","Drape"],keywords:["Tunisian curl","curling","return pass tight","dense fabric","stiff fabric"]}),
+  wikiEntry({id:"stitch-count-troubleshooting",title:"Stitch Count Problems",category:"Troubleshooting Hub",subcategory:"Count problems",craftTypes:["shared"],level:"beginner",summary:"Wrong stitch counts usually come from missed repeats, accidental increases, skipped stitches, or misunderstood turning chains, yarn overs, decreases, or edge stitches.",fullExplanation:"A stitch-count problem is easier to fix if you stop immediately and locate whether the error is local, repeated, or caused by the row setup.",whenToUse:"Use when you have too many or too few stitches, a repeat does not fit, shaping looks wrong, or the final count disagrees with the pattern.",whyItMatters:"Continuing with the wrong count can shift shaping, lace, colourwork, cables, sleeves, or chart alignment.",miniExample:"If a 6-stitch repeat is worked one extra time, the row can be off by 6 stitches and every later row may stop lining up.",stepByStep:["Stop at the end of the current row or round if possible.","Write down your current count and the expected count.","Place markers between repeats or every 10 stitches.","Check the row for increases, decreases, yarn overs, skipped stitches, turning chains, or Tunisian edge stitches.","Undo only the wrong section if you can identify it; otherwise undo slowly to the last correct count."],commonMistakes:["Counting chain spaces as stitches when the pattern does not.","Forgetting yarn overs add stitches.","Missing the final stitch after a repeat.","Skipping the Tunisian edge stitch."],troubleshooting:["If count is off by 1, check edges first.","If count is off by the repeat size, check repeat number.","If count keeps drifting, add markers and count every row until stable."],relatedTools:["Row / Round Counter Helper","Repeat Calculator","Chart Annotation / OG Mode"],relatedProjectTypes:["All projects"],relatedEntries:["reading-repeats","crochet-stitch-height","knit-and-purl"],nextLearningSteps:["Reading Repeats","Row Tracking","Fixing Mistakes"],keywords:["wrong stitch count","too many stitches","too few stitches","repeat not fitting","lost count"]}),
+  wikiEntry({id:"crochet-circle-wavy",title:"Crochet Circle Not Lying Flat",category:"Troubleshooting Hub",subcategory:"Shape problems",craftTypes:["crochet"],level:"beginner",summary:"A crochet circle waves when it has too many increases for the yarn, hook, and tension. It cups when it has too few.",fullExplanation:"Circle formulas are guides, not laws. Yarn thickness, stitch height, hook size, and tension can require small changes.",whenToUse:"Use when a coaster, bag base, motif, amigurumi start, or hat crown ruffles, cups, or forms corners.",whyItMatters:"Circle shape determines the structure of many crochet projects. Early correction prevents distorted bases.",miniExample:"If a single-crochet circle ruffles after round 5, try one plain round before the next increase round.",stepByStep:["Lay the circle flat without stretching.","Check whether the edge waves or cups.","Count each round and compare with the planned increase count.","If wavy, reduce increases or add a plain round.","If cupping, add increases or loosen tension."],commonMistakes:["Increasing in every stitch for too long.","Changing hook size before checking count.","Joining rounds with an extra stitch."],troubleshooting:["Wavy edge: fewer increases, smaller increase clusters, or plain round.","Cupping: more increases or larger hook.","Visible corners: stagger increase placement."],relatedTools:["Circle Calculator","Amigurumi Shape Guide","Project Notes"],relatedProjectTypes:["Amigurumi","Motifs","Bags","Hats"],relatedEntries:["crochet-circle-formula","stitch-count-troubleshooting","amigurumi-shaping"],nextLearningSteps:["Oval Formula","Spiral Rounds","Joining Rounds"],keywords:["wavy circle","curling circle","crochet circle","flat circle","ruffling","cupping"]}),
+  wikiEntry({id:"running-out-of-yarn",title:"Running Out of Yarn",category:"Troubleshooting Hub",subcategory:"Yarn amount problems",craftTypes:["shared"],level:"intermediate",summary:"Running out of yarn usually comes from gauge differences, yardage mismatch, yarn substitution, added length, larger size, or too little buffer.",fullExplanation:"Meterage or yardage matters more than ball count. A substituted yarn can have less length per 100 g even if it looks similar.",whenToUse:"Use when your project is using yarn faster than expected or you are planning a project close to your stash quantity.",whyItMatters:"Planning before you start can prevent mismatched dye lots, unfinished sleeves, or a border that cannot be completed.",miniExample:"If the pattern used 400 m and your balls have only 160 m each, two balls are not enough even if the original pattern used two balls.",stepByStep:["Check pattern total meterage or yardage.","Check your yarn length per ball.","Compare gauge and project size with the pattern.","Add buffer for swatching, seaming, fringe, borders, and mistakes.","If already short, shorten a repeat, contrast the border, or plan a deliberate colour change."],commonMistakes:["Buying the same number of balls instead of the same total yardage.","Ignoring swatch yarn.","Adding length without recalculating yarn."],troubleshooting:["If dye lot is unavailable, alternate old and new yarn for a transition.","If a sleeve may run short, weigh yarn before and after the first sleeve.","If using stash scraps, plan stripes or colour blocking intentionally."],relatedTools:["Yarn Estimator","Yarn Leftover Estimator","Buy List","Project Rendering Studio"],relatedProjectTypes:["Sweaters","Blankets","Shawls","Scarves"],relatedEntries:["yarn-weight","reading-yarn-labels","project-planning-checklist"],nextLearningSteps:["Yarn Estimator","Colour Planning","Project Checklist"],keywords:["running out of yarn","yardage","meterage","dye lot","yarn amount","leftover yarn"]}),
+  wikiEntry({id:"project-planning-checklist",title:"Project Planning Checklist",category:"Project Planning",subcategory:"Before starting",craftTypes:["shared"],level:"beginner",summary:"A project checklist helps you confirm size, yarn, gauge, tools, pattern requirements, colours, repeats, blocking, finishing, and backup notes before you start.",fullExplanation:"Planning is not about making the project rigid. It gives you fewer surprises while still leaving room to adjust.",whenToUse:"Use before starting any larger or fitted project, when modifying a pattern, or when using stash yarn.",whyItMatters:"Most avoidable project problems start before the first stitch: wrong size, wrong yardage, missing tool, unclear repeat, or untested gauge.",miniExample:"Before a cardigan, record body measurement, intended ease, finished bust, yarn amount, gauge, button band plan, and blocking expectation.",stepByStep:["Choose project type and size.","Measure body or target object.","Choose yarn and confirm yardage.","Make and record a swatch.","Read the full pattern once and mark repeats or charts.","Plan modifications, colour changes, blocking, and finishing.","Save notes and add uncertain tasks to the project checklist."],commonMistakes:["Starting before checking yardage.","Skipping measurements for gifts.","Making modifications without recording the original numbers."],troubleshooting:["If you feel stuck before starting, make the checklist smaller: yarn, size, gauge, first row.","If modifying, save original and target measurements side by side.","If using stash yarn, check dye lot and total meterage first."],relatedTools:["Project Notes","Buy List","Yarn Estimator","Gauge / Swatch Adapter","Project Rendering Studio"],relatedProjectTypes:["All projects"],relatedEntries:["gauge-basics","reading-yarn-labels","planning-colour-changes"],nextLearningSteps:["Reading Pattern Requirements","Planning Modifications","Blocking"],keywords:["project planning","checklist","before starting","project notes","measure body","choosing size"]}),
+  wikiEntry({id:"reading-patterns",title:"Reading Written Patterns",category:"Pattern & Chart Reading",subcategory:"Written instructions",craftTypes:["shared"],level:"beginner",summary:"Written patterns use abbreviations, brackets, repeats, row or round labels, stitch counts, and notes that must be read in order.",fullExplanation:"A pattern line is easier when broken into before-repeat, repeat, after-repeat, and final stitch-count parts. Do not work from one abbreviation at a time without reading the whole instruction.",whenToUse:"Use when a row has brackets, asterisks, repeat instructions, stitch counts, or confusing wording.",whyItMatters:"Most reading mistakes happen when makers repeat too much, miss final stitches, or ignore an at-the-same-time note.",miniExample:"K2, [yo, k2tog] 6 times, k2 means work K2 once, repeat only the bracket 6 times, then K2 once at the end.",stepByStep:["Read notes and abbreviation list first.","Find the row or round number.","Mark brackets, asterisks, and repeat counts.","Count the stitches in one repeat.","Work slowly and count at the end of the row.","Highlight at-the-same-time instructions separately."],commonMistakes:["Repeating stitches outside the brackets.","Missing stitch counts in parentheses.","Mixing US and UK crochet terms."],troubleshooting:["If a repeat does not fit, check the stitch multiple and starting count.","If the row feels too long, check whether you repeated the edge stitches.","If the abbreviation is unclear, use the pattern glossary first."],relatedTools:["Repeat Calculator","Row / Round Counter Helper","Project Notes","Chart Annotation / OG Mode"],relatedProjectTypes:["All projects"],relatedEntries:["reading-repeats","stitch-count-troubleshooting","chart-reading"],nextLearningSteps:["Reading Repeats","Chart Reading","Pattern Modification"],keywords:["pattern reading","abbreviations","brackets","asterisk","repeat","row instruction","round instruction"]}),
+  wikiEntry({id:"chart-reading",title:"Reading Charts",category:"Pattern & Chart Reading",subcategory:"Charts",craftTypes:["shared"],level:"intermediate",summary:"Charts show stitches visually, but direction, symbol legend, right-side/wrong-side rules, and craft type decide how to read them.",fullExplanation:"Knitting charts, crochet charts, and Tunisian charts are not read the same way. Always use the pattern legend and chart notes before assuming a symbol meaning.",whenToUse:"Use when following lace, cables, colourwork, motifs, crochet diagrams, Tunisian stitch charts, or imported chart images.",whyItMatters:"Reading the wrong direction or symbol meaning can shift an entire project.",miniExample:"A flat knitting chart may read right-to-left on right-side rows and left-to-right on wrong-side rows. A crochet motif chart may read in rounds from the centre outward.",stepByStep:["Find the legend before reading symbols.","Identify whether the chart is flat, in the round, motif, or Tunisian.","Check row direction and starting row.","Mark the current row with Yarncha's row mask or annotation tools.","Use row counters and repeat markers for repeated sections.","Verify unclear symbols before continuing."],commonMistakes:["Assuming symbols are universal.","Reading wrong-side rows in the same direction as right-side rows.","Ignoring repeat boxes or chart boundaries."],troubleshooting:["If the chart does not match the stitch count, check direction and repeats.","If symbols are unclear, zoom and compare with the legend.","If you lose your place, use row mask, markers, and notes before continuing."],relatedTools:["Chart Annotation / OG Mode","Row / Round Counter Helper","Grid Planner","Symbol Database"],relatedProjectTypes:["Lace","Cables","Colourwork","Motifs","Tunisian panels"],relatedEntries:["reading-patterns","stitch-anatomy","stitch-count-troubleshooting"],nextLearningSteps:["Reading Repeats","Symbol Database","Flow Mode"],keywords:["chart","chart reading","legend","symbols","row direction","OG Mode","annotation","row mask"]}),
+  wikiEntry({id:"modifying-garment-size",title:"Modifying Garment Size",category:"Modification & Design Math",subcategory:"Garment math",craftTypes:["shared"],level:"advanced",summary:"Garment modification means changing stitch counts, row counts, gauge, ease, length, neckline, armhole, or sleeve measurements while preserving the pattern structure.",fullExplanation:"A garment is a set of connected measurements. Changing one area can affect shaping, repeats, yardage, and fit elsewhere.",whenToUse:"Use when changing size, yarn weight, gauge, body length, sleeve length, neckline, armhole depth, ease, or stitch count.",whyItMatters:"Good modification keeps the pattern's construction logic while making the result fit your body or yarn.",miniExample:"Adding 4 cm body length may require extra yarn and may move waist shaping or colour changes.",stepByStep:["Record original pattern gauge and finished measurements.","Record your gauge and target body measurements.","Choose intended ease.","Calculate new stitch and row counts.","Check stitch multiples and shaping intervals.","Adjust yarn estimate and project notes.","Make changes in a test section before committing to the whole garment."],commonMistakes:["Changing stitch count without checking repeats.","Adding length without changing yarn estimate.","Changing armhole depth without sleeve-cap consequences."],troubleshooting:["If the repeat no longer fits, adjust to the nearest valid multiple.","If sleeve length is wrong, compare row gauge and shaping rows.","If garment is too tight, check finished measurement and ease before blocking aggressively."],relatedTools:["Garment Resizer","Pattern Resizer","Sleeve Calculator","Raglan Calculator","Gauge / Swatch Adapter"],relatedProjectTypes:["Sweaters","Cardigans","Tops","Vests"],relatedEntries:["knitting-construction","ease","gauge-adjustment"],nextLearningSteps:["Grading Sizes","Professional Fit Checking","Pattern Design Math"],keywords:["modify pattern","resize sweater","garment size","ease","sleeve length","neckline","armhole","grading"]}),
+  wikiEntry({id:"yarn-substitution",title:"Yarn Substitution",category:"Project Planning",subcategory:"Yarn planning",craftTypes:["shared"],level:"intermediate",summary:"Yarn substitution compares weight, gauge, meterage, fibre, ply, drape, stretch, colour, and care so a different yarn can behave close enough to the pattern yarn.",fullExplanation:"A substitute does not need to be identical, but it must suit the project purpose. A drapey alpaca may not replace springy wool in ribbing, and cotton may grow in garments.",whenToUse:"Use when the pattern yarn is unavailable, too expensive, not in stash, discontinued, or unsuitable for the recipient.",whyItMatters:"Substitution affects size, hand feel, durability, warmth, drape, and yardage.",miniExample:"DK cotton and DK merino can both match stitch gauge, but cotton may stretch lengthwise and have less recovery in ribbing.",stepByStep:["Compare yarn weight and meterage per 100 g.","Compare fibre behaviour, stretch, drape, and care.","Check recommended gauge and tool size.","Swatch in the actual pattern stitch.","Estimate total yardage plus buffer.","Buy matching dye lots when possible."],commonMistakes:["Matching only yarn weight.","Ignoring fibre stretch and blocking behaviour.","Buying equal ball count instead of equal meterage."],troubleshooting:["If fabric is too stiff, try larger tool or softer fibre.","If fabric grows, choose more elastic fibre or adjust length.","If yardage is uncertain, buy extra or plan contrast sections."],relatedTools:["Yarn Substitution Helper","Yarn Weight Converter","Gauge / Swatch Adapter","Yarn Estimator"],relatedProjectTypes:["Garments","Socks","Blankets","Bags","Toys"],relatedEntries:["yarn-weight","yarn-fibre-types","reading-yarn-labels"],nextLearningSteps:["Swatching","Drape","Blocking"],keywords:["yarn substitution","substitute yarn","DK instead of worsted","different yarn","fibre"]}),
+  wikiEntry({id:"blocking",title:"Blocking",category:"Foundations",subcategory:"Finishing",craftTypes:["shared"],level:"beginner",summary:"Blocking shapes and relaxes fabric with water, steam, or gentle pinning. It can change size, drape, stitch definition, and edges.",fullExplanation:"Blocking is part finishing and part measurement check. Different fibres react differently, so the swatch should be blocked before relying on final measurements.",whenToUse:"Use after finishing lace, garments, shawls, squares, Tunisian panels, or anything where edges and measurements matter.",whyItMatters:"Blocking can improve fabric, but it can also reveal growth. Planning for blocking avoids surprise size changes.",miniExample:"A lace shawl may open beautifully after wet blocking, while a cotton top may grow longer than expected.",stepByStep:["Check fibre care instructions.","Test blocking on a swatch first.","Measure before blocking.","Block gently according to fibre and project type.","Measure after drying completely.","Record final measurements in Project Notes."],commonMistakes:["Steaming acrylic too hot.","Stretching ribbing until it loses recovery.","Judging size before the fabric is fully dry."],troubleshooting:["If blocking changed size too much, compare swatch behaviour and fibre content.","If edges still curl, add border or adjust stitch choice next time.","If fabric is limp, avoid overstretching and use gentler blocking."],relatedTools:["Blocking Calculator","Gauge / Swatch Adapter","Project Notes"],relatedProjectTypes:["Garments","Shawls","Lace","Tunisian crochet","Granny squares"],relatedEntries:["swatching","tunisian-curling","gauge-basics"],nextLearningSteps:["Finishing","Seaming","Drape"],keywords:["blocking","wet block","steam block","pinning","finished size","care instructions"]})
+];
+libraryWikiEntries.push(
+  wikiEntry({id:"cast-on-bind-off",title:"Cast-On and Bind-Off Edges",category:"Knitting Knowledge",subcategory:"Edges and finishing",craftTypes:["knitting"],level:"beginner",summary:"Cast-on creates the starting edge and bind-off or cast-off secures live stitches at the end. Edge tension affects fit, stretch, and comfort.",fullExplanation:"A cast-on or bind-off can be technically correct but too tight for ribbing, socks, cuffs, neck openings, shawls, and blankets. The method should match the fabric's stretch and purpose.",whenToUse:"Use when starting knitting, finishing knitting, fixing a tight edge, choosing a stretchy edge, or comparing bind off / cast off wording.",whyItMatters:"A tight edge can make a hat, sock, sleeve, or neckline uncomfortable even when the rest of the gauge is correct.",miniExample:"A ribbed cuff may need a stretchier cast-on and bind-off than a flat garter-stitch scarf edge.",stepByStep:["Choose the cast-on or bind-off method named by the pattern.","Keep the edge loops relaxed and evenly spaced.","Count the starting or remaining stitches carefully.","Compare edge stretch with the fabric after a few rows or before fastening off.","If the edge is too tight, undo early and use a stretchier method or larger needle for the edge only."],commonMistakes:["Casting on too tightly.","Binding off too tightly.","Confusing bind off and cast off as different actions.","Using a firm edge where the project needs stretch."],troubleshooting:["If the cast-on is tight, recast with a larger needle or stretchier method.","If bind-off pulls inward, undo it and bind off more loosely.","If stitch count changes at the edge, recount before continuing."],relatedTools:["Needle / Hook Adjustment","Row / Round Counter Helper","Project Notes"],relatedProjectTypes:["Hats","Socks","Sleeves","Sweaters","Scarves","Blankets"],relatedEntries:["knit-and-purl","stitch-count-troubleshooting","terminology-variants"],nextLearningSteps:["Stretchy Cast-On","Stretchy Bind-Off","Reading Knitting Patterns"],keywords:["cast on","bind off","cast off","too tight cast on","too tight bind off","edge tension","live stitches"]}),
+  wikiEntry({id:"yarn-over-increases-decreases",title:"Yarn Over, Increases, and Decreases",category:"Foundations",subcategory:"Shaping and stitch count",craftTypes:["shared","knitting","crochet"],level:"beginner",summary:"Yarn overs, increases, and decreases change stitch count, shaping, lace openings, and fabric direction.",fullExplanation:"A yarn over usually creates a new loop and often a decorative hole. Increases add stitches; decreases consume stitches. Patterns may pair them to keep stitch count stable.",whenToUse:"Use when a row includes yo, m1, kfb, inc, sc2tog, k2tog, ssk, decrease, shaping, lace, sleeves, hats, or amigurumi forms.",whyItMatters:"Most count problems happen when a maker forgets that yarn overs add stitches or decreases remove them.",miniExample:"In knitting, [yo, k2tog] can keep the total stitch count the same because one stitch is added and one is removed.",stepByStep:["Mark every stitch-count changing action in the row.","Check whether each yarn over or increase adds one or more stitches.","Check how many stitches each decrease consumes.","Compare the expected stitch count before and after the row.","Place markers between repeats until the count is stable."],commonMistakes:["Forgetting to make the yarn over.","Skipping an extra stitch after a decrease.","Adding a stitch when the pattern only wanted a decorative yarn movement.","Not pairing increases/decreases inside lace repeats."],troubleshooting:["If count is high, check accidental yarn overs and extra increases.","If count is low, check missed yarn overs or extra decreases.","If lace is shifted, check the repeat boundary and marker placement."],relatedTools:["Repeat Calculator","Row / Round Counter Helper","Chart Annotation / OG Mode"],relatedProjectTypes:["Lace","Sleeves","Garments","Hats","Amigurumi","Shawls"],relatedEntries:["stitch-count-troubleshooting","reading-repeats","stitch-anatomy"],nextLearningSteps:["Reading Repeats","Chart Symbols","Shaping"],keywords:["yarn over","yo","increase","decrease","k2tog","ssk","sc2tog","m1","kfb","lace","stitch count"]}),
+  wikiEntry({id:"measurement-guide",title:"Measurement and Sizing Guide",category:"Project Planning",subcategory:"Measurements",craftTypes:["shared"],level:"beginner",summary:"A practical measuring reference for garments, accessories, blankets, bags, socks, hats, and amigurumi sizing.",fullExplanation:"Measurements connect pattern numbers to the body or object the project must fit. Yarncha keeps measurements separate from guesses so calculators can use clearer inputs.",whenToUse:"Use before choosing a size, changing length, planning sleeves, checking hat or sock fit, resizing a blanket, or adjusting a bag or toy.",whyItMatters:"A good measurement prevents beautiful fabric from becoming the wrong size.",miniExample:"For a hat, head circumference matters more than age. For socks, foot length and foot circumference both matter.",stepByStep:["Measure the body or item gently without pulling the tape tight.","Record bust/chest, shoulder width, armhole depth, sleeve length, upper arm, wrist, body length, hip, neck opening, head circumference, foot length, foot circumference, hand circumference, and project-specific sizes as needed.","Compare measurements with finished project size and intended ease.","Use Gauge / Swatch Adapter, Garment Resizer, Size Reference, Hat Calculator, Sock Calculator, or Blanket Size Reference when numbers need checking."],commonMistakes:["Choosing garment size by shop clothing size only.","Forgetting ease.","Measuring a stretched item instead of relaxed fabric."],troubleshooting:["If a sleeve length is wrong, compare body measurement, row gauge, and shaping intervals.","If a hat feels tight, compare head circumference with finished circumference and stretch.","If a blanket is too small, check motif count, gauge, and border plan."],relatedTools:["Size Reference","Garment Resizer","Sleeve Calculator","Hat Calculator","Sock Calculator","Blanket Size Reference"],relatedProjectTypes:["Sweaters","Cardigans","Tops","Hats","Socks","Gloves","Blankets","Scarves","Bags","Amigurumi"],relatedEntries:["gauge-basics","garment-modification","project-too-big-small"],nextLearningSteps:["Ease","Gauge Adjustment","Project Planning Checklist"],keywords:["measurement guide","bust","chest","shoulder width","armhole depth","sleeve length","upper arm","wrist","body length","hip","neck opening","head circumference","foot length","foot circumference","hand circumference","blanket size","scarf size","hat size","sock size","bag size","amigurumi size"],measurements:libraryMeasurementGuides}),
+  wikiEntry({id:"terminology-variants",title:"Terminology and Regional Variants",category:"Foundations",subcategory:"Terminology",craftTypes:["shared"],level:"beginner",summary:"Craft patterns use regional names for the same ideas. Yarncha search recognises aliases across US, UK, AU, metric, and common maker slang.",fullExplanation:"US and UK crochet terms can use the same words for different stitches. Yarn weights, hook sizes, needle sizes, gauge, tension, cast off, bind off, frogging, and ripping back also vary by region.",whenToUse:"Use whenever a pattern source, yarn label, or video tutorial uses unfamiliar regional language.",whyItMatters:"Term confusion can change every stitch in a project, especially in crochet patterns.",miniExample:"US single crochet is UK double crochet. 8 ply is often treated like DK, but swatching still decides the final match.",stepByStep:["Identify the pattern region if possible.","Check whether crochet terms are US or UK.","Convert hook and needle sizes by metric diameter.","Translate yarn weight terms such as 8 ply, DK, worsted, Aran, and CYC numbers.","Search Yarncha by any alias; the Library will point to the matching guide."],commonMistakes:["Mixing US and UK crochet terms in one project.","Assuming ply always equals exact thickness.","Treating gauge and tension as different measurements."],troubleshooting:["If stitches look too tall, check US/UK crochet terminology first.","If yarn substitution is off, compare meterage per 100 g and gauge, not name alone.","If a cast off is too tight, search bind off/cast off for technique options."],relatedTools:["Craft converters","Yarn Weight Converter","Needle / Hook Adjustment"],relatedProjectTypes:["All projects"],relatedEntries:["yarn-weight","reading-yarn-labels","crochet-stitch-height"],nextLearningSteps:["Reading Patterns","Yarn Substitution","Chart Symbols"],keywords:["US/UK crochet terms","AU/UK yarn terms","US yarn weights","mm hook","US needle","UK needle","ply terms","bind off","cast off","gauge","tension","frogging","ripping back"],terminologyAliases:libraryTerminologyVariants.flatMap(item=>[item.term,...item.aliases])}),
+  wikiEntry({id:"craft-safety-suitability",title:"Craft Safety and Suitability Notes",category:"Project Planning",subcategory:"Safety and suitability",craftTypes:["shared"],level:"beginner",summary:"Yarn choice, finishing details, recipient age, heat exposure, and fabric structure affect whether a project is suitable for everyday use.",fullExplanation:"A project can be technically correct but unsuitable for a baby, hot kitchen, hard-wearing bag, sensitive skin, or fitted garment. Safety and suitability notes help makers choose materials and details intentionally.",whenToUse:"Use when making baby items, toys, amigurumi, bags, kitchen items, garments, heat-adjacent items, or gifts for sensitive skin.",whyItMatters:"Small choices like safety eyes, buttons, ties, fibre, steam, and fabric density can change comfort, durability, and safety.",miniExample:"Safety eyes are not recommended for babies. Embroidered eyes are a safer option for baby toys.",stepByStep:["Identify the recipient and how the item will be used.","Check fibre behaviour, heat tolerance, stretch, and care needs.","Avoid unsafe small parts for babies.","Test blocking and washing on a swatch.","Record safety notes in Project Notes before gifting."],commonMistakes:["Using safety eyes for baby toys.","Steaming acrylic too hot.","Choosing cotton for a garment that needs strong recovery.","Making a bag fabric too loose for heavy use."],troubleshooting:["If a garment grows, check fibre stretch and blocked measurements.","If a bag stretches, use firmer fabric, lining, or reinforced handles.","If skin feels itchy, choose softer fibre or a barrier layer."],relatedTools:["Yarn Substitution Helper","Blocking Calculator","Project Notes","Yarn Estimator"],relatedProjectTypes:["Baby items","Amigurumi","Bags","Garments","Kitchen items","Gifts"],relatedEntries:["yarn-fibre-types","blocking","amigurumi-shaping"],nextLearningSteps:["Fibre Behaviour","Blocking","Project Planning Checklist"],keywords:["baby items","safety eyes","buttons","long ties","acrylic melts","cotton stretches","wool irritation","pilling","bag durability","steam blocking damage","garments grow"],safetyNotes:libraryCraftSafetyNotes}),
+  wikiEntry({id:"copyright-pattern-protection",title:"Copyright and Pattern Protection",category:"Pattern & Chart Reading",subcategory:"Ethical use",craftTypes:["shared"],level:"beginner",summary:"Yarncha can help with general technique and private notes, but it must not reproduce full paid patterns, copyrighted charts, or copied designer instructions.",fullExplanation:"The Library is for original Yarncha explanations, user-owned private notes, and general craft education. Public or community content must not paste protected designer material.",whenToUse:"Use before saving, importing, sharing, or asking the Assistant about pattern text, charts, designer content, or community submissions.",whyItMatters:"Respecting designers keeps Yarncha useful, safe, and fair for makers and pattern creators.",miniExample:"It is okay to ask how decreases work in general. It is not okay to publish a designer's paid chart or full row-by-row instructions as a Library entry.",stepByStep:["Keep purchased pattern text and charts private.","Use Project Notes for personal reminders, not public copying.","Ask the Assistant for general technique or help with user-provided numbers.","Report copied or suspicious community content.","Credit sources where allowed and write original summaries."],commonMistakes:["Pasting a full paid pattern into a public note.","Uploading copyrighted charts as shared Library content.","Assuming a barcode/product listing gives permission to copy images or instructions."],troubleshooting:["If content looks copied, use Report copied or suspicious content.","If you need help, ask a general technique question or provide your own numbers.","If uncertain, keep the note private."],relatedTools:["Project Notes","Assistant","Library"],relatedProjectTypes:["All projects"],relatedEntries:["reading-charts","reading-patterns","project-planning-checklist"],nextLearningSteps:["Private Notes","Community Review","Pattern Reading"],keywords:["copyright","paid pattern","copyrighted charts","designer content","private notes","community submissions","report copied content"]})
+);
+const libraryLearningPaths=[
+  {id:"knitting-beginner",title:"Knitting Beginner Path",difficulty:"Beginner",estimatedTime:"3-5 hours",orderedEntries:["reading-yarn-labels","yarn-weight","swatching","gauge-basics","stitch-anatomy","knit-and-purl","reading-knitting-patterns"],practiceTask:"Make a small garter or rib swatch, measure gauge, and save the note to a project.",relatedTools:["Gauge / Swatch Adapter","Row / Round Counter Helper"],nextStep:"Try a simple scarf or hat with saved row tracking."},
+  {id:"crochet-beginner",title:"Crochet Beginner Path",difficulty:"Beginner",estimatedTime:"3-5 hours",orderedEntries:["reading-yarn-labels","stitch-anatomy","crochet-stitch-height","crochet-circle-formula","stitch-count-troubleshooting"],practiceTask:"Make a flat circle and a small rectangle, then check stitch count and edges.",relatedTools:["Circle Calculator","Row / Round Counter Helper"],nextStep:"Try a granny square, bag base, or simple amigurumi shape."},
+  {id:"tunisian-beginner",title:"Tunisian Beginner Path",difficulty:"Beginner",estimatedTime:"2-4 hours",orderedEntries:["tunisian-forward-return-pass","tunisian-curling","swatching","blocking"],practiceTask:"Make a Tunisian simple stitch swatch with two hook sizes and compare curl.",relatedTools:["Needle / Hook Adjustment","Blocking Calculator"],nextStep:"Plan a scarf panel with a border."},
+  {id:"gauge-swatching",title:"Gauge and Swatching Path",difficulty:"Beginner",estimatedTime:"2 hours",orderedEntries:["gauge-basics","swatching","blocking","gauge-adjustment"],practiceTask:"Make and block one swatch, then record stitch and row gauge.",relatedTools:["Gauge / Swatch Adapter","Needle / Hook Adjustment"],nextStep:"Use the numbers in Pattern Resizer."},
+  {id:"pattern-reading",title:"Pattern Reading Path",difficulty:"Beginner",estimatedTime:"3 hours",orderedEntries:["terminology-variants","reading-patterns","reading-repeats","stitch-count-troubleshooting"],practiceTask:"Mark repeats and stitch-count changes in a short written row.",relatedTools:["Repeat Calculator","Project Notes"],nextStep:"Try a small lace or texture repeat."},
+  {id:"chart-reading",title:"Chart Reading Path",difficulty:"Intermediate",estimatedTime:"3 hours",orderedEntries:["reading-charts","stitch-anatomy","symbol-database","reading-repeats"],practiceTask:"Highlight one chart row and compare it with the legend.",relatedTools:["Symbol Database","Chart Annotation / OG Mode"],nextStep:"Track the chart in Flow Mode."},
+  {id:"amigurumi",title:"Amigurumi Path",difficulty:"Beginner",estimatedTime:"4 hours",orderedEntries:["crochet-circle-formula","amigurumi-shaping","stitch-count-troubleshooting","craft-safety-suitability"],practiceTask:"Make a sphere, check increase/decrease rounds, and review baby safety notes.",relatedTools:["Amigurumi Shape Guide","Circle Calculator"],nextStep:"Plan a small toy with embroidered features if for a baby."},
+  {id:"sock-knitting",title:"Sock Knitting Path",difficulty:"Intermediate",estimatedTime:"5 hours",orderedEntries:["yarn-fibre-types","measurement-guide","gauge-basics","reading-repeats"],practiceTask:"Measure foot length and circumference, then compare yarn durability.",relatedTools:["Sock Calculator","Yarn Substitution Helper"],nextStep:"Track heel and gusset sections with Sub Row Counters."},
+  {id:"garment-modification",title:"Garment Modification Path",difficulty:"Advanced",estimatedTime:"5-8 hours",orderedEntries:["measurement-guide","ease","gauge-basics","garment-modification","yarn-substitution"],practiceTask:"Compare body measurements, finished measurements, and ease for one sweater section.",relatedTools:["Garment Resizer","Sleeve Calculator","Gauge / Swatch Adapter"],nextStep:"Save a fit-check note to the project."},
+  {id:"yarn-substitution",title:"Yarn Substitution Path",difficulty:"Intermediate",estimatedTime:"2-3 hours",orderedEntries:["yarn-weight","yarn-fibre-types","reading-yarn-labels","yarn-substitution","running-out-of-yarn"],practiceTask:"Compare two yarns by weight, meterage, fibre, and swatched gauge.",relatedTools:["Yarn Substitution Helper","Yarn Estimator"],nextStep:"Add selected yarn to Yarn Stash."},
+  {id:"troubleshooting",title:"Troubleshooting Path",difficulty:"Beginner",estimatedTime:"3 hours",orderedEntries:["stitch-count-troubleshooting","project-too-big-small","knitting-curling","tunisian-curling","running-out-of-yarn"],practiceTask:"Choose one symptom and follow the decision path before undoing work.",relatedTools:["Row / Round Counter Helper","Gauge / Swatch Adapter"],nextStep:"Save the result to Project Notes."},
+  {id:"pattern-design-math",title:"Pattern Design and Math Path",difficulty:"Advanced",estimatedTime:"6 hours",orderedEntries:["gauge-basics","measurement-guide","garment-modification","crochet-circle-formula","project-planning-checklist"],practiceTask:"Draft a small swatch-based rectangle or circle plan and check the numbers.",relatedTools:["Pattern Resizer","Repeat Calculator","Project Rendering Studio"],nextStep:"Save the plan as a Project Idea."}
+];
+function libraryWikiEntryById(id){return libraryWikiEntries.find(entry=>entry.id===id||entry.slug===id);}
+function normalizeLibraryCraft(craft=""){const value=String(craft||"").toLowerCase();return /tunisian/.test(value)?"tunisian":/crochet/.test(value)?"crochet":/knit/.test(value)?"knitting":value||"shared";}
+function libraryEntrySearchText(entry){return [entry.title,entry.summary,entry.fullExplanation,entry.category,entry.subcategory,entry.level,entry.sourceQuality,entry.reliabilityStatus,...(entry.craftTypes||[]),...(entry.keywords||[]),...(entry.aliases||[]),...(entry.terminologyAliases||[]),...(entry.measurements||[]),...(entry.safetyNotes||[]),...(entry.relatedTools||[]),...(entry.relatedProjectTypes||[]),...(entry.visualAssets||[]).flatMap(asset=>[asset.altText,asset.caption,asset.troubleshootingTopic]),...(entry.diagnosticFlow?.symptoms||[]),...(entry.diagnosticFlow?.likelyCauses||[])].join(" ").toLowerCase();}
+function smartLibraryMatches(query=""){
+  const q=String(query||"").toLowerCase();
+  if(!q)return [];
+  return libraryProblemSearchMap.filter(item=>item.phrases.some(phrase=>q.includes(phrase))).flatMap(item=>item.entries).map(libraryWikiEntryById).filter(Boolean);
+}
+function findLibraryEntriesForAssistant(question="",craftType="shared",limit=3){
+  const q=String(question||"").toLowerCase(),craft=normalizeLibraryCraft(craftType),tokens=q.split(/[^a-z0-9]+/).filter(token=>token.length>2);
+  const smart=smartLibraryMatches(q);
+  return libraryWikiEntries.map(entry=>{
+    const text=libraryEntrySearchText(entry);
+    let score=smart.includes(entry)?10:0;
+    if(entry.craftTypes.includes(craft)||entry.craftTypes.includes("shared"))score+=2;
+    if(q.includes(entry.title.toLowerCase()))score+=8;
+    for(const alias of entry.aliases||[])if(q.includes(alias.toLowerCase()))score+=5;
+    for(const keyword of entry.keywords||[])if(q.includes(keyword.toLowerCase()))score+=3;
+    for(const token of tokens)if(text.includes(token))score+=1;
+    return {entry,score};
+  }).filter(item=>item.score>1).sort((a,b)=>b.score-a.score).slice(0,limit).map(item=>item.entry);
+}
+function filteredLibraryWikiEntries(){
+  const filters=libraryWikiFilters,q=String(filters.search||"").trim().toLowerCase();
+  const smart=new Set(smartLibraryMatches(q).map(entry=>entry.id));
+  return libraryWikiEntries.filter(entry=>{
+    if(q&&!libraryEntrySearchText(entry).includes(q)&&!smart.has(entry.id))return false;
+    if(filters.craft!=="All"&&!entry.craftTypes.includes("shared")&&!entry.craftTypes.includes(filters.craft))return false;
+    if(filters.level!=="All"&&entry.level!==filters.level)return false;
+    if(filters.category!=="All"&&entry.category!==filters.category)return false;
+    if(filters.projectType!=="All"&&!(entry.relatedProjectTypes||[]).includes(filters.projectType))return false;
+    if(filters.tool!=="All"&&!(entry.relatedTools||[]).includes(filters.tool))return false;
+    if(filters.path!=="All"&&!entry.keywords?.join(" ").toLowerCase().includes(filters.path.toLowerCase())&&entry.category!==filters.path)return false;
+    return true;
+  });
+}
+function libraryWikiOption(values,current){return values.map(value=>`<option value="${escapeHtml(value)}" ${current===value?"selected":""}>${escapeHtml(value==="All"?"All":libraryCraftLabels[value]||libraryLevelLabels[value]||value)}</option>`).join("");}
+function libraryEntryBadgeHtml(entry){
+  const craft=(entry.craftTypes||[]).map(craft=>`<span>${escapeHtml(libraryCraftLabels[craft]||craft)}</span>`).join("");
+  return `<div class="wiki-badges"><span>${escapeHtml(libraryLevelLabels[entry.level]||entry.level)}</span>${craft}<span>${escapeHtml(entry.sourceQuality||libraryReviewStatusLabel(entry.verifiedStatus))}</span><span>${escapeHtml(entry.estimatedReadTime)}</span></div>`;
+}
+function libraryEntryCardHtml(entry){
+  const saved=(state.libraryBookmarks||[]).includes(entry.id);
+  return `<article class="wiki-entry-card card"><div><p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h3 class="library-content-title">${escapeHtml(entry.title)}</h3>${libraryEntryBadgeHtml(entry)}<p class="library-body-text">${escapeHtml(entry.summary)}</p></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-entry="${entry.id}">Read guide</button><button class="text-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save"}</button></div></article>`;
+}
+function libraryWikiHubCardsHtml(){
+  const groups=[
+    ["Foundations",[["Beginner foundations","beginner","Yarn labels, swatching, gauge, stitch anatomy, and simple rows."],["Yarn & fibre","Yarn & Fibre Library","Fibre behaviour, care, drape, durability, and project suitability."]]],
+    ["Knowledge Library",[["Knitting","knitting","Stitches, charts, shaping, garments, and fit."],["Crochet","crochet","Stitch height, circles, motifs, amigurumi, and construction."],["Tunisian crochet","tunisian","Forward and return passes, curl control, hooks, and fabric."]]],
+    ["Troubleshooting",[["Solve a making problem","Troubleshooting Hub","Find guidance by symptom, likely cause, quick check, or fix."]]]
+  ];
+  return `<nav class="knowledge-hub-groups" aria-label="Theory and Foundation areas">${groups.map(([title,items])=>`<section class="knowledge-hub-group"><h3>${escapeHtml(title)}</h3>${items.map(([label,path,copy])=>`<button class="knowledge-hub-row" data-wiki-path="${escapeHtml(path)}"><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(copy)}</small></span><span aria-hidden="true">→</span></button>`).join("")}</section>`).join("")}</nav>`;
+}
+function libraryLearningPathItemHtml(path){
+  const progress=Number(state.libraryPathProgress?.[path.id]||0),total=path.orderedEntries.length,percent=total?Math.min(100,Math.round(progress/total*100)):0;
+  const completed=total>0&&progress>=total,status=completed?"Completed":progress>0?"In progress":"Not started",action=completed?"Review":progress>0?"Continue":"Start";
+  return `<article class="learning-path-item card"><div class="learning-path-copy"><h4 class="library-learning-path-title">${escapeHtml(path.title)}</h4><p class="library-body-text">${escapeHtml(path.practiceTask)}</p><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span></div></div><div class="learning-path-progress-summary"><strong>${completed?"Completed":`${progress} / ${total}`}</strong><span>${escapeHtml(status)}</span><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><button class="text-button learning-path-action" data-wiki-learning-path="${escapeHtml(path.id)}" onclick="openLibraryLearningPath('${escapeHtml(path.id)}')">${action} <span aria-hidden="true">→</span></button></article>`;
+}
+function libraryLearningPathsHtml(){
+  const levels=["Beginner","Intermediate","Advanced"];
+  const groups=levels.map(level=>{const paths=libraryLearningPaths.filter(path=>String(path.difficulty).toLowerCase()===level.toLowerCase());return paths.length?`<section class="learning-path-group"><div class="learning-path-group-heading"><h3 class="library-major-section-title">${level}</h3><span>${paths.length} path${paths.length===1?"":"s"}</span></div><div class="learning-path-list">${paths.map(libraryLearningPathItemHtml).join("")}</div></section>`:"";}).join("");
+  return `<section class="wiki-path-section library-section"><div class="library-section-heading"><div><p class="eyebrow">LEARNING PATHS</p><h2 class="library-page-title">Choose what to learn next</h2><p class="library-body-text">Pick a path, track your progress, and return when you are ready.</p></div><span>${libraryLearningPaths.length} paths</span></div>${groups}</section>`;
+}
+function libraryLearningPathDetailHtml(path){
+  const progress=Number(state.libraryPathProgress?.[path.id]||0);
+  const entries=path.orderedEntries.map(libraryWikiEntryById).filter(Boolean);
+  return `<article class="wiki-detail learning-path-detail"><button class="text-button" id="wiki-entry-back">← Back to Theory & Foundation</button><header class="article-header"><p class="eyebrow">LEARNING PATH · ${escapeHtml(path.difficulty)} · ${escapeHtml(path.estimatedTime)}</p><h1 class="library-page-title">${escapeHtml(path.title)}</h1><p class="wiki-summary library-body-text">${escapeHtml(path.practiceTask)}</p><div class="wiki-detail-actions"><button class="primary-button" data-wiki-path-progress="${escapeHtml(path.id)}">Mark next step complete</button><button class="text-button" data-wiki-path-reset="${escapeHtml(path.id)}">Reset progress</button></div></header><section class="wiki-path-plan"><h2 class="library-article-section-title">Ordered entries</h2>${entries.map((entry,index)=>`<button class="wiki-path-step ${index<progress?"complete":""}" data-wiki-entry="${entry.id}"><span>${index+1}</span><strong>${escapeHtml(entry.title)}</strong><small>${index<progress?"Complete":"Open guide"}</small></button>`).join("")}</section><section class="related-content"><div><h2 class="library-article-section-title">Related tools</h2><div class="wiki-chip-row">${path.relatedTools.map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div><div><h2 class="library-article-section-title">Next step</h2><p class="library-body-text">${escapeHtml(path.nextStep)}</p></div></section></article>`;
+}
+function visualReferencesForEntry(entryId){return Array.isArray(state.libraryVisualReferences?.[entryId])?state.libraryVisualReferences[entryId]:[];}
+function visualReferenceCardHtml(reference){
+  const date=new Date(reference.createdAt||Date.now()).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+  return `<figure class="visual-reference-card"><button class="visual-reference-preview" data-visual-view="${escapeHtml(reference.id)}" aria-label="View ${escapeHtml(reference.title)}"><img data-visual-asset="${escapeHtml(reference.assetId)}" alt="${escapeHtml(reference.title)}"></button><figcaption><strong>${escapeHtml(reference.title)}</strong><small>${escapeHtml(date)}</small>${reference.note?`<p>${escapeHtml(reference.note)}</p>`:""}<div class="visual-reference-actions"><button class="text-button" data-visual-edit="${escapeHtml(reference.id)}">Rename or replace</button><button class="text-button danger-text" data-visual-delete="${escapeHtml(reference.id)}">Delete</button></div></figcaption></figure>`;
+}
+function visualReferenceGalleryHtml(references){return `<div class="visual-reference-gallery">${references.map(visualReferenceCardHtml).join("")}</div>`;}
+function visualReferenceEmptyStateHtml(){return `<div class="visual-reference-empty"><p><strong>No visual references yet.</strong><br>Upload a photo, sketch, diagram or swatch for this topic.</p></div>`;}
+function uploadVisualButtonHtml(entryId){return `<label class="secondary-button upload-visual-button" for="visual-reference-upload-${escapeHtml(entryId)}">Upload image</label><input id="visual-reference-upload-${escapeHtml(entryId)}" data-visual-upload="${escapeHtml(entryId)}" type="file" accept="image/*" hidden>`;}
+function visualReferenceSectionHtml(entry){
+  const references=visualReferencesForEntry(entry.id);
+  return `<section class="visual-reference-section card"><div class="visual-reference-heading"><div><h2 class="library-article-section-title">My Visual References</h2><p class="library-body-text">Private to your workspace. Only you can see these references unless you choose to export or share them.</p></div><div class="visual-reference-add-actions">${uploadVisualButtonHtml(entry.id)}<button class="text-button" disabled title="Coming later">Take photo</button><button class="text-button" disabled title="Coming later">Draw sketch</button></div></div>${references.length?visualReferenceGalleryHtml(references):visualReferenceEmptyStateHtml()}</section>`;
+}
+async function hydrateVisualReferenceImages(){for(const image of document.querySelectorAll("[data-visual-asset]")){const file=await getAsset(image.dataset.visualAsset);if(file)image.src=URL.createObjectURL(file);}}
+async function addVisualReference(entryId,file){
+  if(!file?.type?.startsWith("image/"))return toast("Choose an image file.");
+  if(file.size>10*1024*1024)return toast("Choose an image smaller than 10 MB.");
+  const assetId=`library-visual-${entryId}-${Date.now()}`,reference={id:`visual-${Date.now()}`,assetId,title:file.name.replace(/\.[^.]+$/,""),note:"",createdAt:new Date().toISOString()};
+  await putAsset(assetId,file);state.libraryVisualReferences={...(state.libraryVisualReferences||{}),[entryId]:[...visualReferencesForEntry(entryId),reference]};saveState();renderLibrary();toast("Visual reference added.");
+}
+function visualReferenceById(entryId,referenceId){return visualReferencesForEntry(entryId).find(reference=>reference.id===referenceId);}
+async function openVisualReference(reference){const file=reference&&await getAsset(reference.assetId);if(!file)return toast("This visual reference is no longer available.");const url=URL.createObjectURL(file);openModal(`<p class="eyebrow">PRIVATE VISUAL REFERENCE</p><h2>${escapeHtml(reference.title)}</h2><img class="visual-reference-full" src="${url}" alt="${escapeHtml(reference.title)}">${reference.note?`<p>${escapeHtml(reference.note)}</p>`:""}<div class="modal-actions"><button class="primary-button" onclick="closeModal()">Close</button></div>`,{beforeClose:()=>{URL.revokeObjectURL(url);return true;}});}
+function editVisualReference(entryId,referenceId){
+  const reference=visualReferenceById(entryId,referenceId);if(!reference)return;
+  openModal(`<p class="eyebrow">MY VISUAL REFERENCE</p><h2>Edit reference</h2><label class="field full">Title<input id="visual-reference-title" value="${escapeHtml(reference.title)}"></label><label class="field full">Private note<textarea id="visual-reference-note" rows="4">${escapeHtml(reference.note||"")}</textarea></label><label class="field full upload-drop">Replace image<input id="visual-reference-replacement" type="file" accept="image/*"><small>Optional. Leave empty to keep the current image.</small></label><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-visual-reference">Save changes</button></div>`);
+  document.getElementById("save-visual-reference").onclick=async()=>{const title=document.getElementById("visual-reference-title").value.trim();if(!title)return toast("Name this visual reference.");const replacement=document.getElementById("visual-reference-replacement").files?.[0];if(replacement){if(!replacement.type.startsWith("image/")||replacement.size>10*1024*1024)return toast("Choose an image smaller than 10 MB.");const nextAsset=`library-visual-${entryId}-${Date.now()}`;await putAsset(nextAsset,replacement);await deleteAsset(reference.assetId);reference.assetId=nextAsset;}reference.title=title;reference.note=document.getElementById("visual-reference-note").value.trim();saveState();closeModal(true);renderLibrary();toast("Visual reference updated.");};
+}
+async function removeVisualReference(entryId,referenceId){const reference=visualReferenceById(entryId,referenceId);if(!reference||!confirm("Delete this private visual reference? This cannot be undone."))return;await deleteAsset(reference.assetId);state.libraryVisualReferences={...(state.libraryVisualReferences||{}),[entryId]:visualReferencesForEntry(entryId).filter(item=>item.id!==referenceId)};saveState();renderLibrary();toast("Visual reference deleted.");}
+function libraryDecisionTreeHtml(entry){
+  const flow=entry.diagnosticFlow||defaultDiagnosticFlow(entry);
+  const block=(title,items,ordered=false)=>items?.length?`<section class="troubleshooting-topic"><h3 class="library-article-section-title">${escapeHtml(title)}</h3>${ordered?`<ol>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol>`:`<ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul>`}</section>`:"";
+  return `<section class="wiki-decision-tree card"><p class="eyebrow">TROUBLESHOOTING</p><div class="diagnostic-groups">${block("Symptoms",flow.symptoms)}${block("Likely causes",flow.likelyCauses)}${block("Quick checks",flow.quickChecks)}${block("Decision path",flow.decisionPath,true)}${block("Fix",flow.fixes)}${block("Prevention",flow.prevention)}</div>${flow.saveToProjectAction?`<button class="secondary-button" data-wiki-checklist="${entry.id}">Save result to project checklist</button>`:""}</section>`;
+}
+function librarySmartSearchHintHtml(query=""){
+  const smart=libraryProblemSearchMap.find(item=>item.phrases.some(phrase=>String(query||"").toLowerCase().includes(phrase)));
+  if(!smart)return "";
+  return `<div class="wiki-smart-search card"><p class="eyebrow">SMART SEARCH</p><strong>${escapeHtml(smart.assistantSuggestion)}</strong><div class="wiki-chip-row">${smart.tools.map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div>`;
+}
+function theoryFoundationHtml(){
+  const entries=filteredLibraryWikiEntries(),selected=currentLibraryEntryId?libraryWikiEntryById(currentLibraryEntryId):null;
+  const selectedPath=currentLibraryPathId?libraryLearningPaths.find(path=>path.id===currentLibraryPathId):null;
+  if(selectedPath)return libraryLearningPathDetailHtml(selectedPath);
+  if(selected)return libraryWikiEntryDetailHtml(selected);
+  const categories=["All",...libraryWikiCategories],crafts=["All","shared","knitting","crochet","tunisian"],levels=["All","beginner","intermediate","advanced","expert"],projectTypes=["All",...[...new Set(libraryWikiEntries.flatMap(entry=>entry.relatedProjectTypes||[]))].sort()],tools=["All",...[...new Set(libraryWikiEntries.flatMap(entry=>entry.relatedTools||[]))].sort()];
+  const savedEntries=(state.libraryBookmarks||[]).map(id=>libraryWikiEntryById(id)).filter(Boolean).slice(0,4);
+  const recent=(state.libraryRecentlyViewed||[]).map(id=>libraryWikiEntryById(id)).filter(Boolean).slice(0,4);
+  return `<section class="wiki-shell">
+    <div class="wiki-hero"><p class="wiki-intro">Browse all guides, then narrow the list by craft, level, category, project type, or tool.</p></div>
+    ${libraryLearningPathsHtml()}
+    <div class="wiki-filter-card card">
+      <label class="field full">Search the wiki<input id="wiki-search" type="search" value="${escapeHtml(libraryWikiFilters.search)}" placeholder="Try: gauge, wavy circle, DK instead of worsted, Tunisian curl, chart direction"></label>
+      <div class="wiki-filter-grid">
+        <label>Craft<select id="wiki-craft">${libraryWikiOption(crafts,libraryWikiFilters.craft)}</select></label>
+        <label>Level<select id="wiki-level">${libraryWikiOption(levels,libraryWikiFilters.level)}</select></label>
+        <label>Category<select id="wiki-category">${libraryWikiOption(categories,libraryWikiFilters.category)}</select></label>
+        <label>Project type<select id="wiki-project-type">${libraryWikiOption(projectTypes,libraryWikiFilters.projectType)}</select></label>
+        <label>Related tool<select id="wiki-tool">${libraryWikiOption(tools,libraryWikiFilters.tool)}</select></label>
+      </div>
+    </div>
+    ${librarySmartSearchHintHtml(libraryWikiFilters.search)}
+    ${(savedEntries.length||recent.length)?`<div class="wiki-continuation-grid">${savedEntries.length?`<section class="card"><p class="eyebrow">SAVED ENTRIES</p>${savedEntries.map(entry=>`<button class="wiki-mini-link" data-wiki-entry="${entry.id}">${escapeHtml(entry.title)}</button>`).join("")}</section>`:""}${recent.length?`<section class="card"><p class="eyebrow">RECENTLY VIEWED</p>${recent.map(entry=>`<button class="wiki-mini-link" data-wiki-entry="${entry.id}">${escapeHtml(entry.title)}</button>`).join("")}</section>`:""}</div>`:""}
+    <div class="wiki-result-heading"><strong>${entries.length} approved guide${entries.length===1?"":"s"}</strong><span>Official entries are separated from future community tips and personal notes.</span></div>
+    <div class="wiki-entry-grid">${entries.length?entries.map(libraryEntryCardHtml).join(""):`<div class="empty-state"><h3>No guide matches yet</h3><p>Try clearing a filter or searching by a simpler problem name.</p></div>`}</div>
+  </section>`;
+}
+function libraryWikiEntryDetailHtml(entry){
+  const note=state.libraryEntryNotes?.[entry.id]||"",related=(entry.relatedEntries||[]).map(libraryWikiEntryById).filter(Boolean);
+  const saved=(state.libraryBookmarks||[]).includes(entry.id);
+  return `<article class="wiki-detail">
+    <button class="text-button" id="wiki-entry-back">← Back to Theory & Foundation</button>
+    <header class="article-header"><p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h1 class="library-page-title">${escapeHtml(entry.title)}</h1>${libraryEntryBadgeHtml(entry)}<p class="wiki-summary library-body-text">${escapeHtml(entry.summary)}</p></header>
+    <div class="wiki-source-banner"><strong>${escapeHtml(entry.sourceQuality||"Official Yarncha Guide")}</strong><span>${escapeHtml(entry.author)} · v${escapeHtml(entry.version)} · Updated ${escapeHtml(entry.updatedAt||entry.lastUpdated)}</span></div>
+    <div class="wiki-copyright-note"><strong>Copyright-safe Library use</strong><p>${escapeHtml(entry.copyrightPolicy?.summary||libraryCopyrightPolicy.summary)}</p></div>
+    <div class="wiki-detail-actions"><button class="primary-button" data-wiki-ask="${entry.id}">Ask Assistant about this</button><button class="secondary-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save entry"}</button><button class="text-button" data-wiki-project-note="${entry.id}">Add to project notes</button><button class="text-button" data-wiki-checklist="${entry.id}">Add to checklist</button><details class="wiki-more-actions"><summary>More</summary><div><button class="text-button" data-wiki-suggest="${entry.id}">Suggest edit</button><button class="text-button" data-wiki-report="${entry.id}">${escapeHtml(libraryCopyrightPolicy.reportLabel)}</button></div></details></div>
+    ${visualReferenceSectionHtml(entry)}
+    <section class="wiki-overview-card card">
+      <p class="eyebrow">OVERVIEW</p>
+      <div class="wiki-detail-grid">
+      <section><h3 class="library-article-section-title">Detailed explanation</h3><p>${escapeHtml(entry.fullExplanation)}</p></section>
+      <section><h3 class="library-article-section-title">When to use this</h3><p>${escapeHtml(entry.whenToUse)}</p></section>
+      <section><h3 class="library-article-section-title">Why it matters</h3><p>${escapeHtml(entry.whyItMatters)}</p></section>
+      <section><h3 class="library-article-section-title">Mini example</h3><p>${escapeHtml(entry.miniExample)}</p></section>
+      <section><h3 class="library-article-section-title">Step-by-step guidance</h3><ol>${(entry.stepByStep||[]).map(step=>`<li>${escapeHtml(step)}</li>`).join("")}</ol></section>
+      <section><h3 class="library-article-section-title">Common mistakes</h3><ul>${(entry.commonMistakes||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
+      <section><h3 class="library-article-section-title">Next learning step</h3><ul>${(entry.nextLearningSteps||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
+      ${entry.safetyNotes?.length?`<section><h3 class="library-article-section-title">Safety and suitability</h3><ul>${entry.safetyNotes.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`:""}
+      ${entry.measurements?.length?`<section><h3 class="library-article-section-title">Measurement guide</h3><div class="wiki-chip-row">${entry.measurements.map(item=>`<span class="chip passive">${escapeHtml(item)}</span>`).join("")}</div></section>`:""}
+      ${entry.terminologyAliases?.length?`<section><h3 class="library-article-section-title">Terminology aliases</h3><div class="wiki-chip-row">${entry.terminologyAliases.slice(0,14).map(item=>`<span class="chip passive">${escapeHtml(item)}</span>`).join("")}</div></section>`:""}
+      </div>
+    </section>
+    <section class="article-section related-content"><div><h2 class="library-article-section-title">Related tools</h2><div class="wiki-chip-row">${(entry.relatedTools||[]).map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div><div><h2 class="library-article-section-title">Related projects</h2><div class="wiki-chip-row">${(entry.relatedProjectTypes||[]).map(type=>`<span class="chip passive">${escapeHtml(type)}</span>`).join("")}</div></div></section>
+    ${libraryDecisionTreeHtml(entry)}
+    <details class="wiki-maintenance"><summary>Article details</summary><dl><dt>Created</dt><dd>${escapeHtml(entry.createdAt)}</dd><dt>Updated</dt><dd>${escapeHtml(entry.updatedAt||entry.lastUpdated)}</dd><dt>Source</dt><dd>${escapeHtml(entry.source)}</dd><dt>Review status</dt><dd>${escapeHtml(entry.reliabilityStatus)}</dd><dt>Changelog</dt><dd>${escapeHtml((entry.changelog||[]).join(" · "))}</dd><dt>Related app version</dt><dd>${escapeHtml(entry.relatedAppVersion)}</dd></dl></details>
+    ${related.length?`<section class="wiki-related"><h3 class="library-article-section-title">Related entries</h3><div class="wiki-entry-grid compact">${related.map(libraryEntryCardHtml).join("")}</div></section>`:""}
+    <section class="wiki-notes"><h3 class="library-article-section-title">Your private note</h3><textarea id="wiki-private-note" data-wiki-note="${entry.id}" rows="4" placeholder="Save your own reminder for this topic...">${escapeHtml(note)}</textarea><small>Private notes stay on this device unless a future sync/community feature is added.</small></section>
+  </article>`;
 }
 function openYarnMaterialModal(materialId=null){
   const material=state.yarnMaterials.find(m=>m.id===materialId),textures=["Soft","Springy","Smooth","Drapey","Fuzzy","Crisp","Rustic","Lustrous","Warm","Cool","Lightweight","Dense"];
@@ -5230,6 +5756,16 @@ function toolsPageCategoryForTool(tool){
   if(["yarn-estimator","yarn-leftover","substitution","yarn-weight"].includes(tool.id))return "Yarn";
   return "Helpers";
 }
+function toolsPageCategoryDescription(id){
+  return {
+    Core:"Stitch, gauge, blocking, and reference helpers.",
+    "Project sizing":"Fit, size, and garment planning tools.",
+    Crochet:"Circle, amigurumi, granny square, and C2C tools.",
+    Rendering:"Colour, stripe, grid, and project preview tools.",
+    Yarn:"Yarn amount, leftover, substitution, and weight tools.",
+    Helpers:"Repeats, rows, cast-on, unit, and shaping helpers."
+  }[id]||"Yarncha planning tools.";
+}
 function toolsPageDetailTool(tool){
   if(tool==="rendering-studio")return currentGlobalRenderingTool||"grid";
   return tool;
@@ -5246,16 +5782,22 @@ function renderTool(tool=currentProjectTool) {
   const selected=tool==="rendering-studio"?"rendering-studio":(toolkitToolDefs.some(t=>t.id===tool)?tool:"swatch");
   currentProjectTool=toolsPageDetailTool(selected);
   const search=currentToolSearch.trim().toLowerCase();
-  const visible=cards.filter(t=>(currentToolCategory==="All"||toolsPageCategoryForTool(t)===currentToolCategory)&&(!search||`${t.name} ${t.desc} ${toolCraftLabel(t)} ${toolsPageCategoryForTool(t)}`.toLowerCase().includes(search)));
   const activeDef=selected==="rendering-studio"?cards.find(t=>t.id==="rendering-studio"):toolkitToolDefs.find(t=>t.id===currentProjectTool);
+  const visible=cards.filter(t=>!search||`${t.name} ${t.desc} ${toolCraftLabel(t)} ${toolsPageCategoryForTool(t)}`.toLowerCase().includes(search));
+  const selectedCategory=toolsPageCategoryForTool(activeDef||{});
+  const categoryPanels=toolsPageCategories.filter(c=>c.id!=="All").map(category=>{
+    const tools=visible.filter(t=>toolsPageCategoryForTool(t)===category.id);
+    if(!tools.length)return "";
+    const content=`<div class="toolbox-grid">${tools.map(t=>toolCardHtml(t,selected)).join("")}</div>`;
+    return collapsibleSectionHtml({eyebrow:"TOOLS",title:category.label,description:toolsPageCategoryDescription(category.id),rightMeta:`${tools.length} tool${tools.length===1?"":"s"}`,defaultOpen:search?true:selectedCategory===category.id,className:"toolbox-category-panel",children:content});
+  }).join("");
   panel.innerHTML=`<div class="tools-page-shell">
     <div class="page-title tools-page-title"><p class="eyebrow">YARNCHA TOOLKIT</p><h1>Maker’s Toolkit</h1><p>Calculators, planners, and yarn math for knitting and crochet.</p></div>
     <section class="toolbox-browser card">
       <div class="toolbox-controls">
-        <div class="toolbox-tabs" role="tablist">${toolsPageCategories.map(c=>`<button class="pill-tab ${currentToolCategory===c.id?"active":""}" data-tools-category="${escapeHtml(c.id)}">${escapeHtml(c.label)}</button>`).join("")}</div>
         <input id="tool-search" class="toolbox-search" value="${escapeHtml(currentToolSearch)}" placeholder="Search tools, e.g. gauge, sock, yarn, C2C">
       </div>
-      <div class="toolbox-grid">${visible.length?visible.map(t=>toolCardHtml(t,selected)).join(""):`<div class="empty-state"><h3>No tools found</h3><p>Try a different category or search word.</p></div>`}</div>
+      <div class="toolbox-accordion-grid">${categoryPanels||`<div class="empty-state"><h3>No tools found</h3><p>Try a different search word.</p></div>`}</div>
     </section>
     <section class="toolbox-detail card">
       <div class="toolbox-detail-head"><div><p class="eyebrow">${escapeHtml(selected==="rendering-studio"?"PROJECT RENDERING":toolsPageCategoryForTool(activeDef||{}))}</p><h2>${escapeHtml(selected==="rendering-studio"?"Project Rendering Studio":activeDef?.name||"Choose a tool")}</h2><p class="muted-copy">${escapeHtml(selected==="rendering-studio"?"Grid, stripes and colour pooling share one focused studio.":activeDef?.desc||"Choose a tool to start calculating.")}</p></div><span class="craft-pill">${escapeHtml(selected==="rendering-studio"?"Shared":toolCraftLabel(activeDef||{}))}</span></div>
@@ -5264,7 +5806,6 @@ function renderTool(tool=currentProjectTool) {
     </section>
   </div>`;
   document.querySelectorAll("[data-tool-tab]").forEach(b=>b.classList.remove("active"));
-  document.querySelectorAll("[data-tools-category]").forEach(b=>b.onclick=()=>{currentToolCategory=b.dataset.toolsCategory;renderTool(selected);});
   document.getElementById("tool-search")?.addEventListener("input",e=>{currentToolSearch=e.target.value;renderTool(selected);});
   document.querySelectorAll("[data-open-tool]").forEach(b=>b.onclick=()=>{const picked=b.dataset.openTool;if(picked==="rendering-studio")currentGlobalRenderingTool=currentGlobalRenderingTool||"grid";renderTool(picked);});
   document.querySelectorAll("[data-global-rendering-tab]").forEach(b=>b.onclick=()=>{currentGlobalRenderingTool=b.dataset.globalRenderingTab;renderTool("rendering-studio");});
@@ -5416,6 +5957,7 @@ function allAssetIdsForState(snapshot){
     ...Object.values(snapshot.userTechniqueReferences||{}).map(reference=>reference.assetId),
     ...Object.values(snapshot.userSymbolsOverride||{}).map(entry=>entry.symbolImageAsset),
     ...(snapshot.symbolLearningLibrary||[]).map(record=>record.symbolImageAsset||record.detectedSymbolImageAsset),
+    ...Object.values(snapshot.libraryVisualReferences||{}).flatMap(references=>(references||[]).map(reference=>reference.assetId)),
     ...(snapshot.librarySections||[]).flatMap(s=>(s.items||[]).flatMap(i=>(i.assets||[]).map(a=>a.id)))
   ].filter(Boolean);
 }
@@ -5461,6 +6003,7 @@ async function importBackup(event,mode="merge"){
       state.techniqueKnowledge=[...(state.techniqueKnowledge||[]),...(imported.techniqueKnowledge||[])];
       state.userTechniqueReferences={...(state.userTechniqueReferences||{}),...(imported.userTechniqueReferences||{})};
       state.userSymbolsOverride={...(state.userSymbolsOverride||{}),...(imported.userSymbolsOverride||{})};
+      for(const [entryId,references] of Object.entries(imported.libraryVisualReferences||{}))state.libraryVisualReferences={...(state.libraryVisualReferences||{}),[entryId]:[...visualReferencesForEntry(entryId),...(Array.isArray(references)?references:[])]};
       (imported.symbolLearningLibrary||[]).forEach(record=>upsertLearningRecord(record,{save:false}));
       state.activeProjectId=projects[0]?.id||state.activeProjectId;
     }
@@ -6001,7 +6544,10 @@ function handleVoice(command) {
 }
 
 function maybeShowOnboarding(){
-  if(state.onboardingComplete)return;
+  if(state.onboardingComplete){
+    document.getElementById("onboarding-overlay")?.remove();
+    return;
+  }
   renderOnboarding();
 }
 function renderOnboarding(){
@@ -6099,6 +6645,7 @@ window.YarnchaLocal={
 };
 
 renderSidebar();
+bindPrimaryShellNavigation();
 renderToday();
 setActiveView("today");
 renderLibrary();
@@ -6106,4 +6653,18 @@ applyTheme();
 applyLanguage();
 refreshFxRates();
 maybeShowOnboarding();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+async function configureServiceWorker(){
+  if(!("serviceWorker" in navigator))return;
+  const isLocalPreview=["localhost","127.0.0.1","::1"].includes(location.hostname);
+  if(isLocalPreview){
+    const registrations=await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(registration=>registration.unregister()));
+    if("caches" in window){
+      const cacheNames=await caches.keys();
+      await Promise.all(cacheNames.map(cacheName=>caches.delete(cacheName)));
+    }
+    return;
+  }
+  await navigator.serviceWorker.register("./service-worker.js");
+}
+configureServiceWorker().catch(error=>console.warn("[Yarncha service worker] Configuration failed",error));
