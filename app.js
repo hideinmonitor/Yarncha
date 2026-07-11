@@ -2829,7 +2829,7 @@ function handleStudioAction(action){
 function copyStudioText(text,message){navigator.clipboard?.writeText(text).then(()=>toast(message)).catch(()=>toast("Copy is blocked in this browser."));}
 function exportStudioImage(studio){
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d"),w=1200,h=760;
-  canvas.width=w;canvas.height=h;ctx.fillStyle="#fff9f0";ctx.fillRect(0,0,w,h);ctx.fillStyle="#5a4632";ctx.font="700 34px system-ui";ctx.fillText(`${studio.projectType} - ${studio.mode}`,48,70);ctx.font="18px system-ui";ctx.fillText(studioPaletteText(studio),48,108);
+  canvas.width=w;canvas.height=h;ctx.fillStyle="#fff9f0";ctx.fillRect(0,0,w,h);ctx.fillStyle="#5a4632";ctx.font="700 34px Inter";ctx.fillText(`${studio.projectType} - ${studio.mode}`,48,70);ctx.font="18px Inter";ctx.fillText(studioPaletteText(studio),48,108);
   const x=80,y=150,pw=1040,ph=520;
   if(studio.mode==="Grid Mode"){
     const cols=Math.max(2,Number(studio.settings.columns)||18),rows=Math.max(2,Number(studio.settings.gridRows)||14),cell=Math.min(pw/cols,ph/rows);

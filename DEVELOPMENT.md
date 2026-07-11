@@ -1,6 +1,6 @@
 # Yarncha Development Memory
 
-Last documentation update: 2026-07-03
+Last documentation update: 2026-07-05
 
 This file is the project memory card for AI-assisted development. Read it before changing code. Keep it practical, current, and honest about what is stable, experimental, local-only, or paused.
 
@@ -44,8 +44,8 @@ Paused / deprecated:
 
 Current inspected branch during this update:
 
-- `feature/counter`
-- The branch currently contains uncommitted sub-counter voice reminder and Chart tab Sub Row Counter updates for project row tracking. Do not discard these changes.
+- `feature/library`
+- The worktree currently contains uncommitted Library Wiki/Theory & Foundation upgrade work, Corner of Light theme cleanup/cache versioning, and related tests. Do not discard these changes.
 
 Recent branch history:
 
@@ -339,6 +339,7 @@ Main functions and services:
 - `bindYarnchaAssistant(p)`
 - `askChartYarnchaAssistant(p)`
 - `yarnchaAssistantAnswerHtml(answer)`
+- `findLibraryEntriesForAssistant(question, craftType, limit)`
 - `projectContextService`
 - `learningMemoryService`
 - `teachingService`
@@ -396,6 +397,7 @@ Wording rules:
 - Knitting advice should mention needle insertion direction, stitch mount, front/back leg, yarn position, row tension, and stitch count where relevant.
 - Tunisian advice should mention Forward Pass, Return Pass, loops on hook, vertical bars, edge stitch, and row/pass counting where relevant.
 - Related techniques should use polished labels such as Weave In Ends, Standing Stitch, Colour Change, Edge Stitch Placement, Crochet Stitch Anatomy, Practice Swatch, and Tension Control.
+- Assistant answers can cite approved Library Wiki entries with `Based on:` and open the linked entry inside Theory & Foundation.
 - Library links are local/reference targets only; the current MVP does not require an external AI/backend for Yarncha Assistant.
 
 UI notes:
@@ -711,7 +713,7 @@ Current theme system:
 
 - Theme presets are defined in `themePresets`.
 - There are eight current themes:
-  1. Original Yarncha (`vintage-paper`)
+  1. Corner of Light (`corner-of-light`)
   2. Flower Blossom
   3. Sky Blessing
   4. Matcha Grove
@@ -719,8 +721,17 @@ Current theme system:
   6. Mediterranean Dream
   7. Sakura Milk
   8. Lavender Twilight
+- Corner of Light is the default colour theme. It uses the vintage paper palette:
+  - Deep Cocoa Brown: `#793409`
+  - Burnt Orange: `#C96C23`
+  - Quiet Ash Grey: `#717678`
+  - Dusty Olive: `#AD9E66`
+  - Soft Amber: `#FCC277`
+- Corner of Light is a colour theme only. It must not appear as a separate layout/design style card.
+- The visible colour theme label is `Corner of Light`, with badge `Vintage` and description `Warm paper layers, earthy accents, and a grounded craft journal feel.`
 - `Sky Blessing` replaces the old Morning Orchard direction.
 - Theme UI must be English-only.
+- Do not show Chinese subtitles/names on theme or design style cards.
 - Theme cards are visual gallery cards. There is no Apply Theme button or visible HEX palette in cards.
 - Cards select by click, Enter, or Space; active state uses a border and explicit Active badge.
 - Palette credit text appears in the settings theme area.
@@ -731,13 +742,16 @@ Theme storage:
 - `state.theme.style`
 - `state.theme.mode`
 - `normalizeThemeName()` maps legacy ids to current ids.
+- Legacy `vintage-paper`, `corner-of-light-vintage-paper`, and old display-name values should migrate to `corner-of-light`.
+- Legacy layout values such as `korean-soft`, `classic-elegant`, and accidental `corner-of-light` style values should migrate to a supported design style, currently `original-classic`.
 
 Design styles:
 
-- Original Classic
-- Korean Soft
-- Minimal Clean
+- Yarncha Default
+- Warm Cozy
+- Modern Atelier
 - Artsy Journal
+- Design styles affect card shape, spacing, shadows, and texture only. Do not add palette names as design styles.
 
 Mobile/layout rules:
 
@@ -778,6 +792,15 @@ Library:
 - Library items can include notes and multiple PDFs/photos.
 - Deletion lives inside edit modal Danger Zone, not as a visible card-level delete action.
 - Legacy tutorials migrate to `Personal References (legacy)` only if user data exists.
+- Theory & Foundation is now the Yarncha Wiki MVP, not a placeholder topic list.
+- Wiki entries use the `wikiEntry()` data structure with id, title, slug, category, subcategory, craft types, level, summary, full explanation, when/why, mini example, steps, mistakes, troubleshooting, related tools, related project types, related entries, next learning steps, keywords, aliases, read time, local note support, community-submission readiness, verified status, source/review quality, visual learning assets, diagnostic decision trees, terminology aliases, measurements, safety notes, copyright policy, version history, author/source, changelog, and last-updated date.
+- Current wiki coverage includes Foundations, Knitting Knowledge, Crochet Knowledge, Tunisian Crochet Knowledge, Troubleshooting Hub, Project Planning, Pattern & Chart Reading, Modification & Design Math, Yarn & Fibre Library, and Tool Manual Integration.
+- Wiki UI includes search, smart problem search, craft/level/category/project/tool filters, learning hub cards, learning paths with local progress, entry subpages, visual learning cards, diagnostic decision trees, source/review labels, related entries, related tools, saved entries, recently viewed entries, private notes, local suggested edits, copied-content reports, add-to-project-notes, add-to-checklist, and Ask Assistant actions.
+- Official Yarncha guide content must stay visually separate from future user-submitted/community-reviewed content and personal notes.
+- Copyright/pattern-protection rules: Library and Assistant must not store, reproduce, or share full paid pattern instructions, copyrighted charts, copied designer content, or public/community submissions that paste protected pattern text. Private notes may hold the user's own reminders, and suspicious copied content can be saved as a local report for review.
+- Assistant Library answers should prefer `Official Yarncha Guide`, `Community Reviewed`, or `Expert Reviewed` entries and separate `General Library advice`, `Project-specific advice`, `Assumptions`, and `Missing information` instead of guessing when project details are absent.
+- Assistant Library actions include saving explanations to notes, adding checklist items, saving troubleshooting results, creating calculator input drafts, and linking cited Library entries back to the project.
+- MVP Library notes/bookmarks/suggested edits/checklist links/path progress/reports are local-first fields on state: `libraryBookmarks`, `libraryEntryNotes`, `librarySuggestedEdits`, `libraryRecentlyViewed`, `libraryProjectChecklist`, `libraryPathProgress`, and `libraryReports`.
 
 Yarn Stash:
 
@@ -828,10 +851,10 @@ PWA files:
 
 Important cache notes:
 
-- Root `index.html` currently references classic assets and shared calculation assets with `v=98-repeat-engine`.
-- `scripts/copy-static.mjs` injects classic scripts with asset version `98-repeat-engine` if missing after Vite build. If stale production behavior appears, check this version path carefully.
-- `service-worker.js` uses cache name `yarncha-shell-v98-repeat-engine`.
-- `public/service-worker.js` also uses cache name `yarncha-shell-v98-repeat-engine` and matching asset urls.
+- Root `index.html` currently references classic assets and shared calculation assets with `v=111-library-wiki`.
+- `scripts/copy-static.mjs` may inject classic scripts after Vite build. If stale production behavior appears, check the root asset version paths carefully.
+- `service-worker.js` uses cache name `yarncha-shell-v111-library-wiki`.
+- `public/service-worker.js` also uses cache name `yarncha-shell-v111-library-wiki` and matching asset urls.
 - Cache issues should be verified before assuming code regression, but do not overfocus on cache when incognito and versioned URLs reproduce a render bug.
 
 ## Tests And NPM Scripts
@@ -878,7 +901,7 @@ Current scripts from `package.json`:
   - Checks local learning records, dedupe, Symbol Database edit sync, Flow Mode correction controls, backup/export learning data, and removal of the visible Symbol Learning Library summary.
   - Use after touching symbol learning, backup/import, or Flow Mode corrections.
 - `npm run test:themes`
-  - Checks all eight theme palettes, dark/light contrast, Sky Blessing, English-only theme UI, gallery card behavior, and danger button contrast.
+  - Checks all eight theme palettes, dark/light contrast, Corner of Light, Sky Blessing, English-only theme UI, gallery card behavior, and danger button contrast.
   - Use after theme, settings appearance, or design token changes.
 - `npm run test:flow-mode`
   - Checks Flow Mode structure, Project Setup UI, chart/reader state, OCR review pieces, OG/Flow placement, annotation toolbar contracts, attachment chip UI, friendly copy, read aloud, mobile layout classes, and cloud panel removal.
@@ -910,6 +933,9 @@ Current scripts from `package.json`:
 - `npm run test:library`
   - Checks Library delete behavior and hidden card-level destructive actions.
   - Use after library card/modal/delete changes.
+- `node tests/library-wiki-contract.test.mjs`
+  - Checks structured wiki entries, required fields, filters, subpage actions, local notes/suggestions, Assistant Library citations, and responsive wiki styles.
+  - Use after changing Theory & Foundation, Library Wiki data, Assistant Library integration, or wiki styles.
 
 Suggested full local verification:
 
@@ -927,6 +953,7 @@ node tests/row-reminders-contract.test.mjs
 node tests/chart-sub-counters-contract.test.mjs
 npm run test:navigation
 node tests/yarncha-assistant-contract.test.mjs
+node tests/library-wiki-contract.test.mjs
 npm run test:settings
 npm run test:library
 npm run build
@@ -1099,18 +1126,23 @@ Recent major work represented in the current codebase:
 - Symbol Database edits merge with local symbol learning behind the scenes.
 - Visible Symbol Learning Library summary was removed from Library.
 - Theme gallery was simplified into clickable visual cards; Sky Blessing replaced Morning Orchard.
+- Corner of Light replaced the old visible `Original Yarncha`/`vintage-paper` colour theme label. It keeps the warm vintage paper palette, but it is not a layout preset and must not be shown with the old long Vintage Paper suffix.
+- Chinese design style subtitles were removed from the Settings appearance cards.
 - Dark/light theme contrast and danger button contrast are covered by theme tests.
 - Project Setup calculation behavior is covered by both `test:flow-mode` and `test:project-setup-calculations`.
 - Yarncha Assistant now lives in Project -> Assistant rather than Chart mode. Chart mode remains OG Mode / Flow Mode only.
 - Yarncha Assistant answer quality was improved with question classification, "What to do now", craft-specific troubleshooting, and answer-specific library links.
+- Theory & Foundation was upgraded into a structured Yarncha Wiki MVP with official craft entries, searchable filters, entry subpages, local notes/bookmarks/suggested edits/checklists, and Assistant citations.
+- Theory & Foundation was extended with visual learning metadata, source/review labels, copyright protection/reporting, troubleshooting decision trees, guided learning paths, regional terminology aliases, measurement and sizing knowledge, safety/suitability notes, version history, local path progress, and Assistant save/link actions.
 - Technique Help was refactored into a structured local technique guide database with selected-technique answers, stitch-count logic, polished related-technique labels, and mobile-friendly answer cards.
 - `tests/yarncha-assistant-contract.test.mjs` covers Assistant placement, Technique Help contracts, answer-quality guardrails, and local-rule-based behavior.
+- `tests/library-wiki-contract.test.mjs` covers Library Wiki data model, visual assets, review labels, copyright/reporting guardrails, learning paths, terminology/measurement/safety coverage, smart search examples, local-first interactions, Assistant citations, save-to-project actions, and responsive styling.
 - `tests/row-reminders-contract.test.mjs` covers row reminder storage defaults, UI fields, trigger behavior, speech settings, vibration hook, and responsive styling.
 - `tests/chart-sub-counters-contract.test.mjs` covers Chart tab counter placement, sync contracts, More-menu actions, assistant context, and responsive styling.
 - `tests/repeat-engine-contract.test.mjs` covers reusable repeat scheduling, validation, UI hooks, and legacy counter migration into `repeatRules`.
 - `tests/progress-persistence-contract.test.mjs` covers local-first progress persistence, save-status wording, cloud merge safety, and stable project id migration.
-- Current asset/cache version is `98-repeat-engine`.
+- Current asset/cache version is `111-library-wiki`.
 
 Documentation-only update:
 
-- This `DEVELOPMENT.md` was refreshed on 2026-07-01 after inspecting branch status, package scripts, app/runtime files, tests, scripts, cache versions, Yarncha Assistant, Technique Help, Flow Mode, OCR, Symbol Database, PWA, and supporting audit docs.
+- This `DEVELOPMENT.md` was refreshed on 2026-07-05 after the Corner of Light theme cleanup, English-only appearance-card cleanup, and cache/version update.
