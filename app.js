@@ -73,6 +73,7 @@ const starterData = {
   symbolLearningLibrary:[],
   libraryBookmarks:[],
   libraryEntryNotes:{},
+  libraryVisualReferences:{},
   librarySuggestedEdits:[],
   libraryRecentlyViewed:[],
   libraryProjectChecklist:[],
@@ -680,6 +681,7 @@ function hasMeaningfulSavedWorkspaceData(saved={}){
   if(nonEmptyArrays.some(key=>Array.isArray(saved[key])&&saved[key].length>0))return true;
   if(Array.isArray(saved.librarySections)&&saved.librarySections.some(section=>Array.isArray(section?.items)&&section.items.length>0))return true;
   if(saved.libraryEntryNotes&&Object.keys(saved.libraryEntryNotes).length>0)return true;
+  if(saved.libraryVisualReferences&&Object.values(saved.libraryVisualReferences).some(references=>Array.isArray(references)&&references.length>0))return true;
   if(saved.libraryPathProgress&&Object.keys(saved.libraryPathProgress).length>0)return true;
   if(saved.userTechniqueReferences&&Object.keys(saved.userTechniqueReferences).length>0)return true;
   if(saved.userSymbolsOverride&&Object.keys(saved.userSymbolsOverride).length>0)return true;
@@ -735,6 +737,7 @@ function loadState() {
     merged.ideaFilters = saved.ideaFilters || {search:"",craft:"All",kind:"All",showArchived:false};
     merged.libraryBookmarks = Array.isArray(saved.libraryBookmarks)?saved.libraryBookmarks:[];
     merged.libraryEntryNotes = saved.libraryEntryNotes && typeof saved.libraryEntryNotes==="object" ? saved.libraryEntryNotes : {};
+    merged.libraryVisualReferences = saved.libraryVisualReferences && typeof saved.libraryVisualReferences==="object" ? saved.libraryVisualReferences : {};
     merged.librarySuggestedEdits = Array.isArray(saved.librarySuggestedEdits)?saved.librarySuggestedEdits:[];
     merged.libraryRecentlyViewed = Array.isArray(saved.libraryRecentlyViewed)?saved.libraryRecentlyViewed:[];
     merged.libraryProjectChecklist = Array.isArray(saved.libraryProjectChecklist)?saved.libraryProjectChecklist:[];
@@ -5219,6 +5222,11 @@ function bindLibraryWiki(){
   document.querySelectorAll("[data-wiki-ask]").forEach(button=>button.onclick=()=>askAssistantAboutLibraryEntry(button.dataset.wikiAsk));
   document.querySelectorAll("[data-wiki-tool]").forEach(button=>button.onclick=()=>{const match=toolkitToolDefs.find(tool=>tool.name===button.dataset.wikiTool||tool.name.includes(button.dataset.wikiTool.split(" ")[0]));if(match){showView("tools");renderTool(match.id);}else toast(`${button.dataset.wikiTool} is in the Tool Manual.`);});
   document.querySelector("[data-wiki-note]")?.addEventListener("input",event=>{state.libraryEntryNotes={...(state.libraryEntryNotes||{}),[event.target.dataset.wikiNote]:event.target.value};saveStateSoon();});
+  document.querySelector("[data-visual-upload]")?.addEventListener("change",event=>{const file=event.target.files?.[0];if(file)addVisualReference(event.target.dataset.visualUpload,file);});
+  document.querySelectorAll("[data-visual-view]").forEach(button=>button.onclick=()=>openVisualReference(visualReferenceById(currentLibraryEntryId,button.dataset.visualView)));
+  document.querySelectorAll("[data-visual-edit]").forEach(button=>button.onclick=()=>editVisualReference(currentLibraryEntryId,button.dataset.visualEdit));
+  document.querySelectorAll("[data-visual-delete]").forEach(button=>button.onclick=()=>removeVisualReference(currentLibraryEntryId,button.dataset.visualDelete));
+  hydrateVisualReferenceImages().catch(error=>console.error("[Yarncha Library] Visual references failed to load",error));
 }
 function yarnMaterialReferenceHtml(){return `<div class="material-reference"><div class="material-source-note">Quick fibre comparison. Final feel also depends on spin, blend, gauge and fabric density.</div><div class="material-grid">${state.yarnMaterials.map(m=>{const r=materialRatings(m);return `<article class="material-card card">${m.imageAsset?`<img class="material-photo" data-material-image="${m.imageAsset}" alt="">`:""}<h3>${escapeHtml(m.name)}</h3><span>${escapeHtml(m.category||m.origin)}</span><div class="rating-grid"><div><small>Warmth</small><strong>${r.warmth}/5</strong></div><div><small>Drape</small><strong>${r.drape}/5</strong></div><div><small>Elasticity</small><strong>${r.elasticity}/5</strong></div><div><small>Care</small><strong>${r.care}/5</strong></div></div><dl><dt>Best season</dt><dd>${escapeHtml(m.season)}</dd><dt>Substitutions</dt><dd>${escapeHtml(r.substitutions)}</dd><dt>Best uses</dt><dd>${escapeHtml(r.uses)}</dd><dt>Texture</dt><dd>${escapeHtml((m.textures||[]).join(", ")||m.texture||"Not specified")}</dd><dt>Useful to know</dt><dd>${escapeHtml(m.features)}</dd></dl><div class="row-actions"><button class="mini-button" data-edit-material="${m.id}">Edit</button></div></article>`}).join("")}</div></div>`;}
 function materialRatings(m){
@@ -5452,9 +5460,33 @@ function libraryLearningPathDetailHtml(path){
   const entries=path.orderedEntries.map(libraryWikiEntryById).filter(Boolean);
   return `<article class="wiki-detail learning-path-detail"><button class="text-button" id="wiki-entry-back">← Back to Theory & Foundation</button><header class="article-header"><p class="eyebrow">LEARNING PATH · ${escapeHtml(path.difficulty)} · ${escapeHtml(path.estimatedTime)}</p><h1>${escapeHtml(path.title)}</h1><p class="wiki-summary">${escapeHtml(path.practiceTask)}</p><div class="wiki-detail-actions"><button class="primary-button" data-wiki-path-progress="${escapeHtml(path.id)}">Mark next step complete</button><button class="text-button" data-wiki-path-reset="${escapeHtml(path.id)}">Reset progress</button></div></header><section class="wiki-path-plan"><h2>Ordered entries</h2>${entries.map((entry,index)=>`<button class="wiki-path-step ${index<progress?"complete":""}" data-wiki-entry="${entry.id}"><span>${index+1}</span><strong>${escapeHtml(entry.title)}</strong><small>${index<progress?"Complete":"Open guide"}</small></button>`).join("")}</section><section class="related-content"><div><h2>Related tools</h2><div class="wiki-chip-row">${path.relatedTools.map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div><div><h2>Next step</h2><p>${escapeHtml(path.nextStep)}</p></div></section></article>`;
 }
-function libraryVisualAssetsHtml(entry){
-  return `<section class="wiki-visual-section"><h3>Visual learning</h3><div class="wiki-visual-grid">${(entry.visualAssets||[]).map(asset=>`<figure class="wiki-visual-card"><div class="wiki-visual-placeholder" aria-label="${escapeHtml(asset.altText)}"><span></span><span></span><span></span></div><figcaption><strong>${escapeHtml(asset.caption)}</strong><small>${escapeHtml(asset.craftType)} · ${escapeHtml(asset.level)} · ${escapeHtml(asset.type)}${asset.futureAnimationReady?" · GIF/animation-ready":""}</small><p>${escapeHtml(asset.altText)}</p></figcaption></figure>`).join("")}</div></section>`;
+function visualReferencesForEntry(entryId){return Array.isArray(state.libraryVisualReferences?.[entryId])?state.libraryVisualReferences[entryId]:[];}
+function visualReferenceCardHtml(reference){
+  const date=new Date(reference.createdAt||Date.now()).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+  return `<figure class="visual-reference-card"><button class="visual-reference-preview" data-visual-view="${escapeHtml(reference.id)}" aria-label="View ${escapeHtml(reference.title)}"><img data-visual-asset="${escapeHtml(reference.assetId)}" alt="${escapeHtml(reference.title)}"></button><figcaption><strong>${escapeHtml(reference.title)}</strong><small>${escapeHtml(date)}</small>${reference.note?`<p>${escapeHtml(reference.note)}</p>`:""}<div class="visual-reference-actions"><button class="text-button" data-visual-edit="${escapeHtml(reference.id)}">Rename or replace</button><button class="text-button danger-text" data-visual-delete="${escapeHtml(reference.id)}">Delete</button></div></figcaption></figure>`;
 }
+function visualReferenceGalleryHtml(references){return `<div class="visual-reference-gallery">${references.map(visualReferenceCardHtml).join("")}</div>`;}
+function visualReferenceEmptyStateHtml(){return `<div class="visual-reference-empty"><p><strong>No visual references yet.</strong><br>Upload a photo, sketch, diagram or swatch for this topic.</p></div>`;}
+function uploadVisualButtonHtml(entryId){return `<label class="secondary-button upload-visual-button" for="visual-reference-upload-${escapeHtml(entryId)}">Upload image</label><input id="visual-reference-upload-${escapeHtml(entryId)}" data-visual-upload="${escapeHtml(entryId)}" type="file" accept="image/*" hidden>`;}
+function visualReferenceSectionHtml(entry){
+  const references=visualReferencesForEntry(entry.id);
+  return `<section class="visual-reference-section article-section"><div class="visual-reference-heading"><div><h2>My Visual References</h2><p>Private to your workspace. Only you can see these references unless you choose to export or share them.</p></div><div class="visual-reference-add-actions">${uploadVisualButtonHtml(entry.id)}<button class="text-button" disabled title="Coming later">Take photo</button><button class="text-button" disabled title="Coming later">Draw sketch</button></div></div>${references.length?visualReferenceGalleryHtml(references):visualReferenceEmptyStateHtml()}</section>`;
+}
+async function hydrateVisualReferenceImages(){for(const image of document.querySelectorAll("[data-visual-asset]")){const file=await getAsset(image.dataset.visualAsset);if(file)image.src=URL.createObjectURL(file);}}
+async function addVisualReference(entryId,file){
+  if(!file?.type?.startsWith("image/"))return toast("Choose an image file.");
+  if(file.size>10*1024*1024)return toast("Choose an image smaller than 10 MB.");
+  const assetId=`library-visual-${entryId}-${Date.now()}`,reference={id:`visual-${Date.now()}`,assetId,title:file.name.replace(/\.[^.]+$/,""),note:"",createdAt:new Date().toISOString()};
+  await putAsset(assetId,file);state.libraryVisualReferences={...(state.libraryVisualReferences||{}),[entryId]:[...visualReferencesForEntry(entryId),reference]};saveState();renderLibrary();toast("Visual reference added.");
+}
+function visualReferenceById(entryId,referenceId){return visualReferencesForEntry(entryId).find(reference=>reference.id===referenceId);}
+async function openVisualReference(reference){const file=reference&&await getAsset(reference.assetId);if(!file)return toast("This visual reference is no longer available.");const url=URL.createObjectURL(file);openModal(`<p class="eyebrow">PRIVATE VISUAL REFERENCE</p><h2>${escapeHtml(reference.title)}</h2><img class="visual-reference-full" src="${url}" alt="${escapeHtml(reference.title)}">${reference.note?`<p>${escapeHtml(reference.note)}</p>`:""}<div class="modal-actions"><button class="primary-button" onclick="closeModal()">Close</button></div>`,{beforeClose:()=>{URL.revokeObjectURL(url);return true;}});}
+function editVisualReference(entryId,referenceId){
+  const reference=visualReferenceById(entryId,referenceId);if(!reference)return;
+  openModal(`<p class="eyebrow">MY VISUAL REFERENCE</p><h2>Edit reference</h2><label class="field full">Title<input id="visual-reference-title" value="${escapeHtml(reference.title)}"></label><label class="field full">Private note<textarea id="visual-reference-note" rows="4">${escapeHtml(reference.note||"")}</textarea></label><label class="field full upload-drop">Replace image<input id="visual-reference-replacement" type="file" accept="image/*"><small>Optional. Leave empty to keep the current image.</small></label><div class="modal-actions"><button class="secondary-button" onclick="closeModal()">Cancel</button><button class="primary-button" id="save-visual-reference">Save changes</button></div>`);
+  document.getElementById("save-visual-reference").onclick=async()=>{const title=document.getElementById("visual-reference-title").value.trim();if(!title)return toast("Name this visual reference.");const replacement=document.getElementById("visual-reference-replacement").files?.[0];if(replacement){if(!replacement.type.startsWith("image/")||replacement.size>10*1024*1024)return toast("Choose an image smaller than 10 MB.");const nextAsset=`library-visual-${entryId}-${Date.now()}`;await putAsset(nextAsset,replacement);await deleteAsset(reference.assetId);reference.assetId=nextAsset;}reference.title=title;reference.note=document.getElementById("visual-reference-note").value.trim();saveState();closeModal(true);renderLibrary();toast("Visual reference updated.");};
+}
+async function removeVisualReference(entryId,referenceId){const reference=visualReferenceById(entryId,referenceId);if(!reference||!confirm("Delete this private visual reference? This cannot be undone."))return;await deleteAsset(reference.assetId);state.libraryVisualReferences={...(state.libraryVisualReferences||{}),[entryId]:visualReferencesForEntry(entryId).filter(item=>item.id!==referenceId)};saveState();renderLibrary();toast("Visual reference deleted.");}
 function libraryDecisionTreeHtml(entry){
   const flow=entry.diagnosticFlow||defaultDiagnosticFlow(entry);
   const block=(title,items)=>items?.length?`<div><h4>${escapeHtml(title)}</h4><ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`:"";
@@ -5501,7 +5533,6 @@ function libraryWikiEntryDetailHtml(entry){
     <div class="wiki-source-banner"><strong>${escapeHtml(entry.sourceQuality||"Official Yarncha Guide")}</strong><span>${escapeHtml(entry.author)} · v${escapeHtml(entry.version)} · Updated ${escapeHtml(entry.updatedAt||entry.lastUpdated)}</span></div>
     <div class="wiki-copyright-note"><strong>Copyright-safe Library use</strong><p>${escapeHtml(entry.copyrightPolicy?.summary||libraryCopyrightPolicy.summary)}</p></div>
     <div class="wiki-detail-actions"><button class="primary-button" data-wiki-ask="${entry.id}">Ask Assistant about this</button><button class="secondary-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save entry"}</button><button class="text-button" data-wiki-project-note="${entry.id}">Add to project notes</button><button class="text-button" data-wiki-checklist="${entry.id}">Add to checklist</button><details class="wiki-more-actions"><summary>More</summary><div><button class="text-button" data-wiki-suggest="${entry.id}">Suggest edit</button><button class="text-button" data-wiki-report="${entry.id}">${escapeHtml(libraryCopyrightPolicy.reportLabel)}</button></div></details></div>
-    ${libraryVisualAssetsHtml(entry)}
     <div class="wiki-detail-grid">
       <section><h3>Detailed explanation</h3><p>${escapeHtml(entry.fullExplanation)}</p></section>
       <section><h3>When to use this</h3><p>${escapeHtml(entry.whenToUse)}</p></section>
@@ -5509,13 +5540,13 @@ function libraryWikiEntryDetailHtml(entry){
       <section><h3>Mini example</h3><p>${escapeHtml(entry.miniExample)}</p></section>
       <section><h3>Step-by-step guidance</h3><ol>${(entry.stepByStep||[]).map(step=>`<li>${escapeHtml(step)}</li>`).join("")}</ol></section>
       <section><h3>Common mistakes</h3><ul>${(entry.commonMistakes||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
-      <section><h3>Related tools</h3><div class="wiki-chip-row">${(entry.relatedTools||[]).map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></section>
-      <section><h3>Related project types</h3><div class="wiki-chip-row">${(entry.relatedProjectTypes||[]).map(type=>`<span class="chip passive">${escapeHtml(type)}</span>`).join("")}</div></section>
       <section><h3>Next learning step</h3><ul>${(entry.nextLearningSteps||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
       ${entry.safetyNotes?.length?`<section><h3>Safety and suitability</h3><ul>${entry.safetyNotes.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`:""}
       ${entry.measurements?.length?`<section><h3>Measurement guide</h3><div class="wiki-chip-row">${entry.measurements.map(item=>`<span class="chip passive">${escapeHtml(item)}</span>`).join("")}</div></section>`:""}
       ${entry.terminologyAliases?.length?`<section><h3>Terminology aliases</h3><div class="wiki-chip-row">${entry.terminologyAliases.slice(0,14).map(item=>`<span class="chip passive">${escapeHtml(item)}</span>`).join("")}</div></section>`:""}
     </div>
+    ${visualReferenceSectionHtml(entry)}
+    <section class="article-section related-content"><div><h2>Related tools</h2><div class="wiki-chip-row">${(entry.relatedTools||[]).map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div><div><h2>Related projects</h2><div class="wiki-chip-row">${(entry.relatedProjectTypes||[]).map(type=>`<span class="chip passive">${escapeHtml(type)}</span>`).join("")}</div></div></section>
     ${libraryDecisionTreeHtml(entry)}
     <section class="wiki-version-card"><h3>Version history and maintenance</h3><dl><dt>Created</dt><dd>${escapeHtml(entry.createdAt)}</dd><dt>Updated</dt><dd>${escapeHtml(entry.updatedAt||entry.lastUpdated)}</dd><dt>Source</dt><dd>${escapeHtml(entry.source)}</dd><dt>Review status</dt><dd>${escapeHtml(entry.reliabilityStatus)}</dd><dt>Changelog</dt><dd>${escapeHtml((entry.changelog||[]).join(" · "))}</dd><dt>Related app version</dt><dd>${escapeHtml(entry.relatedAppVersion)}</dd></dl></section>
     ${related.length?`<section class="wiki-related"><h3>Related entries</h3><div class="wiki-entry-grid compact">${related.map(libraryEntryCardHtml).join("")}</div></section>`:""}
@@ -5915,6 +5946,7 @@ function allAssetIdsForState(snapshot){
     ...Object.values(snapshot.userTechniqueReferences||{}).map(reference=>reference.assetId),
     ...Object.values(snapshot.userSymbolsOverride||{}).map(entry=>entry.symbolImageAsset),
     ...(snapshot.symbolLearningLibrary||[]).map(record=>record.symbolImageAsset||record.detectedSymbolImageAsset),
+    ...Object.values(snapshot.libraryVisualReferences||{}).flatMap(references=>(references||[]).map(reference=>reference.assetId)),
     ...(snapshot.librarySections||[]).flatMap(s=>(s.items||[]).flatMap(i=>(i.assets||[]).map(a=>a.id)))
   ].filter(Boolean);
 }
@@ -5960,6 +5992,7 @@ async function importBackup(event,mode="merge"){
       state.techniqueKnowledge=[...(state.techniqueKnowledge||[]),...(imported.techniqueKnowledge||[])];
       state.userTechniqueReferences={...(state.userTechniqueReferences||{}),...(imported.userTechniqueReferences||{})};
       state.userSymbolsOverride={...(state.userSymbolsOverride||{}),...(imported.userSymbolsOverride||{})};
+      for(const [entryId,references] of Object.entries(imported.libraryVisualReferences||{}))state.libraryVisualReferences={...(state.libraryVisualReferences||{}),[entryId]:[...visualReferencesForEntry(entryId),...(Array.isArray(references)?references:[])]};
       (imported.symbolLearningLibrary||[]).forEach(record=>upsertLearningRecord(record,{save:false}));
       state.activeProjectId=projects[0]?.id||state.activeProjectId;
     }

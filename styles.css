@@ -2097,9 +2097,30 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view input,
 #library-view select,
 #library-view textarea { font-family:var(--font-ui); }
+#library-view .visual-reference-section { display:grid; gap:18px; }
+#library-view .visual-reference-heading { display:flex; justify-content:space-between; align-items:start; gap:24px; }
+#library-view .visual-reference-heading h2 { margin:0 0 7px; }
+#library-view .visual-reference-heading p { margin:0; max-width:590px; color:var(--text-secondary); line-height:1.5; }
+#library-view .visual-reference-add-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+#library-view .upload-visual-button { cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+#library-view .visual-reference-empty { padding:4px 0; }
+#library-view .visual-reference-empty p { margin:0; color:var(--text-secondary); line-height:1.55; }
+#library-view .visual-reference-empty strong { color:var(--text); }
+#library-view .visual-reference-gallery { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+#library-view .visual-reference-card { margin:0; min-width:0; }
+#library-view .visual-reference-preview { display:block; width:100%; aspect-ratio:4/3; padding:0; overflow:hidden; border:1px solid var(--border); border-radius:12px; background:var(--surface-elevated); }
+#library-view .visual-reference-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+#library-view .visual-reference-card figcaption { display:grid; gap:4px; padding-top:9px; }
+#library-view .visual-reference-card figcaption strong { font-family:var(--font-ui); font-size:14px; overflow-wrap:anywhere; }
+#library-view .visual-reference-card figcaption small,
+#library-view .visual-reference-card figcaption p { margin:0; color:var(--text-secondary); font-size:12px; line-height:1.4; }
+#library-view .visual-reference-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+#library-view .visual-reference-actions button { min-height:34px; padding:4px 0; font-size:12px; }
+.visual-reference-full { display:block; max-width:100%; max-height:70vh; margin:16px auto; border-radius:var(--radius-button); object-fit:contain; }
 
 @media (max-width:900px) {
   #library-view .knowledge-hub-groups { grid-template-columns:1fr 1fr; }
+  #library-view .visual-reference-gallery { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:760px) {
   #library-view .library-page-hero,
@@ -2111,6 +2132,8 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
   #library-view .wiki-entry-card { grid-template-columns:1fr; display:grid; gap:14px; }
   #library-view .wiki-card-actions { justify-content:flex-start; }
   #library-view .wiki-detail-actions > button { width:auto; flex:1 1 180px; }
+  #library-view .visual-reference-heading { display:grid; }
+  #library-view .visual-reference-gallery { grid-template-columns:1fr; }
 }
 /* Private beta cloud and review-first chart reader */
 .cloud-chart-reader{display:grid;gap:var(--section-gap);margin-top:var(--section-gap)}

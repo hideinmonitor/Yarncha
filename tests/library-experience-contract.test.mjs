@@ -15,8 +15,19 @@ assert.doesNotMatch(app,/class="wiki-detail card"/,"article detail is not wrappe
 assert.match(app,/class="wiki-more-actions"/,"low-priority article actions use an overflow menu");
 assert.match(app,/Problem[\s\S]*Diagnosis[\s\S]*Resolution[\s\S]*Prevention/,"troubleshooting follows the required diagnostic hierarchy");
 assert.match(app,/libraryWikiFilters\.search=event\.target\.value;libraryWikiFilters\.path="All"/,"manual search clears hidden curated-path filtering");
+assert.doesNotMatch(app,/>Visual learning</,"articles do not render the obsolete static Visual Learning gallery");
+assert.match(app,/function visualReferenceSectionHtml/,"articles share a reusable private visual-reference section");
+assert.match(app,/function visualReferenceGalleryHtml/,"uploaded references share a reusable responsive gallery");
+assert.match(app,/No visual references yet\./,"articles without uploads use a compact empty state");
+assert.match(app,/libraryVisualReferences/,"visual references persist per Library entry");
+assert.match(app,/data-visual-upload/,"each article supports private image uploads");
+assert.match(app,/data-visual-view[\s\S]*data-visual-edit[\s\S]*data-visual-delete/,"visual references preserve view, edit/replace, and delete actions");
+assert.match(app,/snapshot\.libraryVisualReferences[\s\S]*reference\.assetId/,"visual references are included in workspace backups");
 assert.match(css,/#library-view \.wiki-detail-grid section[\s\S]*border-top:1px solid var\(--border\)/,"article sections use separators instead of nested cards");
 assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var\(--font-ui\)/,"interactive Library titles use the UI font");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*#library-view \.knowledge-hub-groups/,"Library knowledge navigation has a mobile layout");
+assert.match(css,/#library-view \.visual-reference-gallery \{[^}]*repeat\(4/,"visual references use a compact desktop gallery");
+assert.match(css,/@media \(max-width:900px\)[\s\S]*visual-reference-gallery[^}]*repeat\(2/,"visual references use two columns on tablet");
+assert.match(css,/@media \(max-width:760px\)[\s\S]*visual-reference-gallery[^}]*grid-template-columns:1fr/,"visual references use one column on mobile");
 
 console.log("Library experience contract passed.");
