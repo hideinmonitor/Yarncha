@@ -2092,10 +2092,17 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view .wiki-visual-section { padding-top:10px; }
 #library-view .diagnostic-groups { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px 40px; }
 #library-view .diagnostic-groups > section { border-top:1px solid var(--border); padding-top:15px; }
-#library-view .diagnostic-groups h3 { font-family:var(--font-ui) !important; font-size:17px; margin:0 0 14px; }
+#library-view .diagnostic-groups h3 { font-family:var(--font-heading) !important; font-size:22px; line-height:1.2; margin:0 0 14px; }
 #library-view .diagnostic-groups h4 { font-size:13px; margin:12px 0 6px; text-transform:uppercase; letter-spacing:.06em; }
-#library-view .wiki-version-card { padding:20px 0; border-block:1px solid var(--border); background:transparent; border-radius:0; }
-#library-view .wiki-notes { box-shadow:none; }
+#library-view .wiki-decision-tree { display:grid; gap:24px; padding:26px; border:1px solid var(--border); border-radius:var(--radius-button); background:var(--surface-elevated); }
+#library-view .wiki-decision-tree > h2 { margin:0; }
+#library-view .wiki-maintenance { padding:16px 0; border-top:1px solid var(--border); color:var(--text-secondary); }
+#library-view .wiki-maintenance summary { cursor:pointer; font-family:var(--font-ui); font-size:13px; font-weight:700; }
+#library-view .wiki-maintenance dl { display:grid; grid-template-columns:150px minmax(0,1fr); gap:8px 14px; margin:16px 0 0; }
+#library-view .wiki-maintenance dt { font-family:var(--font-ui); color:var(--text-secondary); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+#library-view .wiki-maintenance dd { margin:0; line-height:1.5; }
+#library-view .wiki-notes { display:grid; gap:8px; padding:26px 0; border-top:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none; }
+#library-view .wiki-notes h3 { margin:0; }
 #library-view button,
 #library-view input,
 #library-view select,
@@ -2138,6 +2145,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
   #library-view .wiki-detail-actions > button { width:auto; flex:1 1 180px; }
   #library-view .visual-reference-heading { display:grid; }
   #library-view .visual-reference-gallery { grid-template-columns:1fr; }
+  #library-view .wiki-maintenance dl { grid-template-columns:1fr; gap:4px; }
 }
 /* Private beta cloud and review-first chart reader */
 .cloud-chart-reader{display:grid;gap:var(--section-gap);margin-top:var(--section-gap)}

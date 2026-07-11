@@ -19,6 +19,8 @@ assert.match(app,/class="wiki-detail"/,"article detail uses a natural page conta
 assert.doesNotMatch(app,/class="wiki-detail card"/,"article detail is not wrapped in a generic card");
 assert.match(app,/class="wiki-more-actions"/,"low-priority article actions use an overflow menu");
 assert.match(app,/Problem[\s\S]*Diagnosis[\s\S]*Resolution[\s\S]*Prevention/,"troubleshooting follows the required diagnostic hierarchy");
+assert.match(app,/details class="wiki-maintenance"/,"low-priority article maintenance is collapsible");
+assert.doesNotMatch(app,/wiki-notes card/,"private notes are not wrapped in a generic card");
 assert.match(app,/libraryWikiFilters\.search=event\.target\.value;libraryWikiFilters\.path="All"/,"manual search clears hidden curated-path filtering");
 assert.doesNotMatch(app,/>Visual learning</,"articles do not render the obsolete static Visual Learning gallery");
 assert.match(app,/function visualReferenceSectionHtml/,"articles share a reusable private visual-reference section");
@@ -29,6 +31,8 @@ assert.match(app,/data-visual-upload/,"each article supports private image uploa
 assert.match(app,/data-visual-view[\s\S]*data-visual-edit[\s\S]*data-visual-delete/,"visual references preserve view, edit/replace, and delete actions");
 assert.match(app,/snapshot\.libraryVisualReferences[\s\S]*reference\.assetId/,"visual references are included in workspace backups");
 assert.match(css,/#library-view \.wiki-detail-grid section[\s\S]*border-top:1px solid var\(--border\)/,"article sections use separators instead of nested cards");
+assert.match(css,/#library-view \.diagnostic-groups h3 \{ font-family:var\(--font-heading\) !important/,"decision workflow headings use the display font");
+assert.match(css,/#library-view \.wiki-maintenance summary \{[\s\S]*font-family:var\(--font-ui\)/,"maintenance metadata uses the UI font");
 assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var\(--font-ui\)/,"interactive Library titles use the UI font");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*#library-view \.knowledge-hub-groups/,"Library knowledge navigation has a mobile layout");
 assert.match(css,/#library-view \.visual-reference-gallery \{[^}]*repeat\(4/,"visual references use a compact desktop gallery");
