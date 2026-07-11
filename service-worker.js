@@ -1,8 +1,8 @@
-const CACHE_NAME = "yarncha-shell-v112-live-repeat-fix";
+const CACHE_NAME = "yarncha-shell-v113-learning-path-cards";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=112-live-repeat-fix",
+  "/styles.css?v=113-learning-path-cards",
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=112-live-repeat-fix",
   "/symbol-database.js?v=112-live-repeat-fix",
