@@ -2026,7 +2026,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view {
   --library-body-size:16px;
   --library-body-line-height:1.7;
-  --library-section-heading-size:22px;
+  --library-section-heading-size:26px;
   --library-section-heading-line-height:1.2;
   --library-content-gap:30px;
   --library-card-padding:28px;
@@ -3090,6 +3090,83 @@ button,
   .project-workspace-page .annotation-toolbar {
     padding-right:24px;
   }
+}
+
+/* Library semantic typography — scoped above legacy audit-rule specificity. */
+#library-view .library-page-title {
+  font-family:var(--font-heading) !important;
+  font-size:46px !important;
+  font-weight:700 !important;
+  line-height:1.08 !important;
+  letter-spacing:normal !important;
+}
+
+#library-view .library-major-section-title {
+  font-family:var(--font-heading) !important;
+  font-size:30px !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  letter-spacing:normal !important;
+}
+
+#library-view .wiki-entry-card .library-content-title,
+#library-view .library-category-card .library-content-title {
+  font-family:var(--font-heading) !important;
+  font-size:24px !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  letter-spacing:normal !important;
+}
+
+#library-view .learning-path-item .library-learning-path-title {
+  font-family:var(--font-heading) !important;
+  font-size:19px !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  letter-spacing:normal !important;
+}
+
+#library-view .wiki-detail .library-article-section-title {
+  font-family:var(--font-heading) !important;
+  font-size:26px !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  letter-spacing:normal !important;
+}
+
+#library-view .library-body-text,
+#library-view .wiki-detail-grid p,
+#library-view .wiki-detail-grid li,
+#library-view .diagnostic-groups li,
+#library-view .related-content p {
+  font-family:var(--font-ui) !important;
+  font-size:16px !important;
+  font-weight:400 !important;
+  line-height:1.6 !important;
+}
+
+#library-view button,
+#library-view .primary-button,
+#library-view .secondary-button,
+#library-view .text-button {
+  font-family:var(--font-ui) !important;
+  font-size:15px !important;
+  font-weight:700 !important;
+}
+
+#library-view .eyebrow,
+#library-view .wiki-badges span,
+#library-view .library-space-count,
+#library-view .library-category-card-meta,
+#library-view .learning-path-meta,
+#library-view .learning-path-progress-summary strong,
+#library-view .learning-path-progress-summary > span,
+#library-view .learning-path-group-heading > span,
+#library-view .library-section-heading > span {
+  font-family:var(--font-ui) !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  line-height:1.3 !important;
 }
 
 /* Shared Project Setup */

@@ -26,5 +26,15 @@ assert.match(css,/font-style:normal !important;[\s\S]*font-variation-settings:no
 
 assert.match(css,/button,input,select,textarea,option,label,[\s\S]*font-family:var\(--font-ui\) !important;/,"UI controls explicitly use Inter");
 assert.match(css,/\*,\*::before,\*::after\s*\{[\s\S]*font-family:var\(--font-ui\) !important;/,"Dynamic content and pseudo-elements default to Inter");
+assert.match(app,/class="library-page-title"/,"Library page titles have an explicit semantic class");
+assert.match(app,/class="library-major-section-title"/,"Library major section titles have an explicit semantic class");
+assert.match(app,/class="library-content-title"/,"Library content titles have an explicit semantic class");
+assert.match(app,/class="library-learning-path-title"/,"Learning Path titles have an explicit compact-title class");
+assert.match(app,/class="library-article-section-title"/,"Library article section titles have an explicit semantic class");
+assert.match(css,/#library-view \.library-page-title \{[^}]*font-size:46px !important[^}]*font-weight:700 !important[^}]*line-height:1\.08 !important/,"Library page titles use the requested fixed scale");
+assert.match(css,/#library-view \.library-major-section-title \{[^}]*font-size:30px !important[^}]*line-height:1\.2 !important/,"Library major sections use the requested fixed scale");
+assert.match(css,/#library-view \.wiki-entry-card \.library-content-title,[\s\S]*font-size:24px !important[^}]*line-height:1\.2 !important/,"Library cards use the requested content-title scale");
+assert.match(css,/#library-view \.learning-path-item \.library-learning-path-title \{[^}]*font-size:19px !important[^}]*line-height:1\.2 !important/,"Learning Path titles use the requested compact scale");
+assert.match(css,/#library-view \.wiki-detail \.library-article-section-title \{[^}]*font-size:26px !important[^}]*line-height:1\.2 !important/,"Article section titles use the requested scale");
 
 console.log("Typography contract passed");
