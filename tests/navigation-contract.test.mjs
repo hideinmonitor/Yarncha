@@ -57,6 +57,8 @@ assert.match(app, /Today \"Continue making\"/, "Today Continue making has a dire
 assert.match(app, /Tools navigation/, "Tools has a direct navigation binding");
 assert.match(app, /Project \$\{button\.dataset\.projectTab\} tab/, "Project and Assistant tabs have direct navigation bindings");
 assert.match(app, /\[Yarncha navigation\] Direct click failed/, "Direct navigation failures produce useful diagnostics");
+assert.match(app, /function configureServiceWorker\(\)[\s\S]*\["localhost","127\.0\.0\.1","::1"\][\s\S]*getRegistrations\(\)[\s\S]*registration=>registration\.unregister\(\)[\s\S]*caches\.keys\(\)[\s\S]*caches\.delete\(cacheName\)/, "Local previews unregister service workers and clear only Cache Storage");
+assert.match(app, /await navigator\.serviceWorker\.register\("\.\/service-worker\.js"\)/, "Hosted Yarncha still registers its production service worker");
 assert.doesNotMatch(app, /document\.querySelectorAll\("\.nav-item"\)\.forEach\(button => \{\s*button\.onclick/s, "Nav buttons do not use stale direct onclick handlers");
 assert.match(app, /window\.__yarnchaShellClickHandler[\s\S]*removeEventListener\("click",window\.__yarnchaShellClickHandler\)/, "Shell click handler is replaced on reload instead of leaving stale handlers");
 assert.match(app, /const nav = e\.target\.closest\("\[data-view\]"\); if \(nav\) \{ e\.preventDefault\(\); showView\(nav\.dataset\.view\)\.catch/, "Sidebar navigation clicks prevent default and report failures");

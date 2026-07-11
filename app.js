@@ -2302,7 +2302,7 @@ function subCounterHtml(counter,{chart=false,currentRow=0}={}) {
 function unifiedRepeatCountersHtml(p,{chart=false}={}){
   const counters=(p.subCounters||[]).map(normalizeSubCounter);
   return `<section class="repeat-section unified-repeat-section ${chart?"chart-repeat-section":""}" aria-label="Repeat and sub-counters">
-    <div class="repeat-section-header unified-repeat-heading"><div class="repeat-section-title-group"><p class="section-kicker repeat-section-kicker">REPEAT / SUB-COUNTER</p><h3 class="section-title repeat-section-title">${counters.length?"Repeat / Sub-Counter":"No repeat counter yet"}</h3></div><button class="button-secondary add-subcounter-button mini-button" id="add-sub-counter">+ Add</button></div>
+    <div class="repeat-section-header unified-repeat-heading"><div class="repeat-section-title-group"><h3 class="section-title repeat-section-title">${counters.length?"Repeat / Sub-Counter":"No repeat counter yet"}</h3></div><button class="button-secondary add-subcounter-button mini-button" id="add-sub-counter">+ Add</button></div>
     <div id="sub-counters" class="unified-repeat-list">${counters.length?counters.map(counter=>subCounterHtml(counter,{chart,currentRow:p.row})).join(""):`<p class="muted-copy">Add sleeve shaping, cable repeats, lace repeats, colour changes, or any section that needs its own count.</p>`}</div>
   </section>`;
 }
@@ -6601,4 +6601,18 @@ applyTheme();
 applyLanguage();
 refreshFxRates();
 maybeShowOnboarding();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+async function configureServiceWorker(){
+  if(!("serviceWorker" in navigator))return;
+  const isLocalPreview=["localhost","127.0.0.1","::1"].includes(location.hostname);
+  if(isLocalPreview){
+    const registrations=await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(registration=>registration.unregister()));
+    if("caches" in window){
+      const cacheNames=await caches.keys();
+      await Promise.all(cacheNames.map(cacheName=>caches.delete(cacheName)));
+    }
+    return;
+  }
+  await navigator.serviceWorker.register("./service-worker.js");
+}
+configureServiceWorker().catch(error=>console.warn("[Yarncha service worker] Configuration failed",error));
