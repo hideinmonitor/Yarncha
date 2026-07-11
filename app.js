@@ -5498,7 +5498,7 @@ async function removeVisualReference(entryId,referenceId){const reference=visual
 function libraryDecisionTreeHtml(entry){
   const flow=entry.diagnosticFlow||defaultDiagnosticFlow(entry);
   const block=(title,items,ordered=false)=>items?.length?`<section class="troubleshooting-topic"><h3>${escapeHtml(title)}</h3>${ordered?`<ol>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol>`:`<ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul>`}</section>`:"";
-  return `<section class="wiki-decision-tree card"><h2>Troubleshooting</h2><div class="diagnostic-groups">${block("Symptoms",flow.symptoms)}${block("Likely causes",flow.likelyCauses)}${block("Quick checks",flow.quickChecks)}${block("Decision path",flow.decisionPath,true)}${block("Fix",flow.fixes)}${block("Prevention",flow.prevention)}</div>${flow.saveToProjectAction?`<button class="secondary-button" data-wiki-checklist="${entry.id}">Save result to project checklist</button>`:""}</section>`;
+  return `<section class="wiki-decision-tree card"><p class="eyebrow">TROUBLESHOOTING</p><div class="diagnostic-groups">${block("Symptoms",flow.symptoms)}${block("Likely causes",flow.likelyCauses)}${block("Quick checks",flow.quickChecks)}${block("Decision path",flow.decisionPath,true)}${block("Fix",flow.fixes)}${block("Prevention",flow.prevention)}</div>${flow.saveToProjectAction?`<button class="secondary-button" data-wiki-checklist="${entry.id}">Save result to project checklist</button>`:""}</section>`;
 }
 function librarySmartSearchHintHtml(query=""){
   const smart=libraryProblemSearchMap.find(item=>item.phrases.some(phrase=>String(query||"").toLowerCase().includes(phrase)));

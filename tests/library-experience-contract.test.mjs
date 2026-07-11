@@ -19,6 +19,7 @@ assert.match(app,/class="wiki-detail"/,"article detail uses a natural page conta
 assert.doesNotMatch(app,/class="wiki-detail card"/,"article detail is not wrapped in a generic card");
 assert.match(app,/class="wiki-more-actions"/,"low-priority article actions use an overflow menu");
 assert.match(app,/Symptoms[\s\S]*Likely causes[\s\S]*Quick checks[\s\S]*Decision path[\s\S]*Fix[\s\S]*Prevention/,"troubleshooting follows the six-part editorial hierarchy");
+assert.match(app,/wiki-decision-tree card"><p class="eyebrow">TROUBLESHOOTING<\//,"Troubleshooting reuses the shared Overview kicker treatment");
 assert.match(app,/details class="wiki-maintenance"/,"low-priority article maintenance is collapsible");
 assert.doesNotMatch(app,/wiki-notes card/,"private notes are not wrapped in a generic card");
 assert.match(app,/libraryWikiFilters\.search=event\.target\.value;libraryWikiFilters\.path="All"/,"manual search clears hidden curated-path filtering");
