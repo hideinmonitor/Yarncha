@@ -5478,7 +5478,7 @@ function visualReferenceEmptyStateHtml(){return `<div class="visual-reference-em
 function uploadVisualButtonHtml(entryId){return `<label class="secondary-button upload-visual-button" for="visual-reference-upload-${escapeHtml(entryId)}">Upload image</label><input id="visual-reference-upload-${escapeHtml(entryId)}" data-visual-upload="${escapeHtml(entryId)}" type="file" accept="image/*" hidden>`;}
 function visualReferenceSectionHtml(entry){
   const references=visualReferencesForEntry(entry.id);
-  return `<section class="visual-reference-section article-section"><div class="visual-reference-heading"><div><h2>My Visual References</h2><p>Private to your workspace. Only you can see these references unless you choose to export or share them.</p></div><div class="visual-reference-add-actions">${uploadVisualButtonHtml(entry.id)}<button class="text-button" disabled title="Coming later">Take photo</button><button class="text-button" disabled title="Coming later">Draw sketch</button></div></div>${references.length?visualReferenceGalleryHtml(references):visualReferenceEmptyStateHtml()}</section>`;
+  return `<section class="visual-reference-section card"><div class="visual-reference-heading"><div><h2>My Visual References</h2><p>Private to your workspace. Only you can see these references unless you choose to export or share them.</p></div><div class="visual-reference-add-actions">${uploadVisualButtonHtml(entry.id)}<button class="text-button" disabled title="Coming later">Take photo</button><button class="text-button" disabled title="Coming later">Draw sketch</button></div></div>${references.length?visualReferenceGalleryHtml(references):visualReferenceEmptyStateHtml()}</section>`;
 }
 async function hydrateVisualReferenceImages(){for(const image of document.querySelectorAll("[data-visual-asset]")){const file=await getAsset(image.dataset.visualAsset);if(file)image.src=URL.createObjectURL(file);}}
 async function addVisualReference(entryId,file){
@@ -5541,7 +5541,10 @@ function libraryWikiEntryDetailHtml(entry){
     <div class="wiki-source-banner"><strong>${escapeHtml(entry.sourceQuality||"Official Yarncha Guide")}</strong><span>${escapeHtml(entry.author)} · v${escapeHtml(entry.version)} · Updated ${escapeHtml(entry.updatedAt||entry.lastUpdated)}</span></div>
     <div class="wiki-copyright-note"><strong>Copyright-safe Library use</strong><p>${escapeHtml(entry.copyrightPolicy?.summary||libraryCopyrightPolicy.summary)}</p></div>
     <div class="wiki-detail-actions"><button class="primary-button" data-wiki-ask="${entry.id}">Ask Assistant about this</button><button class="secondary-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save entry"}</button><button class="text-button" data-wiki-project-note="${entry.id}">Add to project notes</button><button class="text-button" data-wiki-checklist="${entry.id}">Add to checklist</button><details class="wiki-more-actions"><summary>More</summary><div><button class="text-button" data-wiki-suggest="${entry.id}">Suggest edit</button><button class="text-button" data-wiki-report="${entry.id}">${escapeHtml(libraryCopyrightPolicy.reportLabel)}</button></div></details></div>
-    <div class="wiki-detail-grid">
+    ${visualReferenceSectionHtml(entry)}
+    <section class="wiki-overview-card card">
+      <p class="eyebrow">OVERVIEW</p>
+      <div class="wiki-detail-grid">
       <section><h3>Detailed explanation</h3><p>${escapeHtml(entry.fullExplanation)}</p></section>
       <section><h3>When to use this</h3><p>${escapeHtml(entry.whenToUse)}</p></section>
       <section><h3>Why it matters</h3><p>${escapeHtml(entry.whyItMatters)}</p></section>
@@ -5552,8 +5555,8 @@ function libraryWikiEntryDetailHtml(entry){
       ${entry.safetyNotes?.length?`<section><h3>Safety and suitability</h3><ul>${entry.safetyNotes.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`:""}
       ${entry.measurements?.length?`<section><h3>Measurement guide</h3><div class="wiki-chip-row">${entry.measurements.map(item=>`<span class="chip passive">${escapeHtml(item)}</span>`).join("")}</div></section>`:""}
       ${entry.terminologyAliases?.length?`<section><h3>Terminology aliases</h3><div class="wiki-chip-row">${entry.terminologyAliases.slice(0,14).map(item=>`<span class="chip passive">${escapeHtml(item)}</span>`).join("")}</div></section>`:""}
-    </div>
-    ${visualReferenceSectionHtml(entry)}
+      </div>
+    </section>
     <section class="article-section related-content"><div><h2>Related tools</h2><div class="wiki-chip-row">${(entry.relatedTools||[]).map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div><div><h2>Related projects</h2><div class="wiki-chip-row">${(entry.relatedProjectTypes||[]).map(type=>`<span class="chip passive">${escapeHtml(type)}</span>`).join("")}</div></div></section>
     ${libraryDecisionTreeHtml(entry)}
     <details class="wiki-maintenance"><summary>Article details</summary><dl><dt>Created</dt><dd>${escapeHtml(entry.createdAt)}</dd><dt>Updated</dt><dd>${escapeHtml(entry.updatedAt||entry.lastUpdated)}</dd><dt>Source</dt><dd>${escapeHtml(entry.source)}</dd><dt>Review status</dt><dd>${escapeHtml(entry.reliabilityStatus)}</dd><dt>Changelog</dt><dd>${escapeHtml((entry.changelog||[]).join(" · "))}</dd><dt>Related app version</dt><dd>${escapeHtml(entry.relatedAppVersion)}</dd></dl></details>

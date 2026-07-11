@@ -2080,13 +2080,17 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view .wiki-more-actions { position:relative; }
 #library-view .wiki-more-actions summary { min-height:44px; display:flex; align-items:center; cursor:pointer; padding:0 12px; }
 #library-view .wiki-more-actions > div { position:absolute; z-index:5; right:0; top:48px; min-width:180px; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-button); box-shadow:var(--shadow); display:grid; }
-#library-view .wiki-detail-grid { display:block; }
-#library-view .wiki-detail-grid section,
-#library-view .article-section,
-#library-view .wiki-related { padding:26px 0; border:0; border-top:1px solid var(--border); border-radius:0; background:transparent; }
+#library-view .wiki-overview-card { display:grid; gap:24px; padding:28px; }
+#library-view .wiki-overview-card > .eyebrow { margin:0; }
+#library-view .wiki-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px 38px; }
+#library-view .wiki-detail-grid section { padding:0; border:0; border-radius:0; background:transparent; }
 #library-view .wiki-detail-grid h3,
+#library-view .wiki-overview-card h3,
+#library-view .visual-reference-section h2,
 #library-view .article-section > h2,
-#library-view .wiki-related > h3 { margin:0 0 12px; }
+#library-view .wiki-related > h3 { font-family:var(--font-heading) !important; margin:0 0 12px; }
+#library-view .article-section { padding:18px 0; border:0; background:transparent; }
+#library-view .wiki-related { padding:18px 0; border:0; background:transparent; }
 #library-view .wiki-detail-grid p,
 #library-view .wiki-detail-grid li { font-size:16px; line-height:1.7; }
 #library-view .wiki-visual-section { padding-top:10px; }
@@ -2107,7 +2111,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view input,
 #library-view select,
 #library-view textarea { font-family:var(--font-ui); }
-#library-view .visual-reference-section { display:grid; gap:18px; }
+#library-view .visual-reference-section { display:grid; gap:18px; padding:28px; }
 #library-view .visual-reference-heading { display:flex; justify-content:space-between; align-items:start; gap:24px; }
 #library-view .visual-reference-heading h2 { margin:0 0 7px; }
 #library-view .visual-reference-heading p { margin:0; max-width:590px; color:var(--text-secondary); line-height:1.5; }

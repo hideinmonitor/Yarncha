@@ -30,7 +30,9 @@ assert.match(app,/libraryVisualReferences/,"visual references persist per Librar
 assert.match(app,/data-visual-upload/,"each article supports private image uploads");
 assert.match(app,/data-visual-view[\s\S]*data-visual-edit[\s\S]*data-visual-delete/,"visual references preserve view, edit/replace, and delete actions");
 assert.match(app,/snapshot\.libraryVisualReferences[\s\S]*reference\.assetId/,"visual references are included in workspace backups");
-assert.match(css,/#library-view \.wiki-detail-grid section[\s\S]*border-top:1px solid var\(--border\)/,"article sections use separators instead of nested cards");
+assert.match(app,/section class="wiki-overview-card card"/,"article overview groups related reading content into one warm Yarncha card");
+assert.match(app,/\$\{visualReferenceSectionHtml\(entry\)\}[\s\S]*wiki-overview-card card/,"visual references are the first major content card after the article summary");
+assert.match(css,/#library-view \.wiki-detail-grid section \{ padding:0; border:0/,"overview subsections use whitespace rather than individual cards or dividers");
 assert.match(css,/#library-view \.diagnostic-groups h3 \{ font-family:var\(--font-heading\) !important/,"decision workflow headings use the display font");
 assert.match(css,/#library-view \.wiki-maintenance summary \{[\s\S]*font-family:var\(--font-ui\)/,"maintenance metadata uses the UI font");
 assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var\(--font-ui\)/,"interactive Library titles use the UI font");
