@@ -4672,6 +4672,8 @@ function librarySectionCount(section){
   return (section.items||[]).length;
 }
 function librarySectionIcon(sectionId){return uiIcon(({"personal-references":"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
+function libraryPageHeroHtml({eyebrow,title,description,actions=""}){return `<header class="page-title split-title library-page-hero"><div><p class="eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div>${actions?`<div class="library-page-actions">${actions}</div>`:""}</header>`;}
+function libraryCategoryCardHtml(section){return `<button class="library-space library-category-card card" data-library-space="${section.id}"><span class="library-space-count">${librarySectionCount(section)} items</span><div class="library-space-icon">${librarySectionIcon(section.id)}</div><div class="library-category-copy"><h2>${escapeHtml(section.name)}</h2><p>${escapeHtml(section.description)}</p></div></button>`;}
 function symbolRegionBadges(entry){return (entry.regionTags||[]).map(tag=>`<span class="symbol-region-badge">${escapeHtml(tag)}</span>`).join("");}
 const symbolSvgPaths={
   knit:'<path d="M32 10v44"></path>',
@@ -5110,16 +5112,18 @@ function renderLibrary() {
     saveState();
   }
   if(!currentLibrarySection){
-    host.innerHTML=`<div class="page-title split-title"><div><p class="eyebrow">YOUR MAKING WIKI</p><h1>Library</h1><p>A flexible home for your symbols, pattern files, notes and ideas.</p></div><button class="secondary-button" id="add-library-space">+ Custom space</button></div>
-      <div class="library-home-grid">${state.librarySections.map(s=>`<button class="library-space card" data-library-space="${s.id}"><span class="library-space-count">${librarySectionCount(s)} items</span><div class="library-space-icon">${librarySectionIcon(s.id)}</div><h2>${escapeHtml(s.name)}</h2><p>${escapeHtml(s.description)}</p></button>`).join("")}</div>`;
+    host.innerHTML=`${libraryPageHeroHtml({eyebrow:"YOUR MAKING WIKI",title:"Library",description:"A flexible home for your symbols, pattern files, notes and ideas.",actions:'<button class="secondary-button" id="add-library-space">+ Custom space</button>'})}
+      <div class="library-home-grid">${state.librarySections.map(libraryCategoryCardHtml).join("")}</div>`;
     document.getElementById("add-library-space").onclick=()=>openLibrarySpaceModal();
   } else {
     const section=state.librarySections.find(s=>s.id===currentLibrarySection);
     if(!section){currentLibrarySection=null;return renderLibrary();}
-    host.innerHTML=`<button class="text-button library-back" id="library-back">← All library spaces</button><div class="page-title split-title"><div><p class="eyebrow">PERSONAL LIBRARY</p><h1>${escapeHtml(section.name)}</h1><p>${escapeHtml(section.description)}</p></div>${section.id==="symbols"?"":`<div><button class="secondary-button" id="rename-library">Rename</button> <button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button></div>`}</div>
+    const isTheoryDetail=section.id==="theory"&&(currentLibraryEntryId||currentLibraryPathId);
+    const sectionActions=section.id==="symbols"?"":`<button class="secondary-button" id="rename-library">Rename</button><button class="primary-button" id="add-library-item">${section.id==="materials"?"+ Add yarn material":section.id==="ideas"?"+ Add Project Idea":"+ Add page or PDF"}</button>`;
+    host.innerHTML=`${isTheoryDetail?"":`<button class="text-button library-back" id="library-back">← All library spaces</button>${libraryPageHeroHtml({eyebrow:"PERSONAL LIBRARY",title:section.name,description:section.description,actions:sectionActions})}`}
       ${section.id==="materials"?yarnMaterialReferenceHtml():section.id==="symbols"?symbolDatabaseHtml():section.id==="tool-manual"?toolManualHtml():section.id==="theory"?theoryFoundationHtml():section.id==="ideas"?projectIdeasHtml():""}
       <div class="notion-list">${["symbols","ideas"].includes(section.id)?"":section.items.length?section.items.map(item=>`<div class="notion-row"><div>${item.fileData||item.assets?.length?"▧":"□"}</div><div><h3>${escapeHtml(item.name)}</h3><p>${item.craft?`${escapeHtml(item.craft)} · `:""}${escapeHtml(item.notes||"No notes")}${item.assets?.length?` · ${item.assets.length} files`:item.fileName?` · ${escapeHtml(item.fileName)}`:""}</p></div><div class="row-actions"><button class="mini-button" data-edit-item="${item.id}">Edit</button>${item.fileData||item.assets?.length?`<button class="mini-button" data-open-item="${item.id}">View files</button>`:""}</div></div>`).join(""):["materials","tool-manual","theory","ideas"].includes(section.id)?"":`<div class="empty-state"><h3>This space is ready for your own pages</h3><p>Add a named section, note or PDF tutorial.</p></div>`}</div>`;
-    document.getElementById("library-back").onclick=()=>{currentLibrarySection=null;renderLibrary();};
+    document.getElementById("library-back")?.addEventListener("click",()=>{currentLibrarySection=null;renderLibrary();});
     document.getElementById("add-library-item")?.addEventListener("click",()=>section.id==="materials"?openYarnMaterialModal():section.id==="ideas"?openProjectIdeaModal():openLibraryItemModal(section.id));
     document.getElementById("rename-library")?.addEventListener("click",()=>openLibrarySpaceModal(section.id));
     document.querySelectorAll("[data-open-item]").forEach(b=>b.onclick=()=>openLibraryAssets(section.items.find(i=>i.id===b.dataset.openItem)));
@@ -5200,8 +5204,8 @@ function openLibraryReport(entryId){
 function bindLibraryWiki(){
   if(currentLibrarySection!=="theory")return;
   document.getElementById("wiki-entry-back")?.addEventListener("click",()=>{currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();});
-  document.getElementById("wiki-search")?.addEventListener("input",event=>{libraryWikiFilters.search=event.target.value;currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();requestAnimationFrame(()=>document.getElementById("wiki-search")?.focus());});
-  [["wiki-craft","craft"],["wiki-level","level"],["wiki-category","category"],["wiki-project-type","projectType"],["wiki-tool","tool"]].forEach(([id,key])=>document.getElementById(id)?.addEventListener("change",event=>{libraryWikiFilters[key]=event.target.value;currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();}));
+  document.getElementById("wiki-search")?.addEventListener("input",event=>{libraryWikiFilters.search=event.target.value;libraryWikiFilters.path="All";currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();requestAnimationFrame(()=>document.getElementById("wiki-search")?.focus());});
+  [["wiki-craft","craft"],["wiki-level","level"],["wiki-category","category"],["wiki-project-type","projectType"],["wiki-tool","tool"]].forEach(([id,key])=>document.getElementById(id)?.addEventListener("change",event=>{libraryWikiFilters[key]=event.target.value;libraryWikiFilters.path="All";currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();}));
   document.querySelectorAll("[data-wiki-path]").forEach(button=>button.onclick=()=>{const path=button.dataset.wikiPath;libraryWikiFilters={search:"",craft:["knitting","crochet","tunisian"].includes(path)?path:"All",level:path==="beginner"?"beginner":"All",category:libraryWikiCategories.includes(path)?path:"All",projectType:"All",tool:"All",path};currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();});
   document.querySelectorAll("[data-wiki-learning-path]").forEach(button=>button.onclick=()=>{currentLibraryPathId=button.dataset.wikiLearningPath;currentLibraryEntryId=null;renderLibrary();});
   document.querySelectorAll("[data-wiki-path-progress]").forEach(button=>button.onclick=()=>updateLibraryPathProgress(button.dataset.wikiPathProgress));
@@ -5424,23 +5428,29 @@ function libraryEntryBadgeHtml(entry){
 }
 function libraryEntryCardHtml(entry){
   const saved=(state.libraryBookmarks||[]).includes(entry.id);
-  return `<article class="wiki-entry-card card"><div><p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h3>${escapeHtml(entry.title)}</h3>${libraryEntryBadgeHtml(entry)}<p>${escapeHtml(entry.summary)}</p></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-entry="${entry.id}">Read guide</button><button class="mini-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save"}</button><button class="mini-button" data-wiki-ask="${entry.id}">Ask Assistant</button></div></article>`;
+  return `<article class="wiki-entry-card card"><div><p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h3>${escapeHtml(entry.title)}</h3>${libraryEntryBadgeHtml(entry)}<p>${escapeHtml(entry.summary)}</p></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-entry="${entry.id}">Read guide</button><button class="text-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save"}</button></div></article>`;
 }
 function libraryWikiHubCardsHtml(){
-  const hubs=[["Beginner path","beginner","Start with yarn labels, swatching, gauge, stitch anatomy, and reading simple rows."],["Knitting path","knitting","Knit/purl basics, charts, garment construction, shaping, and fit."],["Crochet path","crochet","Chains, stitch height, circles, motifs, amigurumi, and crochet troubleshooting."],["Tunisian crochet path","tunisian","Forward/return pass, curl control, dense fabric, hook choice, and Tunisian project planning."],["Troubleshooting hub","Troubleshooting Hub","Search by problem: count, curl, gauge, yarn amount, sizing, or chart confusion."],["Yarn and fibre hub","Yarn & Fibre Library","Compare fibre behaviour, care, drape, durability, pilling, and best project types."]];
-  return `<div class="wiki-hub-grid">${hubs.map(([title,path,copy])=>`<button class="wiki-hub-card" data-wiki-path="${escapeHtml(path)}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(copy)}</span></button>`).join("")}</div>`;
+  const groups=[
+    ["Foundations",[["Beginner foundations","beginner","Yarn labels, swatching, gauge, stitch anatomy, and simple rows."],["Yarn & fibre","Yarn & Fibre Library","Fibre behaviour, care, drape, durability, and project suitability."]]],
+    ["Knowledge Library",[["Knitting","knitting","Stitches, charts, shaping, garments, and fit."],["Crochet","crochet","Stitch height, circles, motifs, amigurumi, and construction."],["Tunisian crochet","tunisian","Forward and return passes, curl control, hooks, and fabric."]]],
+    ["Troubleshooting",[["Solve a making problem","Troubleshooting Hub","Find guidance by symptom, likely cause, quick check, or fix."]]]
+  ];
+  return `<nav class="knowledge-hub-groups" aria-label="Theory and Foundation areas">${groups.map(([title,items])=>`<section class="knowledge-hub-group"><h3>${escapeHtml(title)}</h3>${items.map(([label,path,copy])=>`<button class="knowledge-hub-row" data-wiki-path="${escapeHtml(path)}"><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(copy)}</small></span><span aria-hidden="true">→</span></button>`).join("")}</section>`).join("")}</nav>`;
+}
+function libraryLearningPathItemHtml(path){
+  const progress=Number(state.libraryPathProgress?.[path.id]||0),total=path.orderedEntries.length,percent=total?Math.min(100,Math.round(progress/total*100)):0;
+  return `<article class="wiki-path-card learning-path-item"><div class="learning-path-copy"><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span><span>${progress}/${total} complete</span></div><h4>${escapeHtml(path.title)}</h4><p>${escapeHtml(path.practiceTask)}</p><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-learning-path="${escapeHtml(path.id)}">Open path</button><button class="text-button" data-wiki-path-progress="${escapeHtml(path.id)}">Mark next</button></div></article>`;
 }
 function libraryLearningPathsHtml(){
-  const cards=`<div class="wiki-path-grid">${libraryLearningPaths.map(path=>{
-    const progress=Number(state.libraryPathProgress?.[path.id]||0),total=path.orderedEntries.length;
-    return `<article class="wiki-path-card"><div><p class="eyebrow">${escapeHtml(path.difficulty)} · ${escapeHtml(path.estimatedTime)}</p><h4>${escapeHtml(path.title)}</h4><p>${escapeHtml(path.practiceTask)}</p><small>${progress}/${total} entries checked</small></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-learning-path="${escapeHtml(path.id)}">Open path</button><button class="mini-button" data-wiki-path-progress="${escapeHtml(path.id)}">Mark next</button></div></article>`;
-  }).join("")}</div>`;
-  return collapsibleSectionHtml({eyebrow:"LEARNING PATHS",title:"Guided craft journeys",description:"Ordered entries, practice tasks, related tools, and progress tracking for focused learning.",rightMeta:`${libraryLearningPaths.length} paths`,className:"wiki-path-section card",children:cards});
+  const levels=["Beginner","Intermediate","Advanced"];
+  const groups=levels.map(level=>{const paths=libraryLearningPaths.filter(path=>String(path.difficulty).toLowerCase()===level.toLowerCase());return paths.length?`<section class="learning-path-group"><div class="learning-path-group-heading"><h3>${level}</h3><span>${paths.length} path${paths.length===1?"":"s"}</span></div><div class="learning-path-list">${paths.map(libraryLearningPathItemHtml).join("")}</div></section>`:"";}).join("");
+  return `<section class="wiki-path-section library-section"><div class="library-section-heading"><div><p class="eyebrow">LEARNING PATHS</p><h2>Guided craft journeys</h2><p>Choose a level, follow each guide in order, and keep your progress.</p></div><span>${libraryLearningPaths.length} paths</span></div>${groups}</section>`;
 }
 function libraryLearningPathDetailHtml(path){
   const progress=Number(state.libraryPathProgress?.[path.id]||0);
   const entries=path.orderedEntries.map(libraryWikiEntryById).filter(Boolean);
-  return `<article class="wiki-detail card"><button class="text-button" id="wiki-entry-back">← Back to Theory & Foundation</button><p class="eyebrow">LEARNING PATH · ${escapeHtml(path.difficulty)} · ${escapeHtml(path.estimatedTime)}</p><h2>${escapeHtml(path.title)}</h2><p class="wiki-summary">${escapeHtml(path.practiceTask)}</p><div class="wiki-detail-actions"><button class="primary-button" data-wiki-path-progress="${escapeHtml(path.id)}">Mark next step complete</button><button class="secondary-button" data-wiki-path-reset="${escapeHtml(path.id)}">Reset progress</button></div><section class="wiki-path-plan"><h3>Ordered entries</h3>${entries.map((entry,index)=>`<button class="wiki-path-step ${index<progress?"complete":""}" data-wiki-entry="${entry.id}"><span>${index+1}</span><strong>${escapeHtml(entry.title)}</strong><small>${index<progress?"Complete":"Open guide"}</small></button>`).join("")}</section><section class="wiki-detail-grid"><div><h3>Related tools</h3><div class="wiki-chip-row">${path.relatedTools.map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div><div><h3>Next step</h3><p>${escapeHtml(path.nextStep)}</p></div></section></article>`;
+  return `<article class="wiki-detail learning-path-detail"><button class="text-button" id="wiki-entry-back">← Back to Theory & Foundation</button><header class="article-header"><p class="eyebrow">LEARNING PATH · ${escapeHtml(path.difficulty)} · ${escapeHtml(path.estimatedTime)}</p><h1>${escapeHtml(path.title)}</h1><p class="wiki-summary">${escapeHtml(path.practiceTask)}</p><div class="wiki-detail-actions"><button class="primary-button" data-wiki-path-progress="${escapeHtml(path.id)}">Mark next step complete</button><button class="text-button" data-wiki-path-reset="${escapeHtml(path.id)}">Reset progress</button></div></header><section class="wiki-path-plan"><h2>Ordered entries</h2>${entries.map((entry,index)=>`<button class="wiki-path-step ${index<progress?"complete":""}" data-wiki-entry="${entry.id}"><span>${index+1}</span><strong>${escapeHtml(entry.title)}</strong><small>${index<progress?"Complete":"Open guide"}</small></button>`).join("")}</section><section class="related-content"><div><h2>Related tools</h2><div class="wiki-chip-row">${path.relatedTools.map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></div><div><h2>Next step</h2><p>${escapeHtml(path.nextStep)}</p></div></section></article>`;
 }
 function libraryVisualAssetsHtml(entry){
   return `<section class="wiki-visual-section"><h3>Visual learning</h3><div class="wiki-visual-grid">${(entry.visualAssets||[]).map(asset=>`<figure class="wiki-visual-card"><div class="wiki-visual-placeholder" aria-label="${escapeHtml(asset.altText)}"><span></span><span></span><span></span></div><figcaption><strong>${escapeHtml(asset.caption)}</strong><small>${escapeHtml(asset.craftType)} · ${escapeHtml(asset.level)} · ${escapeHtml(asset.type)}${asset.futureAnimationReady?" · GIF/animation-ready":""}</small><p>${escapeHtml(asset.altText)}</p></figcaption></figure>`).join("")}</div></section>`;
@@ -5448,7 +5458,7 @@ function libraryVisualAssetsHtml(entry){
 function libraryDecisionTreeHtml(entry){
   const flow=entry.diagnosticFlow||defaultDiagnosticFlow(entry);
   const block=(title,items)=>items?.length?`<div><h4>${escapeHtml(title)}</h4><ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`:"";
-  return `<section class="wiki-decision-tree"><h3>Troubleshooting decision tree</h3>${block("Symptoms",flow.symptoms)}${block("Likely causes",flow.likelyCauses)}${block("Quick checks",flow.quickChecks)}${block("Decision path",flow.decisionPath)}${block("Fixes",flow.fixes)}${block("Prevention",flow.prevention)}${flow.saveToProjectAction?`<button class="secondary-button" data-wiki-checklist="${entry.id}">Save troubleshooting result to project checklist</button>`:""}</section>`;
+  return `<section class="wiki-decision-tree article-section"><h2>Troubleshooting</h2><div class="diagnostic-groups"><section><h3>Problem</h3>${block("Symptoms",flow.symptoms)}</section><section><h3>Diagnosis</h3>${block("Likely causes",flow.likelyCauses)}${block("Quick checks",flow.quickChecks)}${block("Decision path",flow.decisionPath)}</section><section><h3>Resolution</h3>${block("Fixes",flow.fixes)}</section><section><h3>Prevention</h3>${block("How to avoid it",flow.prevention)}</section></div>${flow.saveToProjectAction?`<button class="secondary-button" data-wiki-checklist="${entry.id}">Save result to project checklist</button>`:""}</section>`;
 }
 function librarySmartSearchHintHtml(query=""){
   const smart=libraryProblemSearchMap.find(item=>item.phrases.some(phrase=>String(query||"").toLowerCase().includes(phrase)));
@@ -5464,7 +5474,7 @@ function theoryFoundationHtml(){
   const savedEntries=(state.libraryBookmarks||[]).map(id=>libraryWikiEntryById(id)).filter(Boolean).slice(0,4);
   const recent=(state.libraryRecentlyViewed||[]).map(id=>libraryWikiEntryById(id)).filter(Boolean).slice(0,4);
   return `<section class="wiki-shell">
-    <div class="wiki-hero card"><p class="eyebrow">YARNCHA WIKI</p><h2>Theory & Foundation</h2><p>A searchable craft knowledge base for knitting, crochet, Tunisian crochet, troubleshooting, yarn planning, chart reading, and pattern modification.</p>${libraryWikiHubCardsHtml()}</div>
+    <div class="wiki-hero"><p class="wiki-intro">Browse foundations, craft knowledge, and troubleshooting guidance.</p>${libraryWikiHubCardsHtml()}</div>
     ${libraryLearningPathsHtml()}
     <div class="wiki-filter-card card">
       <label class="field full">Search the wiki<input id="wiki-search" type="search" value="${escapeHtml(libraryWikiFilters.search)}" placeholder="Try: gauge, wavy circle, DK instead of worsted, Tunisian curl, chart direction"></label>
@@ -5485,13 +5495,12 @@ function theoryFoundationHtml(){
 function libraryWikiEntryDetailHtml(entry){
   const note=state.libraryEntryNotes?.[entry.id]||"",related=(entry.relatedEntries||[]).map(libraryWikiEntryById).filter(Boolean);
   const saved=(state.libraryBookmarks||[]).includes(entry.id);
-  return `<article class="wiki-detail card">
+  return `<article class="wiki-detail">
     <button class="text-button" id="wiki-entry-back">← Back to Theory & Foundation</button>
-    <p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h2>${escapeHtml(entry.title)}</h2>${libraryEntryBadgeHtml(entry)}
-    <p class="wiki-summary">${escapeHtml(entry.summary)}</p>
+    <header class="article-header"><p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h1>${escapeHtml(entry.title)}</h1>${libraryEntryBadgeHtml(entry)}<p class="wiki-summary">${escapeHtml(entry.summary)}</p></header>
     <div class="wiki-source-banner"><strong>${escapeHtml(entry.sourceQuality||"Official Yarncha Guide")}</strong><span>${escapeHtml(entry.author)} · v${escapeHtml(entry.version)} · Updated ${escapeHtml(entry.updatedAt||entry.lastUpdated)}</span></div>
     <div class="wiki-copyright-note"><strong>Copyright-safe Library use</strong><p>${escapeHtml(entry.copyrightPolicy?.summary||libraryCopyrightPolicy.summary)}</p></div>
-    <div class="wiki-detail-actions"><button class="secondary-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save entry"}</button><button class="secondary-button" data-wiki-project-note="${entry.id}">Add to project notes</button><button class="secondary-button" data-wiki-checklist="${entry.id}">Add to checklist</button><button class="primary-button" data-wiki-ask="${entry.id}">Ask Assistant about this</button><button class="mini-button" data-wiki-suggest="${entry.id}">Suggest edit</button><button class="mini-button" data-wiki-report="${entry.id}">${escapeHtml(libraryCopyrightPolicy.reportLabel)}</button></div>
+    <div class="wiki-detail-actions"><button class="primary-button" data-wiki-ask="${entry.id}">Ask Assistant about this</button><button class="secondary-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save entry"}</button><button class="text-button" data-wiki-project-note="${entry.id}">Add to project notes</button><button class="text-button" data-wiki-checklist="${entry.id}">Add to checklist</button><details class="wiki-more-actions"><summary>More</summary><div><button class="text-button" data-wiki-suggest="${entry.id}">Suggest edit</button><button class="text-button" data-wiki-report="${entry.id}">${escapeHtml(libraryCopyrightPolicy.reportLabel)}</button></div></details></div>
     ${libraryVisualAssetsHtml(entry)}
     <div class="wiki-detail-grid">
       <section><h3>Detailed explanation</h3><p>${escapeHtml(entry.fullExplanation)}</p></section>
@@ -5500,7 +5509,6 @@ function libraryWikiEntryDetailHtml(entry){
       <section><h3>Mini example</h3><p>${escapeHtml(entry.miniExample)}</p></section>
       <section><h3>Step-by-step guidance</h3><ol>${(entry.stepByStep||[]).map(step=>`<li>${escapeHtml(step)}</li>`).join("")}</ol></section>
       <section><h3>Common mistakes</h3><ul>${(entry.commonMistakes||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
-      <section><h3>Troubleshooting</h3><ul>${(entry.troubleshooting||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
       <section><h3>Related tools</h3><div class="wiki-chip-row">${(entry.relatedTools||[]).map(tool=>`<button class="chip" data-wiki-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></section>
       <section><h3>Related project types</h3><div class="wiki-chip-row">${(entry.relatedProjectTypes||[]).map(type=>`<span class="chip passive">${escapeHtml(type)}</span>`).join("")}</div></section>
       <section><h3>Next learning step</h3><ul>${(entry.nextLearningSteps||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
