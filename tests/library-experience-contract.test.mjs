@@ -3,12 +3,17 @@ import { readFile } from "node:fs/promises";
 
 const app=await readFile(new URL("../app.js",import.meta.url),"utf8");
 const css=await readFile(new URL("../styles.css",import.meta.url),"utf8");
+const learningPathItem=app.match(/function libraryLearningPathItemHtml\(path\)\{[\s\S]*?\n\}/)?.[0]||"";
 
 assert.match(app,/function libraryPageHeroHtml/,"Library pages share one page hero");
 assert.match(app,/function libraryCategoryCardHtml/,"Library category cards share one renderer");
 assert.match(app,/getElementById\("library-back"\)\?\.addEventListener/,"detail pages do not abort Library bindings when the outer back button is omitted");
 assert.match(app,/knowledge-hub-groups/,"Theory hub uses grouped knowledge navigation");
 assert.match(app,/\["Beginner","Intermediate","Advanced"\]/,"learning paths are grouped by level");
+assert.match(app,/const completed=total>0&&progress>=total,status=completed\?"Completed":progress>0\?"In progress":"Not started",action=completed\?"Review":progress>0\?"Continue":"Start"/,"Learning Path overview exposes one contextual next action");
+assert.match(app,/onclick="openLibraryLearningPath\('\$\{escapeHtml\(path\.id\)\}'\)"/,"Learning Path overview uses a direct action binding");
+assert.doesNotMatch(learningPathItem,/data-wiki-path-progress/,"Learning Path overview does not expose a second progress action");
+assert.doesNotMatch(learningPathItem,/practiceTask/,"Learning Path overview does not render detailed practice descriptions");
 assert.doesNotMatch(app,/wiki-hero card[^`]*<h2>Theory & Foundation/,"Theory view does not repeat its page heading in a card");
 assert.match(app,/class="wiki-detail"/,"article detail uses a natural page container");
 assert.doesNotMatch(app,/class="wiki-detail card"/,"article detail is not wrapped in a generic card");
@@ -27,6 +32,7 @@ assert.match(css,/#library-view \.wiki-detail-grid section[\s\S]*border-top:1px 
 assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var\(--font-ui\)/,"interactive Library titles use the UI font");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*#library-view \.knowledge-hub-groups/,"Library knowledge navigation has a mobile layout");
 assert.match(css,/#library-view \.visual-reference-gallery \{[^}]*repeat\(4/,"visual references use a compact desktop gallery");
+assert.match(css,/#library-view \.learning-path-item \{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(108px,150px\) auto/,"Learning Paths use compact scan-friendly rows");
 assert.match(css,/@media \(max-width:900px\)[\s\S]*visual-reference-gallery[^}]*repeat\(2/,"visual references use two columns on tablet");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*visual-reference-gallery[^}]*grid-template-columns:1fr/,"visual references use one column on mobile");
 

@@ -5150,6 +5150,14 @@ function openLibraryWikiEntry(entryId){
   if(activePage!=="library")showView("library");
   else renderLibrary();
 }
+function openLibraryLearningPath(pathId){
+  if(!libraryLearningPaths.some(path=>path.id===pathId))return toast("Learning path not found yet.");
+  currentLibrarySection="theory";
+  currentLibraryPathId=pathId;
+  currentLibraryEntryId=null;
+  if(activePage!=="library")showView("library");
+  else renderLibrary();
+}
 function toggleLibraryBookmark(entryId){
   const bookmarks=new Set(state.libraryBookmarks||[]);
   bookmarks.has(entryId)?bookmarks.delete(entryId):bookmarks.add(entryId);
@@ -5210,7 +5218,6 @@ function bindLibraryWiki(){
   document.getElementById("wiki-search")?.addEventListener("input",event=>{libraryWikiFilters.search=event.target.value;libraryWikiFilters.path="All";currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();requestAnimationFrame(()=>document.getElementById("wiki-search")?.focus());});
   [["wiki-craft","craft"],["wiki-level","level"],["wiki-category","category"],["wiki-project-type","projectType"],["wiki-tool","tool"]].forEach(([id,key])=>document.getElementById(id)?.addEventListener("change",event=>{libraryWikiFilters[key]=event.target.value;libraryWikiFilters.path="All";currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();}));
   document.querySelectorAll("[data-wiki-path]").forEach(button=>button.onclick=()=>{const path=button.dataset.wikiPath;libraryWikiFilters={search:"",craft:["knitting","crochet","tunisian"].includes(path)?path:"All",level:path==="beginner"?"beginner":"All",category:libraryWikiCategories.includes(path)?path:"All",projectType:"All",tool:"All",path};currentLibraryEntryId=null;currentLibraryPathId=null;renderLibrary();});
-  document.querySelectorAll("[data-wiki-learning-path]").forEach(button=>button.onclick=()=>{currentLibraryPathId=button.dataset.wikiLearningPath;currentLibraryEntryId=null;renderLibrary();});
   document.querySelectorAll("[data-wiki-path-progress]").forEach(button=>button.onclick=()=>updateLibraryPathProgress(button.dataset.wikiPathProgress));
   document.querySelectorAll("[data-wiki-path-reset]").forEach(button=>button.onclick=()=>updateLibraryPathProgress(button.dataset.wikiPathReset,true));
   document.querySelectorAll("[data-wiki-entry]").forEach(button=>button.onclick=()=>openLibraryWikiEntry(button.dataset.wikiEntry));
@@ -5448,12 +5455,13 @@ function libraryWikiHubCardsHtml(){
 }
 function libraryLearningPathItemHtml(path){
   const progress=Number(state.libraryPathProgress?.[path.id]||0),total=path.orderedEntries.length,percent=total?Math.min(100,Math.round(progress/total*100)):0;
-  return `<article class="wiki-path-card learning-path-item"><div class="learning-path-copy"><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span><span>${progress}/${total} complete</span></div><h4>${escapeHtml(path.title)}</h4><p>${escapeHtml(path.practiceTask)}</p><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-learning-path="${escapeHtml(path.id)}">Open path</button><button class="text-button" data-wiki-path-progress="${escapeHtml(path.id)}">Mark next</button></div></article>`;
+  const completed=total>0&&progress>=total,status=completed?"Completed":progress>0?"In progress":"Not started",action=completed?"Review":progress>0?"Continue":"Start";
+  return `<article class="learning-path-item"><div class="learning-path-copy"><h4>${escapeHtml(path.title)}</h4><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span></div></div><div class="learning-path-progress-summary"><strong>${completed?"Completed":`${progress} / ${total}`}</strong><span>${escapeHtml(status)}</span><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><button class="text-button learning-path-action" data-wiki-learning-path="${escapeHtml(path.id)}" onclick="openLibraryLearningPath('${escapeHtml(path.id)}')">${action} <span aria-hidden="true">→</span></button></article>`;
 }
 function libraryLearningPathsHtml(){
   const levels=["Beginner","Intermediate","Advanced"];
   const groups=levels.map(level=>{const paths=libraryLearningPaths.filter(path=>String(path.difficulty).toLowerCase()===level.toLowerCase());return paths.length?`<section class="learning-path-group"><div class="learning-path-group-heading"><h3>${level}</h3><span>${paths.length} path${paths.length===1?"":"s"}</span></div><div class="learning-path-list">${paths.map(libraryLearningPathItemHtml).join("")}</div></section>`:"";}).join("");
-  return `<section class="wiki-path-section library-section"><div class="library-section-heading"><div><p class="eyebrow">LEARNING PATHS</p><h2>Guided craft journeys</h2><p>Choose a level, follow each guide in order, and keep your progress.</p></div><span>${libraryLearningPaths.length} paths</span></div>${groups}</section>`;
+  return `<section class="wiki-path-section library-section"><div class="library-section-heading"><div><p class="eyebrow">LEARNING PATHS</p><h2>Choose what to learn next</h2><p>Pick a path, track your progress, and return when you are ready.</p></div><span>${libraryLearningPaths.length} paths</span></div>${groups}</section>`;
 }
 function libraryLearningPathDetailHtml(path){
   const progress=Number(state.libraryPathProgress?.[path.id]||0);
