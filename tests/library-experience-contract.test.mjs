@@ -34,10 +34,12 @@ assert.match(app,/snapshot\.libraryVisualReferences[\s\S]*reference\.assetId/,"v
 assert.match(app,/section class="wiki-overview-card card"/,"article overview groups related reading content into one warm Yarncha card");
 assert.match(app,/\$\{visualReferenceSectionHtml\(entry\)\}[\s\S]*wiki-overview-card card/,"visual references are the first major content card after the article summary");
 assert.match(css,/#library-view \.wiki-detail-grid section \{ padding:0; border:0/,"overview subsections use whitespace rather than individual cards or dividers");
-assert.match(css,/#library-view \.wiki-detail-grid \{ display:grid; grid-template-columns:1fr; gap:30px; max-width:72ch/,"article overview uses a single-column reading layout with controlled line length");
+assert.match(css,/#library-view \.wiki-detail-grid \{ display:grid; grid-template-columns:1fr; gap:var\(--library-content-gap\); max-width:72ch/,"article overview uses a single-column reading layout with controlled line length");
 assert.match(css,/#library-view \.wiki-detail \{ max-width:820px/,"Library articles use a focused single-column document width");
 assert.match(css,/#library-view \.diagnostic-groups h3 \{ font-family:var\(--font-heading\) !important/,"decision workflow headings use the display font");
-assert.match(css,/#library-view \.wiki-related > h3 \{ font-family:var\(--font-heading\) !important; font-size:22px/,"Library section headings share one heading size");
+assert.match(css,/#library-view \.wiki-related > h3,[\s\S]*font-size:var\(--library-section-heading-size\)/,"Library section headings share one heading size");
+assert.match(css,/--library-section-heading-size:22px/,"Library section heading size is centralised as a shared token");
+assert.match(css,/#library-view \.related-content h2,/,"nested Related Tools headings use the shared section-heading system");
 assert.match(css,/#library-view \.diagnostic-groups > section \{ padding:0; border:0/,"troubleshooting topics are not nested cards or bordered panels");
 assert.match(css,/#library-view \.wiki-maintenance summary \{[\s\S]*font-family:var\(--font-ui\)/,"maintenance metadata uses the UI font");
 assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var\(--font-ui\)/,"interactive Library titles use the UI font");
