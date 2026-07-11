@@ -8,12 +8,12 @@ const learningPathItem=app.match(/function libraryLearningPathItemHtml\(path\)\{
 assert.match(app,/function libraryPageHeroHtml/,"Library pages share one page hero");
 assert.match(app,/function libraryCategoryCardHtml/,"Library category cards share one renderer");
 assert.match(app,/getElementById\("library-back"\)\?\.addEventListener/,"detail pages do not abort Library bindings when the outer back button is omitted");
-assert.match(app,/knowledge-hub-groups/,"Theory hub uses grouped knowledge navigation");
+assert.doesNotMatch(app,/wiki-hero[\s\S]*libraryWikiHubCardsHtml\(\)/,"Theory hub does not split the article library into homepage categories");
 assert.match(app,/\["Beginner","Intermediate","Advanced"\]/,"learning paths are grouped by level");
 assert.match(app,/const completed=total>0&&progress>=total,status=completed\?"Completed":progress>0\?"In progress":"Not started",action=completed\?"Review":progress>0\?"Continue":"Start"/,"Learning Path overview exposes one contextual next action");
 assert.match(app,/onclick="openLibraryLearningPath\('\$\{escapeHtml\(path\.id\)\}'\)"/,"Learning Path overview uses a direct action binding");
 assert.doesNotMatch(learningPathItem,/data-wiki-path-progress/,"Learning Path overview does not expose a second progress action");
-assert.doesNotMatch(learningPathItem,/practiceTask/,"Learning Path overview does not render detailed practice descriptions");
+assert.match(learningPathItem,/\$\{escapeHtml\(path\.practiceTask\)\}/,"Learning Path overview includes a concise editorial description");
 assert.doesNotMatch(app,/wiki-hero card[^`]*<h2>Theory & Foundation/,"Theory view does not repeat its page heading in a card");
 assert.match(app,/class="wiki-detail"/,"article detail uses a natural page container");
 assert.doesNotMatch(app,/class="wiki-detail card"/,"article detail is not wrapped in a generic card");
@@ -37,6 +37,7 @@ assert.match(css,/#library-view \.wiki-detail-grid section \{ padding:0; border:
 assert.match(css,/#library-view \.wiki-detail-grid \{ display:grid; grid-template-columns:1fr; gap:30px; max-width:72ch/,"article overview uses a single-column reading layout with controlled line length");
 assert.match(css,/#library-view \.wiki-detail \{ max-width:820px/,"Library articles use a focused single-column document width");
 assert.match(css,/#library-view \.diagnostic-groups h3 \{ font-family:var\(--font-heading\) !important/,"decision workflow headings use the display font");
+assert.match(css,/#library-view \.wiki-related > h3 \{ font-family:var\(--font-heading\) !important; font-size:22px/,"Library section headings share one heading size");
 assert.match(css,/#library-view \.diagnostic-groups > section \{ padding:0; border:0/,"troubleshooting topics are not nested cards or bordered panels");
 assert.match(css,/#library-view \.wiki-maintenance summary \{[\s\S]*font-family:var\(--font-ui\)/,"maintenance metadata uses the UI font");
 assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var\(--font-ui\)/,"interactive Library titles use the UI font");

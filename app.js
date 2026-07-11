@@ -5456,7 +5456,7 @@ function libraryWikiHubCardsHtml(){
 function libraryLearningPathItemHtml(path){
   const progress=Number(state.libraryPathProgress?.[path.id]||0),total=path.orderedEntries.length,percent=total?Math.min(100,Math.round(progress/total*100)):0;
   const completed=total>0&&progress>=total,status=completed?"Completed":progress>0?"In progress":"Not started",action=completed?"Review":progress>0?"Continue":"Start";
-  return `<article class="learning-path-item"><div class="learning-path-copy"><h4>${escapeHtml(path.title)}</h4><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span></div></div><div class="learning-path-progress-summary"><strong>${completed?"Completed":`${progress} / ${total}`}</strong><span>${escapeHtml(status)}</span><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><button class="text-button learning-path-action" data-wiki-learning-path="${escapeHtml(path.id)}" onclick="openLibraryLearningPath('${escapeHtml(path.id)}')">${action} <span aria-hidden="true">→</span></button></article>`;
+  return `<article class="learning-path-item"><div class="learning-path-copy"><h4>${escapeHtml(path.title)}</h4><p>${escapeHtml(path.practiceTask)}</p><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span></div></div><div class="learning-path-progress-summary"><strong>${completed?"Completed":`${progress} / ${total}`}</strong><span>${escapeHtml(status)}</span><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><button class="text-button learning-path-action" data-wiki-learning-path="${escapeHtml(path.id)}" onclick="openLibraryLearningPath('${escapeHtml(path.id)}')">${action} <span aria-hidden="true">→</span></button></article>`;
 }
 function libraryLearningPathsHtml(){
   const levels=["Beginner","Intermediate","Advanced"];
@@ -5514,7 +5514,7 @@ function theoryFoundationHtml(){
   const savedEntries=(state.libraryBookmarks||[]).map(id=>libraryWikiEntryById(id)).filter(Boolean).slice(0,4);
   const recent=(state.libraryRecentlyViewed||[]).map(id=>libraryWikiEntryById(id)).filter(Boolean).slice(0,4);
   return `<section class="wiki-shell">
-    <div class="wiki-hero"><p class="wiki-intro">Browse foundations, craft knowledge, and troubleshooting guidance.</p>${libraryWikiHubCardsHtml()}</div>
+    <div class="wiki-hero"><p class="wiki-intro">Browse all guides, then narrow the list by craft, level, category, project type, or tool.</p></div>
     ${libraryLearningPathsHtml()}
     <div class="wiki-filter-card card">
       <label class="field full">Search the wiki<input id="wiki-search" type="search" value="${escapeHtml(libraryWikiFilters.search)}" placeholder="Try: gauge, wavy circle, DK instead of worsted, Tunisian curl, chart direction"></label>
