@@ -2057,15 +2057,15 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 #library-view .library-section { border-top:1px solid var(--border); padding-top:36px; }
 #library-view .library-section-heading,
 #library-view .learning-path-group-heading { display:flex; justify-content:space-between; gap:20px; align-items:end; }
-#library-view .library-section-heading h2 { margin:4px 0 6px; }
+#library-view .wiki-path-section .library-section-heading h2 { margin:4px 0 6px; font-family:var(--font-heading); font-size:clamp(2.75rem,4vw,3rem); font-weight:700; line-height:1.08; letter-spacing:normal; }
 #library-view .library-section-heading p { margin:0; color:var(--text-secondary); }
 #library-view .learning-path-group { margin-top:28px; }
 #library-view .learning-path-group-heading { padding-bottom:8px; border-bottom:1px solid var(--border); }
-#library-view .learning-path-group-heading h3 { margin:0; font-size:18px; font-family:var(--font-ui) !important; }
+#library-view .learning-path-group-heading h3 { margin:0; font-family:var(--font-heading); font-size:clamp(1.875rem,3vw,2rem); font-weight:700; line-height:1.2; letter-spacing:normal; }
 #library-view .learning-path-group-heading span,
 #library-view .library-section-heading > span { color:var(--text-secondary); font-size:12px; }
 #library-view .learning-path-item { display:grid; grid-template-columns:minmax(0,1fr) minmax(108px,150px) auto; gap:22px; align-items:center; min-height:68px; padding:12px 2px; border-bottom:1px solid var(--border); }
-#library-view .learning-path-item h4 { margin:0 0 5px; font-size:16px; }
+#library-view .learning-path-item h4 { margin:0 0 5px; font-family:var(--font-ui); font-size:19px; font-weight:700; line-height:1.3; letter-spacing:normal; }
 #library-view .learning-path-item p { margin:0 0 7px; color:var(--text-secondary); font-size:var(--library-body-size); line-height:var(--library-body-line-height); max-width:60ch; }
 #library-view .learning-path-meta { display:flex; flex-wrap:wrap; gap:12px; color:var(--text-secondary); font-size:12px; }
 #library-view .learning-path-progress-summary { display:grid; grid-template-columns:auto 1fr; align-items:baseline; gap:4px 9px; min-width:0; }

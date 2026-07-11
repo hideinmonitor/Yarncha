@@ -46,6 +46,9 @@ assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var
 assert.match(css,/@media \(max-width:760px\)[\s\S]*#library-view \.knowledge-hub-groups/,"Library knowledge navigation has a mobile layout");
 assert.match(css,/#library-view \.visual-reference-gallery \{[^}]*repeat\(4/,"visual references use a compact desktop gallery");
 assert.match(css,/#library-view \.learning-path-item \{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(108px,150px\) auto/,"Learning Paths use compact scan-friendly rows");
+assert.match(css,/#library-view \.wiki-path-section \.library-section-heading h2 \{[^}]*font-size:clamp\(2\.75rem,4vw,3rem\)[^}]*line-height:1\.08/,"Learning Paths page title uses the Library display-title role");
+assert.match(css,/#library-view \.learning-path-group-heading h3 \{[^}]*font-family:var\(--font-heading\)[^}]*font-size:clamp\(1\.875rem,3vw,2rem\)/,"Learning Path level headings use the major-section role");
+assert.match(css,/#library-view \.learning-path-item h4 \{[^}]*font-family:var\(--font-ui\)[^}]*font-size:19px[^}]*font-weight:700/,"Learning Path item titles use the Inter row-title role");
 assert.match(css,/@media \(max-width:900px\)[\s\S]*visual-reference-gallery[^}]*repeat\(2/,"visual references use two columns on tablet");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*visual-reference-gallery[^}]*grid-template-columns:1fr/,"visual references use one column on mobile");
 
