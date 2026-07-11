@@ -38,15 +38,22 @@ assert.match(css,/#library-view \.wiki-detail-grid \{ display:grid; grid-templat
 assert.match(css,/#library-view \.wiki-detail \{ max-width:820px/,"Library articles use a focused single-column document width");
 assert.match(css,/#library-view \.diagnostic-groups h3 \{ font-family:var\(--font-heading\) !important/,"decision workflow headings use the display font");
 assert.match(css,/#library-view \.wiki-related > h3,[\s\S]*font-size:var\(--library-section-heading-size\)/,"Library section headings share one heading size");
-assert.match(css,/--library-section-heading-size:22px/,"Library section heading size is centralised as a shared token");
+assert.match(css,/--library-section-heading-size:26px/,"Library article section heading size is centralised as a shared token");
 assert.match(css,/#library-view \.related-content h2,/,"nested Related Tools headings use the shared section-heading system");
 assert.match(css,/#library-view \.diagnostic-groups > section \{ padding:0; border:0/,"troubleshooting topics are not nested cards or bordered panels");
 assert.match(css,/#library-view \.wiki-maintenance summary \{[\s\S]*font-family:var\(--font-ui\)/,"maintenance metadata uses the UI font");
-assert.match(css,/#library-view \.library-category-card h2[\s\S]*font-family:var\(--font-ui\)/,"interactive Library titles use the UI font");
+assert.match(app,/class="library-content-title"/,"Library content titles use an explicit semantic class");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*#library-view \.knowledge-hub-groups/,"Library knowledge navigation has a mobile layout");
 assert.match(css,/#library-view \.visual-reference-gallery \{[^}]*repeat\(4/,"visual references use a compact desktop gallery");
-assert.match(css,/#library-view \.learning-path-item \{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(108px,150px\) auto/,"Learning Paths use compact scan-friendly rows");
+assert.match(learningPathItem,/class="learning-path-item card"/,"Learning Paths use the shared card surface");
+assert.match(css,/#library-view \.learning-path-list \{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,"Learning Paths use a three-column desktop card grid");
+assert.match(css,/#library-view \.learning-path-item \{[^}]*display:flex[^}]*flex-direction:column[^}]*min-height:280px/,"Learning Path cards keep their content and actions aligned");
+assert.match(css,/#library-view \.library-page-title \{[^}]*font-family:var\(--font-heading\) !important[^}]*font-size:46px !important[^}]*line-height:1\.08 !important/,"Learning Paths page title uses the semantic display-title role");
+assert.match(css,/#library-view \.library-major-section-title \{[^}]*font-family:var\(--font-heading\) !important[^}]*font-size:30px !important/,"Learning Path level headings use the semantic major-section role");
+assert.match(css,/#library-view \.learning-path-item \.library-learning-path-title \{[^}]*font-family:var\(--font-heading\) !important[^}]*font-size:19px !important[^}]*font-weight:700 !important/,"Learning Path item titles use the compact Fraunces content-title role");
 assert.match(css,/@media \(max-width:900px\)[\s\S]*visual-reference-gallery[^}]*repeat\(2/,"visual references use two columns on tablet");
+assert.match(css,/@media \(max-width:900px\)[\s\S]*learning-path-list[^}]*repeat\(2/,"Learning Path cards use two columns on tablet");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*visual-reference-gallery[^}]*grid-template-columns:1fr/,"visual references use one column on mobile");
+assert.match(css,/@media \(max-width:760px\)[\s\S]*learning-path-list[^}]*grid-template-columns:1fr/,"Learning Path cards use one column on mobile");
 
 console.log("Library experience contract passed.");
