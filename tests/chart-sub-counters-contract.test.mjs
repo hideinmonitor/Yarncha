@@ -23,15 +23,14 @@ for (const helper of [
 
 assert.match(app, /\$\{unifiedRepeatCountersHtml\(p,\{chart:true\}\)\}[\s\S]*<div class="annotation-toolbar-shell/, "Chart sub counters render inside the unified counter before annotation tools");
 assert.match(app, /\$\{unifiedRepeatCountersHtml\(p\)\}/, "Project tracker uses the same unified counter card");
-assert.match(app, /REPEAT \/ SUB-COUNTER/, "Unified repeat section label is present");
+assert.match(app, /Repeat \/ Sub-Counter/, "Unified repeat section label is present");
 assert.match(app, /No repeat counter yet/, "Empty unified counter state is present");
 assert.match(app, /Counter name/, "Counter settings include name");
-assert.match(app, /Starting value/, "Counter settings include starting value");
+assert.match(app, /Sub-counter starts at/, "Counter settings include an explicit starting value");
 assert.match(app, /Increment step/, "Counter settings include increment step");
-assert.match(app, /Maximum value optional/, "Counter settings include optional maximum");
-assert.match(app, /Reset value/, "Counter settings include reset value");
-assert.match(app, /Colour tag/, "Counter settings include colour tag");
-assert.match(app, /Anchor Row/, "Counter settings include anchor row");
+assert.match(app, /Optional stop condition/, "Repeat settings include an optional stop condition");
+assert.match(app, /Optional colour tag/, "Sub-counter settings include an optional colour tag");
+assert.match(app, /First trigger row \/ round/, "Repeat settings include the inclusive first trigger anchor");
 assert.match(app, /Link to Main Row Counter/, "Counter settings include main-row link");
 assert.match(app, /Update every X rows/, "Counter settings include repeat interval");
 assert.match(app, /Speak reminder every X rows/, "Counter settings include voice reminder interval");

@@ -50,6 +50,13 @@ assert.equal(engine.getNextTrigger(everyEight, 42), 48, "next project trigger is
 assert.equal(engine.getPreviousTrigger(everyEight, 42), 40, "previous project trigger is calculated");
 assert.equal(engine.isTriggerPosition(everyEight, 40), true, "trigger position can be checked");
 
+const decreaseAt179 = engine.createRepeatRule({repeatType:"every-x-rows",firstTrigger:179,repeatValue:8});
+assert.deepEqual(positions(engine.getTriggerPositions(decreaseAt179,{from:179,limit:5})),[179,187,195,203,211],"first trigger is an inclusive anchor");
+assert.deepEqual(positions(engine.getTriggerPositions({repeatType:"every-x-rows",firstTrigger:0,repeatValue:8},{from:0,limit:5})),[0,8,16,24,32],"row zero remains supported");
+assert.deepEqual(positions(engine.getTriggerPositions({repeatType:"every-x-rows",firstTrigger:1,repeatValue:1},{from:1,limit:5})),[1,2,3,4,5],"one-row cadence starts inclusively");
+assert.equal(engine.isTriggerPosition(decreaseAt179,179),true,"rule triggers when current row equals first trigger");
+assert.equal(engine.isTriggerPosition(decreaseAt179,178),false,"rule does not trigger before first trigger");
+
 const sleeve = engine.createRepeatRule({ mode: "subCounter", sectionName: "Sleeve Shaping", repeatType: "every-x-rows", repeatValue: 6, startAt: 0, localStartValue: 0, sectionStartProjectPosition: 42 });
 assert.deepEqual(positions(engine.getTriggerPositions(sleeve, { from: 0, limit: 3 })), [0, 6, 12], "sub-counter local triggers are calculated");
 assert.deepEqual(positions(engine.getTriggerPositions({ ...sleeve, skipFirstRepeat: true }, { from: 0, limit: 3 })), [6, 12, 18], "skip first repeat works for sub-counters");
@@ -66,6 +73,7 @@ assert.match(engine.validateRepeatRule({ mode: "subCounter", sectionName: "", se
 const migrated = engine.migrateRepeatRules([{ id: "p1", subCounters: [{ id: "s1", name: "Cable Repeat", every: 6, anchorRow: 12 }] }]);
 assert.equal(migrated[0].repeatRules.length, 1, "legacy sub counters migrate to repeat rules");
 assert.equal(migrated[0].repeatRules[0].linkedFeature, "project", "migrated rule links to project");
+assert.equal(engine.createRepeatRule({startRow:12,repeatValue:4}).startAt,12,"legacy startRow migrates to the inclusive startAt anchor");
 
 assert.match(html, /repeat-engine\.js\?v=/, "Repeat Engine is loaded before app runtime");
 assert.match(app, /repeatEngine\(\)\?\.migrateRepeatRules/, "project load migrates repeat rules");
@@ -77,5 +85,14 @@ assert.match(app, /Advanced Repeat Settings/, "advanced settings are hidden behi
 assert.match(app, /Live preview/, "UI includes live trigger preview");
 assert.match(css, /\.repeat-engine-modal/, "Repeat Engine modal is styled");
 assert.match(css, /\.repeat-preview-pills/, "Repeat preview pills are styled");
+const refinedModal=app.slice(app.indexOf("function openSubCounterModal(editId=null){"),app.indexOf("function openSubCounterModalLegacy"));
+assert.match(refinedModal,/First trigger row \/ round/,"repeat mode uses an unambiguous first-trigger label");
+assert.match(refinedModal,/This exact row is the first time the rule happens\./,"inclusive anchor helper is shown");
+assert.match(refinedModal,/Section begins at main row \/ round/,"sub-counter section start is explicit");
+assert.match(refinedModal,/Sub-counter starts at/,"sub-counter starting value is explicit");
+assert.doesNotMatch(refinedModal,/Current count|Repeat type|Anchor Row/,"ambiguous and mixed legacy fields are absent from the refined modal");
+assert.match(refinedModal,/host\.innerHTML=mode==="repeatCounter"\?/,"mode fields are rendered conditionally rather than hidden");
+assert.match(css,/\.modal:has\(\.repeat-engine-modal\) \{ width:min\(680px,calc\(100vw - 32px\)\)/,"Repeat modal is viewport bounded");
+assert.match(css,/@media \(max-width:480px\)[\s\S]*\.repeat-modal-actions \{ display:grid; grid-template-columns:1fr;/,"mobile footer actions stack safely");
 
 console.log("Repeat engine contract passed.");
