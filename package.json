@@ -26,7 +26,7 @@
     "test:settings": "node tests/settings-contract.test.mjs",
     "test:cloud-sync": "node tests/cloud-sync-contract.test.mjs",
     "test:manual-save": "node tests/manual-save-contract.test.mjs",
-    "test:library": "node tests/library-delete-contract.test.mjs && node tests/library-experience-contract.test.mjs"
+    "test:library": "node tests/library-delete-contract.test.mjs && node tests/library-experience-contract.test.mjs && node tests/library-wiki-contract.test.mjs && node tests/cast-on-library-contract.test.mjs && node tests/yarn-material-library-contract.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
