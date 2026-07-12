@@ -5338,6 +5338,7 @@ function bindLibraryWiki(){
   document.querySelectorAll("[data-wiki-ask]").forEach(button=>button.onclick=()=>askAssistantAboutLibraryEntry(button.dataset.wikiAsk));
   document.querySelectorAll("[data-wiki-tool]").forEach(button=>button.onclick=()=>{const match=toolkitToolDefs.find(tool=>tool.name===button.dataset.wikiTool||tool.name.includes(button.dataset.wikiTool.split(" ")[0]));if(match){showView("tools");renderTool(match.id);}else toast(`${button.dataset.wikiTool} is in the Tool Manual.`);});
   document.querySelector("[data-wiki-note]")?.addEventListener("input",event=>{state.libraryEntryNotes={...(state.libraryEntryNotes||{}),[event.target.dataset.wikiNote]:event.target.value};saveStateSoon();});
+  document.querySelector("[data-wiki-note-save]")?.addEventListener("click",event=>{const entryId=event.currentTarget.dataset.wikiNoteSave,textarea=document.querySelector(`[data-wiki-note="${entryId}"]`);state.libraryEntryNotes={...(state.libraryEntryNotes||{}),[entryId]:textarea?.value||""};saveState();toast("Private note saved on this device.");});
   document.querySelector("[data-visual-upload]")?.addEventListener("change",event=>{const file=event.target.files?.[0];if(file)addVisualReference(event.target.dataset.visualUpload,file);});
   document.querySelectorAll("[data-visual-view]").forEach(button=>button.onclick=()=>openVisualReference(visualReferenceById(currentLibraryEntryId,button.dataset.visualView)));
   document.querySelectorAll("[data-visual-edit]").forEach(button=>button.onclick=()=>editVisualReference(currentLibraryEntryId,button.dataset.visualEdit));
@@ -5717,7 +5718,7 @@ function libraryWikiEntryDetailHtml(entry){
     ${libraryDecisionTreeHtml(entry)}
     <details class="wiki-maintenance"><summary>Article details</summary><dl><dt>Created</dt><dd>${escapeHtml(entry.createdAt)}</dd><dt>Updated</dt><dd>${escapeHtml(entry.updatedAt||entry.lastUpdated)}</dd><dt>Source</dt><dd>${escapeHtml(entry.source)}</dd><dt>Review status</dt><dd>${escapeHtml(entry.reliabilityStatus)}</dd><dt>Changelog</dt><dd>${escapeHtml((entry.changelog||[]).join(" · "))}</dd><dt>Related app version</dt><dd>${escapeHtml(entry.relatedAppVersion)}</dd></dl></details>
     ${related.length?`<section class="wiki-related"><h3 class="library-article-section-title">Related entries</h3><div class="wiki-entry-grid compact">${related.map(libraryEntryCardHtml).join("")}</div></section>`:""}
-    <section class="wiki-notes"><h3 class="library-article-section-title">Your private note</h3><textarea id="wiki-private-note" data-wiki-note="${entry.id}" rows="4" placeholder="Save your own reminder for this topic...">${escapeHtml(note)}</textarea><small>Private notes stay on this device unless a future sync/community feature is added.</small></section>
+    <section class="wiki-notes"><h3 class="library-article-section-title">Your private note</h3><textarea id="wiki-private-note" data-wiki-note="${entry.id}" rows="5" placeholder="Save your own reminder for this topic...">${escapeHtml(note)}</textarea><small>Private notes stay on this device unless a future sync/community feature is added.</small><div class="wiki-note-actions"><button class="secondary-button" type="button" data-wiki-note-save="${entry.id}">Save</button></div></section>
   </article>`;
 }
 function openYarnMaterialModal(materialId=null){
