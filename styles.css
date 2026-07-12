@@ -5483,3 +5483,31 @@ textarea::placeholder {
     width:100%;
   }
 }
+
+/* Cross-page semantic typography roles. */
+.page-title-text,
+.view .page-title h1 {
+  font-family:var(--font-heading) !important;
+  font-size:46px !important;
+  font-weight:700 !important;
+  line-height:1.08 !important;
+  letter-spacing:normal !important;
+}
+
+.major-section-title,
+#market-view .market-panel-head h2,
+#settings-view .settings-group-title h2 {
+  font-family:var(--font-heading) !important;
+  font-size:30px !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  letter-spacing:normal !important;
+}
+
+#tools-view .tool-card-title {
+  font-family:var(--font-ui) !important;
+  font-size:19px !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  letter-spacing:normal !important;
+}

@@ -832,10 +832,10 @@ function saveStateSoon(delay=350){
 }
 function updateSaveStatus(text,tone=""){const el=document.getElementById("save-status");if(el){el.textContent=text;el.dataset.tone=tone;}updateSaveIndicators(text,tone);}
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
-function collapsibleSectionHtml({eyebrow="",title="",description="",defaultOpen=false,children="",rightMeta="",className="",summaryClass=""}={}){
+function collapsibleSectionHtml({eyebrow="",title="",titleClass="",description="",defaultOpen=false,children="",rightMeta="",className="",summaryClass=""}={}){
   return `<details class="collapsible-section ${escapeHtml(className)}" ${defaultOpen?"open":""}>
     <summary class="collapsible-summary ${escapeHtml(summaryClass)}">
-      <span class="collapsible-summary-copy">${eyebrow?`<span class="eyebrow">${escapeHtml(eyebrow)}</span>`:""}<strong>${escapeHtml(title)}</strong>${description?`<span>${escapeHtml(description)}</span>`:""}</span>
+      <span class="collapsible-summary-copy">${eyebrow?`<span class="eyebrow">${escapeHtml(eyebrow)}</span>`:""}<strong class="${escapeHtml(titleClass)}">${escapeHtml(title)}</strong>${description?`<span>${escapeHtml(description)}</span>`:""}</span>
       <span class="collapsible-summary-side">${rightMeta?`<em>${escapeHtml(rightMeta)}</em>`:""}<i class="collapsible-chevron" aria-hidden="true"></i></span>
     </summary>
     <div class="collapsible-content">${children}</div>
@@ -5460,7 +5460,7 @@ function libraryLearningPathItemHtml(path){
 }
 function libraryLearningPathsHtml(){
   const levels=["Beginner","Intermediate","Advanced"];
-  const groups=levels.map(level=>{const paths=libraryLearningPaths.filter(path=>String(path.difficulty).toLowerCase()===level.toLowerCase());return paths.length?`<section class="learning-path-group"><div class="learning-path-group-heading"><h3 class="library-major-section-title">${level}</h3><span>${paths.length} path${paths.length===1?"":"s"}</span></div><div class="learning-path-list">${paths.map(libraryLearningPathItemHtml).join("")}</div></section>`:"";}).join("");
+  const groups=levels.map(level=>{const paths=libraryLearningPaths.filter(path=>String(path.difficulty).toLowerCase()===level.toLowerCase());return paths.length?`<section class="learning-path-group"><div class="learning-path-group-heading"><h3 class="major-section-title library-major-section-title">${level}</h3><span>${paths.length} path${paths.length===1?"":"s"}</span></div><div class="learning-path-list">${paths.map(libraryLearningPathItemHtml).join("")}</div></section>`:"";}).join("");
   return `<section class="wiki-path-section library-section"><div class="library-section-heading"><div><p class="eyebrow">LEARNING PATHS</p><h2 class="library-page-title">Choose what to learn next</h2><p class="library-body-text">Pick a path, track your progress, and return when you are ready.</p></div><span>${libraryLearningPaths.length} paths</span></div>${groups}</section>`;
 }
 function libraryLearningPathDetailHtml(path){
@@ -5772,7 +5772,7 @@ function toolsPageDetailTool(tool){
 }
 function toolCardHtml(tool,selected){
   const status=tool.id==="pooling"||tool.id==="rendering-studio"?"Planning":Number(tool.confidence||0)<0?"Beta":"";
-  return `<button class="toolbox-card card ${selected===tool.id?"active":""}" data-open-tool="${escapeHtml(tool.id)}"><span class="toolbox-icon">${uiIcon(toolIconMap[tool.id]||"calculator","toolbox-card-icon")}</span><span class="toolbox-copy"><strong>${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
+  return `<button class="toolbox-card card ${selected===tool.id?"active":""}" data-open-tool="${escapeHtml(tool.id)}"><span class="toolbox-icon">${uiIcon(toolIconMap[tool.id]||"calculator","toolbox-card-icon")}</span><span class="toolbox-copy"><strong class="tool-card-title">${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
 }
 function renderTool(tool=currentProjectTool) {
   const panel=document.getElementById("tool-panel");
@@ -5789,10 +5789,10 @@ function renderTool(tool=currentProjectTool) {
     const tools=visible.filter(t=>toolsPageCategoryForTool(t)===category.id);
     if(!tools.length)return "";
     const content=`<div class="toolbox-grid">${tools.map(t=>toolCardHtml(t,selected)).join("")}</div>`;
-    return collapsibleSectionHtml({eyebrow:"TOOLS",title:category.label,description:toolsPageCategoryDescription(category.id),rightMeta:`${tools.length} tool${tools.length===1?"":"s"}`,defaultOpen:search?true:selectedCategory===category.id,className:"toolbox-category-panel",children:content});
+    return collapsibleSectionHtml({eyebrow:"TOOLS",title:category.label,titleClass:"major-section-title",description:toolsPageCategoryDescription(category.id),rightMeta:`${tools.length} tool${tools.length===1?"":"s"}`,defaultOpen:search?true:selectedCategory===category.id,className:"toolbox-category-panel",children:content});
   }).join("");
   panel.innerHTML=`<div class="tools-page-shell">
-    <div class="page-title tools-page-title"><p class="eyebrow">YARNCHA TOOLKIT</p><h1>Maker’s Toolkit</h1><p>Calculators, planners, and yarn math for knitting and crochet.</p></div>
+    <div class="page-title tools-page-title"><p class="eyebrow">YARNCHA TOOLKIT</p><h1 class="page-title-text">Maker’s Toolkit</h1><p>Calculators, planners, and yarn math for knitting and crochet.</p></div>
     <section class="toolbox-browser card">
       <div class="toolbox-controls">
         <input id="tool-search" class="toolbox-search" value="${escapeHtml(currentToolSearch)}" placeholder="Search tools, e.g. gauge, sock, yarn, C2C">
@@ -5800,7 +5800,7 @@ function renderTool(tool=currentProjectTool) {
       <div class="toolbox-accordion-grid">${categoryPanels||`<div class="empty-state"><h3>No tools found</h3><p>Try a different search word.</p></div>`}</div>
     </section>
     <section class="toolbox-detail card">
-      <div class="toolbox-detail-head"><div><p class="eyebrow">${escapeHtml(selected==="rendering-studio"?"PROJECT RENDERING":toolsPageCategoryForTool(activeDef||{}))}</p><h2>${escapeHtml(selected==="rendering-studio"?"Project Rendering Studio":activeDef?.name||"Choose a tool")}</h2><p class="muted-copy">${escapeHtml(selected==="rendering-studio"?"Grid, stripes and colour pooling share one focused studio.":activeDef?.desc||"Choose a tool to start calculating.")}</p></div><span class="craft-pill">${escapeHtml(selected==="rendering-studio"?"Shared":toolCraftLabel(activeDef||{}))}</span></div>
+      <div class="toolbox-detail-head"><div><p class="eyebrow">${escapeHtml(selected==="rendering-studio"?"PROJECT RENDERING":toolsPageCategoryForTool(activeDef||{}))}</p><h2 class="tool-card-title">${escapeHtml(selected==="rendering-studio"?"Project Rendering Studio":activeDef?.name||"Choose a tool")}</h2><p class="muted-copy">${escapeHtml(selected==="rendering-studio"?"Grid, stripes and colour pooling share one focused studio.":activeDef?.desc||"Choose a tool to start calculating.")}</p></div><span class="craft-pill">${escapeHtml(selected==="rendering-studio"?"Shared":toolCraftLabel(activeDef||{}))}</span></div>
       <input id="link-project-tools" type="checkbox" hidden>
       <div id="project-tool-content" class="tools-detail-content">${activeDef?projectToolContent(getProject(),currentProjectTool):`<div class="empty-state"><h3>Choose a tool to start calculating.</h3></div>`}</div>
     </section>

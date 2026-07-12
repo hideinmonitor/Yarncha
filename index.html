@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles.css?v=114-library-typography" />
+    <link rel="stylesheet" href="styles.css?v=115-semantic-typography" />
 
   </head>
   <body>
@@ -71,7 +71,7 @@
           <div class="hero">
             <div>
               <p class="eyebrow" id="today-date">TODAY</p>
-              <h1 id="today-greeting">Your project is waiting for you.</h1>
+              <h1 class="page-title-text" id="today-greeting">Your project is waiting for you.</h1>
               <p>Everything is right where you left it.</p>
             </div>
             <div class="hero-thread" aria-hidden="true">
@@ -80,14 +80,14 @@
           </div>
 
           <div class="section-heading">
-            <div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h2>In progress</h2></div>
+            <div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h2 class="major-section-title">In progress</h2></div>
             <button class="text-button" data-go="projects">View all projects →</button>
           </div>
           <div id="active-project-card"></div>
 
           <div class="dashboard-grid">
             <div>
-              <div class="section-heading compact"><div><p class="eyebrow">QUICK ACCESS</p><h2>Maker's toolkit</h2></div></div>
+              <div class="section-heading compact"><div><p class="eyebrow">QUICK ACCESS</p><h2 class="major-section-title">Maker's toolkit</h2></div></div>
               <div class="tool-grid">
                 <button class="tool-card" data-tool="swatch"><span class="tool-symbol"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M7 3v18M17 3v18"></path></svg></span><strong>Swatch adapter</strong><small>Resize any pattern</small></button>
                 <button class="tool-card" data-tool="shaping"><span class="tool-symbol"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 17 10 12l3 3 6-8"></path><path d="M15 7h4v4"></path></svg></span><strong>Shape evenly</strong><small>Increases & decreases</small></button>
@@ -104,7 +104,7 @@
         </section>
 
         <section class="view" id="projects-view">
-          <div class="page-title"><p class="eyebrow">YOUR WORK</p><h1>Projects</h1><p>Keep every chart, counter, note and bright idea together.</p></div>
+          <div class="page-title"><p class="eyebrow">YOUR WORK</p><h1 class="page-title-text">Projects</h1><p>Keep every chart, counter, note and bright idea together.</p></div>
           <div class="project-grid" id="project-grid"></div>
         </section>
 
@@ -171,7 +171,7 @@
     <script src="calculator-engine.js?v=111-library-wiki"></script>
     <script src="repeat-engine.js?v=111-library-wiki"></script>
     <script src="symbol-database.js?v=111-library-wiki"></script>
-    <script src="app.js?v=112-live-repeat-fix"></script>
+    <script src="app.js?v=115-semantic-typography"></script>
 
   </body>
 </html>
