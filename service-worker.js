@@ -1,12 +1,12 @@
-const CACHE_NAME = "yarncha-shell-v114-library-typography";
+const CACHE_NAME = "yarncha-shell-v116-content-titles";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=114-library-typography",
+  "/styles.css?v=116-content-titles",
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=112-live-repeat-fix",
   "/symbol-database.js?v=112-live-repeat-fix",
-  "/app.js?v=112-live-repeat-fix",
+  "/app.js?v=116-content-titles",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",
