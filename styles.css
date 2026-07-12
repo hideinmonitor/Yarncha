@@ -552,6 +552,7 @@ blockquote { font:600 24px/1.35 var(--font-ui); margin: 28px 0 16px; }.daily-not
 .repeat-form-section .field small { display:block; margin-top:6px; color:var(--muted); font-size:12px; line-height:1.45; overflow-wrap:anywhere; }
 .repeat-form-section.repeat-preview-card { padding:18px; border:1px solid var(--line); border-radius:14px; }
 .repeat-modal-actions { padding-bottom:4px; }
+.repeat-save-mobile { display:none; }
 .repeat-engine-modal h2,.repeat-engine-modal h3,.repeat-engine-modal p { margin-top:0; }
 .repeat-mode-toggle { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .repeat-mode-toggle label { min-height:52px; display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; background:var(--paper); cursor:pointer; font-weight:800; }
@@ -2204,9 +2205,13 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
   #library-view .wiki-maintenance dl { grid-template-columns:1fr; gap:4px; }
 }
 
-@media (max-width:480px) {
+@media (max-width:600px) {
   .modal .repeat-modal-actions { display:grid !important; grid-template-columns:minmax(0,1fr) !important; width:100%; gap:10px; }
-  .modal .repeat-modal-actions > button { display:flex; width:100% !important; max-width:100%; min-width:0; flex:none; }
+  .modal .repeat-modal-actions > button { display:flex; align-items:center; justify-content:center; width:100% !important; max-width:100%; min-width:0; min-height:50px; height:auto; padding:12px 16px; flex:none; white-space:nowrap; overflow:visible; }
+  .modal .repeat-modal-actions > .primary-button { order:1; }
+  .modal .repeat-modal-actions > .secondary-button { order:2; }
+  .repeat-save-desktop { display:none; }
+  .repeat-save-mobile { display:inline; }
 }
 /* Private beta cloud and review-first chart reader */
 .cloud-chart-reader{display:grid;gap:var(--section-gap);margin-top:var(--section-gap)}

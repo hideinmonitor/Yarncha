@@ -93,6 +93,9 @@ assert.match(refinedModal,/Sub-counter starts at/,"sub-counter starting value is
 assert.doesNotMatch(refinedModal,/Current count|Repeat type|Anchor Row/,"ambiguous and mixed legacy fields are absent from the refined modal");
 assert.match(refinedModal,/host\.innerHTML=mode==="repeatCounter"\?/,"mode fields are rendered conditionally rather than hidden");
 assert.match(css,/\.modal:has\(\.repeat-engine-modal\) \{ width:min\(680px,calc\(100vw - 32px\)\)/,"Repeat modal is viewport bounded");
-assert.match(css,/@media \(max-width:480px\)[\s\S]*\.repeat-modal-actions \{ display:grid; grid-template-columns:1fr;/,"mobile footer actions stack safely");
+assert.match(app,/repeat-save-mobile">Save rule/,"Repeat Counter uses a compact mobile save label");
+assert.match(app,/repeat-save-mobile">Save counter/,"Sub-Counter uses a compact mobile save label");
+assert.match(css,/@media \(max-width:600px\)[\s\S]*\.modal \.repeat-modal-actions \{ display:grid !important; grid-template-columns:minmax\(0,1fr\) !important;/,"mobile footer actions stack safely below 600px");
+assert.match(css,/\.modal \.repeat-modal-actions > \.primary-button \{ order:1; \}/,"mobile Save action appears before Cancel");
 
 console.log("Repeat engine contract passed.");
