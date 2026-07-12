@@ -1133,7 +1133,7 @@ function renderTimeGreeting(){
 function renderProjects() {
   const grid=document.getElementById("project-grid");
   grid.innerHTML = state.projects.map(p => `<button class="project-card card" type="button" data-project-id="${p.id}" data-project="${p.id}" aria-label="Open ${escapeHtml(p.name)}">
-    ${visual(p, true)}<div class="project-card-info"><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.type)} · ${rowSummary(p)}</p>
+    ${visual(p, true)}<div class="project-card-info"><h3 class="content-title project-content-title">${escapeHtml(p.name)}</h3><p>${escapeHtml(p.type)} · ${rowSummary(p)}</p>
     <div class="progress-track"><div class="progress-fill" style="width:${progress(p) ?? Math.min(95, p.row)}%"></div></div></div>
   </button>`).join("") + `<button class="add-project-card card" type="button" data-add-project><div><span class="add-circle">+</span><strong>Start a new project</strong><p>Bring a new idea to life</p></div></button>`;
   hydrateProjectCovers();
@@ -4676,7 +4676,7 @@ function librarySectionCount(section){
 }
 function librarySectionIcon(sectionId){return uiIcon(({"personal-references":"book",patterns:"pattern",ideas:"idea",materials:"fibre",symbols:"pattern","tool-manual":"manual",theory:"theory"})[sectionId]||"folder","library-card-icon");}
 function libraryPageHeroHtml({eyebrow,title,description,actions=""}){return `<header class="page-title split-title library-page-hero"><div><p class="eyebrow">${escapeHtml(eyebrow)}</p><h1 class="library-page-title">${escapeHtml(title)}</h1><p class="library-body-text">${escapeHtml(description)}</p></div>${actions?`<div class="library-page-actions">${actions}</div>`:""}</header>`;}
-function libraryCategoryCardHtml(section){return `<button class="library-space library-category-card card" data-library-space="${section.id}"><span class="library-space-count">${librarySectionCount(section)} items</span><div class="library-space-icon">${librarySectionIcon(section.id)}</div><div class="library-category-copy"><h2 class="library-content-title">${escapeHtml(section.name)}</h2><p class="library-body-text">${escapeHtml(section.description)}</p></div></button>`;}
+function libraryCategoryCardHtml(section){return `<button class="library-space library-category-card card" data-library-space="${section.id}"><span class="library-space-count">${librarySectionCount(section)} items</span><div class="library-space-icon">${librarySectionIcon(section.id)}</div><div class="library-category-copy"><h2 class="content-title library-content-title">${escapeHtml(section.name)}</h2><p class="library-body-text">${escapeHtml(section.description)}</p></div></button>`;}
 function symbolRegionBadges(entry){return (entry.regionTags||[]).map(tag=>`<span class="symbol-region-badge">${escapeHtml(tag)}</span>`).join("");}
 const symbolSvgPaths={
   knit:'<path d="M32 10v44"></path>',
@@ -5443,7 +5443,7 @@ function libraryEntryBadgeHtml(entry){
 }
 function libraryEntryCardHtml(entry){
   const saved=(state.libraryBookmarks||[]).includes(entry.id);
-  return `<article class="wiki-entry-card card"><div><p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h3 class="library-content-title">${escapeHtml(entry.title)}</h3>${libraryEntryBadgeHtml(entry)}<p class="library-body-text">${escapeHtml(entry.summary)}</p></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-entry="${entry.id}">Read guide</button><button class="text-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save"}</button></div></article>`;
+  return `<article class="wiki-entry-card card"><div><p class="eyebrow">${escapeHtml(entry.category)} · ${escapeHtml(entry.subcategory)}</p><h3 class="content-title library-content-title">${escapeHtml(entry.title)}</h3>${libraryEntryBadgeHtml(entry)}<p class="library-body-text">${escapeHtml(entry.summary)}</p></div><div class="wiki-card-actions"><button class="secondary-button" data-wiki-entry="${entry.id}">Read guide</button><button class="text-button" data-wiki-save="${entry.id}">${saved?"Saved":"Save"}</button></div></article>`;
 }
 function libraryWikiHubCardsHtml(){
   const groups=[
@@ -5456,7 +5456,7 @@ function libraryWikiHubCardsHtml(){
 function libraryLearningPathItemHtml(path){
   const progress=Number(state.libraryPathProgress?.[path.id]||0),total=path.orderedEntries.length,percent=total?Math.min(100,Math.round(progress/total*100)):0;
   const completed=total>0&&progress>=total,status=completed?"Completed":progress>0?"In progress":"Not started",action=completed?"Review":progress>0?"Continue":"Start";
-  return `<article class="learning-path-item card"><div class="learning-path-copy"><h4 class="library-learning-path-title">${escapeHtml(path.title)}</h4><p class="library-body-text">${escapeHtml(path.practiceTask)}</p><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span></div></div><div class="learning-path-progress-summary"><strong>${completed?"Completed":`${progress} / ${total}`}</strong><span>${escapeHtml(status)}</span><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><button class="text-button learning-path-action" data-wiki-learning-path="${escapeHtml(path.id)}" onclick="openLibraryLearningPath('${escapeHtml(path.id)}')">${action} <span aria-hidden="true">→</span></button></article>`;
+  return `<article class="learning-path-item card"><div class="learning-path-copy"><h4 class="content-title library-learning-path-title">${escapeHtml(path.title)}</h4><p class="library-body-text">${escapeHtml(path.practiceTask)}</p><div class="learning-path-meta"><span>${escapeHtml(path.difficulty)}</span><span>${escapeHtml(path.estimatedTime)}</span></div></div><div class="learning-path-progress-summary"><strong>${completed?"Completed":`${progress} / ${total}`}</strong><span>${escapeHtml(status)}</span><div class="learning-path-progress" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><button class="text-button learning-path-action" data-wiki-learning-path="${escapeHtml(path.id)}" onclick="openLibraryLearningPath('${escapeHtml(path.id)}')">${action} <span aria-hidden="true">→</span></button></article>`;
 }
 function libraryLearningPathsHtml(){
   const levels=["Beginner","Intermediate","Advanced"];
@@ -5772,7 +5772,7 @@ function toolsPageDetailTool(tool){
 }
 function toolCardHtml(tool,selected){
   const status=tool.id==="pooling"||tool.id==="rendering-studio"?"Planning":Number(tool.confidence||0)<0?"Beta":"";
-  return `<button class="toolbox-card card ${selected===tool.id?"active":""}" data-open-tool="${escapeHtml(tool.id)}"><span class="toolbox-icon">${uiIcon(toolIconMap[tool.id]||"calculator","toolbox-card-icon")}</span><span class="toolbox-copy"><strong class="tool-card-title">${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
+  return `<button class="toolbox-card card ${selected===tool.id?"active":""}" data-open-tool="${escapeHtml(tool.id)}"><span class="toolbox-icon">${uiIcon(toolIconMap[tool.id]||"calculator","toolbox-card-icon")}</span><span class="toolbox-copy"><strong class="content-title tool-card-title">${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
 }
 function renderTool(tool=currentProjectTool) {
   const panel=document.getElementById("tool-panel");
@@ -5800,7 +5800,7 @@ function renderTool(tool=currentProjectTool) {
       <div class="toolbox-accordion-grid">${categoryPanels||`<div class="empty-state"><h3>No tools found</h3><p>Try a different search word.</p></div>`}</div>
     </section>
     <section class="toolbox-detail card">
-      <div class="toolbox-detail-head"><div><p class="eyebrow">${escapeHtml(selected==="rendering-studio"?"PROJECT RENDERING":toolsPageCategoryForTool(activeDef||{}))}</p><h2 class="tool-card-title">${escapeHtml(selected==="rendering-studio"?"Project Rendering Studio":activeDef?.name||"Choose a tool")}</h2><p class="muted-copy">${escapeHtml(selected==="rendering-studio"?"Grid, stripes and colour pooling share one focused studio.":activeDef?.desc||"Choose a tool to start calculating.")}</p></div><span class="craft-pill">${escapeHtml(selected==="rendering-studio"?"Shared":toolCraftLabel(activeDef||{}))}</span></div>
+      <div class="toolbox-detail-head"><div><p class="eyebrow">${escapeHtml(selected==="rendering-studio"?"PROJECT RENDERING":toolsPageCategoryForTool(activeDef||{}))}</p><h2 class="content-title tool-card-title">${escapeHtml(selected==="rendering-studio"?"Project Rendering Studio":activeDef?.name||"Choose a tool")}</h2><p class="muted-copy">${escapeHtml(selected==="rendering-studio"?"Grid, stripes and colour pooling share one focused studio.":activeDef?.desc||"Choose a tool to start calculating.")}</p></div><span class="craft-pill">${escapeHtml(selected==="rendering-studio"?"Shared":toolCraftLabel(activeDef||{}))}</span></div>
       <input id="link-project-tools" type="checkbox" hidden>
       <div id="project-tool-content" class="tools-detail-content">${activeDef?projectToolContent(getProject(),currentProjectTool):`<div class="empty-state"><h3>Choose a tool to start calculating.</h3></div>`}</div>
     </section>

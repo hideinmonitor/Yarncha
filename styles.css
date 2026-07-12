@@ -5505,9 +5505,20 @@ textarea::placeholder {
 }
 
 #tools-view .tool-card-title {
-  font-family:var(--font-ui) !important;
+  font-family:var(--font-heading) !important;
   font-size:19px !important;
   font-weight:700 !important;
   line-height:1.2 !important;
   letter-spacing:normal !important;
+}
+
+.content-title {
+  font-family:var(--font-heading) !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  letter-spacing:normal !important;
+}
+
+.project-card .project-content-title {
+  font-size:24px !important;
 }

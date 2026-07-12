@@ -42,7 +42,7 @@ assert.match(css,/--library-section-heading-size:26px/,"Library article section 
 assert.match(css,/#library-view \.related-content h2,/,"nested Related Tools headings use the shared section-heading system");
 assert.match(css,/#library-view \.diagnostic-groups > section \{ padding:0; border:0/,"troubleshooting topics are not nested cards or bordered panels");
 assert.match(css,/#library-view \.wiki-maintenance summary \{[\s\S]*font-family:var\(--font-ui\)/,"maintenance metadata uses the UI font");
-assert.match(app,/class="library-content-title"/,"Library content titles use an explicit semantic class");
+assert.match(app,/class="content-title library-content-title"/,"Library content titles use the shared semantic class");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*#library-view \.knowledge-hub-groups/,"Library knowledge navigation has a mobile layout");
 assert.match(css,/#library-view \.visual-reference-gallery \{[^}]*repeat\(4/,"visual references use a compact desktop gallery");
 assert.match(learningPathItem,/class="learning-path-item card"/,"Learning Paths use the shared card surface");

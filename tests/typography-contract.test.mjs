@@ -28,8 +28,8 @@ assert.match(css,/button,input,select,textarea,option,label,[\s\S]*font-family:v
 assert.match(css,/\*,\*::before,\*::after\s*\{[\s\S]*font-family:var\(--font-ui\) !important;/,"Dynamic content and pseudo-elements default to Inter");
 assert.match(app,/class="library-page-title"/,"Library page titles have an explicit semantic class");
 assert.match(app,/class="major-section-title library-major-section-title"/,"Library major section titles share the cross-page semantic class");
-assert.match(app,/class="library-content-title"/,"Library content titles have an explicit semantic class");
-assert.match(app,/class="library-learning-path-title"/,"Learning Path titles have an explicit compact-title class");
+assert.match(app,/class="content-title library-content-title"/,"Library content titles share the semantic content-title class");
+assert.match(app,/class="content-title library-learning-path-title"/,"Learning Path titles share the compact content-title class");
 assert.match(app,/class="library-article-section-title"/,"Library article section titles have an explicit semantic class");
 assert.match(css,/#library-view \.library-page-title \{[^}]*font-size:46px !important[^}]*font-weight:700 !important[^}]*line-height:1\.08 !important/,"Library page titles use the requested fixed scale");
 assert.match(css,/#library-view \.library-major-section-title \{[^}]*font-size:30px !important[^}]*line-height:1\.2 !important/,"Library major sections use the requested fixed scale");
@@ -37,9 +37,12 @@ assert.match(css,/#library-view \.wiki-entry-card \.library-content-title,[\s\S]
 assert.match(css,/#library-view \.learning-path-item \.library-learning-path-title \{[^}]*font-size:19px !important[^}]*line-height:1\.2 !important/,"Learning Path titles use the requested compact scale");
 assert.match(css,/#library-view \.wiki-detail \.library-article-section-title \{[^}]*font-size:26px !important[^}]*line-height:1\.2 !important/,"Article section titles use the requested scale");
 assert.match(app,/titleClass:"major-section-title"/,"Tools category headings use the shared semantic major-section class");
-assert.match(app,/class="tool-card-title"/,"Tools content titles have an explicit Inter role");
+assert.match(app,/class="content-title tool-card-title"/,"Tools titles share the semantic content-title class");
+assert.match(app,/class="content-title project-content-title"/,"Project names share the semantic content-title class");
 assert.match(css,/\.page-title-text,[\s\S]*font-size:46px !important[^}]*line-height:1\.08 !important/,"Top-level page titles share the requested semantic scale");
 assert.match(css,/\.major-section-title,[\s\S]*font-size:30px !important[^}]*line-height:1\.2 !important/,"Cross-page major sections share the requested semantic scale");
-assert.match(css,/#tools-view \.tool-card-title \{[^}]*font-family:var\(--font-ui\) !important[^}]*font-size:19px !important[^}]*font-weight:700 !important/,"Individual Tools titles stay in the Inter content-title role");
+assert.match(css,/\.content-title \{[^}]*font-family:var\(--font-heading\) !important[^}]*font-weight:700 !important[^}]*line-height:1\.2 !important/,"Primary content titles share the Fraunces semantic role");
+assert.match(css,/#tools-view \.tool-card-title \{[^}]*font-family:var\(--font-heading\) !important[^}]*font-size:19px !important[^}]*font-weight:700 !important/,"Compact Tools titles use Fraunces at the requested density");
+assert.match(css,/\.project-card \.project-content-title \{[^}]*font-size:24px !important/,"Primary project names use the larger content-title density");
 
 console.log("Typography contract passed");
