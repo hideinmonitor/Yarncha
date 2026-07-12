@@ -41,6 +41,12 @@ assert.match(css,/#library-view \.wiki-related > h3,[\s\S]*font-size:var\(--libr
 assert.match(css,/--library-section-heading-size:26px/,"Library article section heading size is centralised as a shared token");
 assert.match(css,/#library-view \.related-content h2,/,"nested Related Tools headings use the shared section-heading system");
 assert.match(css,/#library-view \.diagnostic-groups > section \{ padding:0; border:0/,"troubleshooting topics are not nested cards or bordered panels");
+assert.match(css,/#library-view \.diagnostic-groups \{[^}]*width:100%; max-width:none; padding:0; border:0;[^}]*background:transparent/,"troubleshooting uses the full flat article width without an inner card");
+assert.match(css,/#library-view \.wiki-related \.wiki-entry-card \{[^}]*grid-template-rows:1fr auto/,"related cards keep content and actions in stable rows");
+assert.match(css,/#library-view \.wiki-related \.wiki-card-actions button \{[^}]*min-width:max-content[^}]*writing-mode:horizontal-tb/,"related card actions cannot collapse into vertical text");
+assert.match(app,/data-wiki-note-save/,"private notes expose an explicit local Save action");
+assert.match(css,/#library-view \.wiki-notes textarea \{[^}]*width:100%[^}]*min-height:150px/,"private note textarea stays comfortably inside its section");
+assert.match(css,/#library-view \.wiki-note-actions \.secondary-button \{[^}]*border:1px solid var\(--text-primary\)/,"private note Save uses functional button styling");
 assert.match(css,/#library-view \.wiki-maintenance summary \{[\s\S]*font-family:var\(--font-ui\)/,"maintenance metadata uses the UI font");
 assert.match(app,/class="content-title library-content-title"/,"Library content titles use the shared semantic class");
 assert.match(css,/@media \(max-width:760px\)[\s\S]*#library-view \.knowledge-hub-groups/,"Library knowledge navigation has a mobile layout");

@@ -1,6 +1,6 @@
 (function(root){
   "use strict";
-  const SCHEMA_VERSION=1;
+  const SCHEMA_VERSION=2;
   const repeatTypes=[
     "every-x-rows","every-xth-row","every-x-rounds","every-xth-round",
     "every-row","every-round","every-rs-row","every-ws-row",
@@ -35,7 +35,8 @@
       repeatType,
       repeatValue:inferRepeatValue({...input,repeatType}),
       unit:inferUnit({...input,repeatType}),
-      startAt:Math.max(0,whole(input.startAt??input.anchorRow??input.startRow??0,0)),
+      // startAt is the inclusive first trigger anchor. firstTrigger is its UI alias.
+      startAt:Math.max(0,whole(input.firstTrigger??input.startAt??input.anchorRow??input.startRow??0,0)),
       endAt:nullableWhole(input.endAt),
       repeatCount:nullableWhole(input.repeatCount),
       offset:whole(input.offset,0),
@@ -56,12 +57,14 @@
   function validateRepeatRule(ruleInput={}){
     const rule=createRepeatRule(ruleInput),errors=[];
     const rawRepeatValue=Number(ruleInput.repeatValue??ruleInput.every??ruleInput.updateEvery??rule.repeatValue);
+    const rawStart=Number(ruleInput.firstTrigger??ruleInput.startAt??ruleInput.anchorRow??ruleInput.startRow??rule.startAt);
     const rawRepeatCount=ruleInput.repeatCount===""||ruleInput.repeatCount==null?null:Number(ruleInput.repeatCount);
     const rawSectionName=String(ruleInput.sectionName??ruleInput.name??"").trim();
     const rawSectionStart=ruleInput.sectionStartProjectPosition;
     if(!modes.includes(rule.mode))errors.push("Choose Repeat Counter or Sub-Counter.");
     if(!repeatTypes.includes(rule.repeatType))errors.push("Choose a repeat type.");
     if(!Number.isFinite(rawRepeatValue)||rawRepeatValue<1)errors.push("Repeat value must be at least 1.");
+    if(!Number.isInteger(rawStart)||rawStart<0)errors.push("First trigger row / round must be a non-negative whole number.");
     if(rule.endAt!==null&&rule.startAt>rule.endAt)errors.push("Start row cannot be after the end row.");
     if(rawRepeatCount!==null&&(!Number.isFinite(rawRepeatCount)||rawRepeatCount<1))errors.push("Repeat count must be at least 1.");
     if(!sides.includes(rule.rowSide))errors.push("Choose All, RS, or WS.");
