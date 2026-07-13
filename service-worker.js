@@ -1,12 +1,12 @@
-const CACHE_NAME = "yarncha-shell-v123-repeat-footer";
+const CACHE_NAME = "yarncha-shell-v124-symbol-reference";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=123-repeat-footer",
+  "/styles.css?v=124-symbol-reference",
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=123-repeat-footer",
-  "/symbol-database.js?v=112-live-repeat-fix",
-  "/app.js?v=123-repeat-footer",
+  "/symbol-database.js?v=124-symbol-reference",
+  "/app.js?v=124-symbol-reference",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

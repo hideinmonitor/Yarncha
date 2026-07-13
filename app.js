@@ -5146,22 +5146,22 @@ function symbolDatabaseHtml(){
     const entry=allEntries.find(item=>item.id===currentSymbolId);
     if(!entry){currentSymbolId=null;return symbolDatabaseHtml();}
     const favorite=(state.symbolFavorites||[]).includes(entry.id);
+    const abbreviations=entry.abbreviations||{usUk:entry.craft==="Crochet"?[entry.abbreviationUS,entry.abbreviationUK].filter(Boolean).join(" / "):entry.abbreviation||"—",cn:entry.abbreviationChinese||"—",jp:entry.languageVariants?.ja||"—"};
+    const relatedEntries=(entry.relatedSymbols||[]).map(label=>({label,match:allEntries.find(candidate=>candidate.id!==entry.id&&[candidate.abbreviation,candidate.nameEn,candidate.fullName].some(value=>String(value||"").toLowerCase()===String(label).toLowerCase()))}));
     return `<section class="symbol-detail card">
       <button class="text-button symbol-detail-back" id="symbol-detail-back">← Symbol Database</button>
-      <div class="symbol-detail-hero"><div class="symbol-glyph">${symbolVisualHtml(entry,"detail")}</div><div><p class="eyebrow">${escapeHtml(entry.craft)} · ${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}</p><h2>${escapeHtml(entry.nameEn)}</h2><p class="symbol-chinese-name">${escapeHtml(entry.nameZh)}</p><p class="symbol-abbreviation">${entry.craft==="Crochet"?`US ${escapeHtml(entry.abbreviationUS||"—")} · UK ${escapeHtml(entry.abbreviationUK||"—")} · CN ${escapeHtml(entry.abbreviationChinese||"—")}`:escapeHtml(entry.abbreviation||"No universal abbreviation")}</p>${symbolVerificationBadge(entry)}<div class="symbol-region-badges">${symbolRegionBadges(entry)}</div>${entry.needsReview?`<span class="analysis-badge review">Needs review</span>`:""}</div></div>
+      <div class="symbol-detail-hero"><div class="symbol-glyph">${symbolVisualHtml(entry,"detail")}</div><div><p class="eyebrow">${escapeHtml(entry.craft)} · ${escapeHtml(entry.category)} · ${escapeHtml(entry.difficulty)}</p><h2>${escapeHtml(entry.nameEn)}</h2><div class="symbol-abbreviation-block" aria-label="Abbreviations"><h3>Abbreviations</h3><div class="symbol-abbreviation-chips"><span><small>UK/US</small><strong>${escapeHtml(abbreviations.usUk||"—")}</strong></span><span><small>CN</small><strong>${escapeHtml(abbreviations.cn||"—")}</strong></span><span><small>JP</small><strong>${escapeHtml(abbreviations.jp||"—")}</strong></span></div></div></div></div>
       <div class="symbol-detail-actions"><button class="secondary-button" id="edit-symbol-detail">Edit Symbol</button><button class="secondary-button" id="copy-symbol-meaning">Copy Meaning</button><button class="secondary-button" id="save-symbol-project">Save to Project Notes</button><button class="primary-button" id="favorite-symbol">${favorite?"Remove Favorite":"Add to Favorites"}</button></div>
-      <p class="symbol-global-warning">${escapeHtml(entry.chartLegendWarning)}</p>
       <div class="symbol-detail-grid">
-        <article><h3>Meaning</h3><p>${escapeHtml(entry.explanation)}</p></article>
-        <article><h3>How To</h3><p>${escapeHtml(entry.howTo)}</p></article>
-        <article><h3>Beginner Notes</h3><p>${escapeHtml(entry.beginnerExplanation)}</p></article>
+        <article><h3>Meaning</h3><p>${escapeHtml(entry.meaning||entry.explanation)}</p></article>
+        <article><h3>How to read it</h3><p>${escapeHtml(entry.howToRead||entry.howTo)}</p></article>
+        <article><h3>Beginner note</h3><p>${escapeHtml(entry.beginnerNote||entry.beginnerExplanation)}</p></article>
         <article><h3>Common Mistakes</h3><ul>${entry.commonMistakes.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></article>
-        <article><h3>Related Symbols</h3><p>${entry.relatedSymbols.length?entry.relatedSymbols.map(escapeHtml).join(" · "):"Use craft and category filters to find related entries."}</p></article>
-        <article><h3>Language Names</h3><dl>${Object.entries(entry.languageVariants).map(([language,name])=>`<dt>${escapeHtml(language)}</dt><dd>${escapeHtml(name)}</dd>`).join("")}</dl></article>
-        <article><h3>Sources & Variations</h3><ul class="symbol-source-list">${(entry.sourceReferences||[]).map(reference=>`<li><strong>${escapeHtml(reference.name)}</strong>${reference.url?` · <a href="${escapeHtml(reference.url)}" target="_blank" rel="noopener noreferrer">Open</a>`:""}<br><span>${escapeHtml(reference.scope||"")}</span></li>`).join("")}</ul><p>${escapeHtml(entry.variationNotes||entry.sourceNote)}</p></article>
-        <article><h3>Verification</h3>${symbolVerificationBadge(entry)}<p><strong>Confidence: ${escapeHtml(entry.confidence||"Low")}</strong></p><p>Last verified: ${escapeHtml(entry.lastVerifiedDate||entry.verifiedDate||"Not recorded")}${entry.verifiedBy?` · ${escapeHtml(entry.verifiedBy)}`:""}</p><p>${escapeHtml(entry.verificationNotes||"No verification notes yet.")}</p></article>
+        <article><h3>Related symbols</h3><div class="related-symbol-links">${relatedEntries.length?relatedEntries.map(item=>item.match?`<button type="button" data-related-symbol="${escapeHtml(item.match.id)}">${escapeHtml(item.label)}</button>`:`<span>${escapeHtml(item.label)}</span>`).join(""):"<p>Use craft and category filters to find related entries.</p>"}</div></article>
+        <article><h3>Related tools</h3><ul>${(entry.relatedTools||["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"]).map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></article>
       </div>
-      <section class="flow-reference-note"><p class="eyebrow">FLOW MODE REFERENCE</p><h3>Candidate matching notes</h3><p><strong>Possible meanings:</strong> ${entry.possibleMeanings.map(escapeHtml).join(" · ")}</p><p><strong>Recognition aliases:</strong> ${entry.recognitionAliases.map(escapeHtml).join(" · ")}</p><p><strong>OCR keywords:</strong> ${entry.ocrKeywords.map(escapeHtml).join(" · ")}</p><p><strong>Chart examples:</strong> ${entry.chartExamples.map(escapeHtml).join(" · ")}</p><p><strong>Ambiguity:</strong> ${entry.ambiguityWarnings.map(escapeHtml).join(" ")}</p><p><strong>Confidence:</strong> ${escapeHtml(entry.confidenceHint)}</p><span class="analysis-badge review">${entry.requiresLegendCheck?"Legend check required":"Context check required"}</span></section>
+      <p class="symbol-global-warning">${escapeHtml(entry.legendWarning||entry.chartLegendWarning)}</p>
+      <details class="symbol-reference-notes"><summary>Reference notes</summary><div><p>${escapeHtml(entry.variationNotes||entry.sourceNote)}</p><p><strong>Possible meanings:</strong> ${entry.possibleMeanings.map(escapeHtml).join(" · ")}</p><p><strong>Recognition aliases:</strong> ${entry.recognitionAliases.map(escapeHtml).join(" · ")}</p><p><strong>Verification:</strong> ${escapeHtml(entry.verificationStatus)} · ${escapeHtml(entry.confidence||"Low")} confidence</p></div></details>
       ${techniqueReferenceHtml(entry)}
     </section>`;
   }
@@ -5202,6 +5202,7 @@ function bindSymbolDatabase(){
   importInput?.addEventListener("change",event=>{const file=event.target.files?.[0];if(file)importSymbolsJson(file);});
   document.getElementById("reset-all-symbols")?.addEventListener("click",resetAllSymbolOverrides);
   document.getElementById("symbol-detail-back")?.addEventListener("click",()=>{currentSymbolId=null;renderLibrary();});
+  document.querySelectorAll("[data-related-symbol]").forEach(button=>button.addEventListener("click",()=>{currentSymbolId=button.dataset.relatedSymbol;renderLibrary();document.getElementById("library-content")?.scrollIntoView({block:"start"});}));
   const entry=mergedSymbolEntries().find(item=>item.id===currentSymbolId);if(!entry)return;
   document.getElementById("edit-symbol-detail")?.addEventListener("click",()=>openSymbolEditModal(entry));
   document.getElementById("copy-symbol-meaning")?.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(symbolMeaningText(entry));toast("Meaning copied");}catch{toast("Copy is blocked in this browser.");}});

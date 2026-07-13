@@ -175,6 +175,12 @@
   };
 
   const chartLegendWarning = "Chart symbols can vary by designer and region. Always check the pattern legend.";
+  const relatedToolsByCraft = {
+    Knitting:["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"],
+    Crochet:["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"],
+    Tunisian:["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"],
+    Shared:["OG Chart Mode","Annotation Tool"]
+  };
   const LAST_VERIFIED_DATE = "2026-06-23";
   const SOURCE_URLS = {
     cycCrochet:"https://www.craftyarncouncil.com/standards/crochet-chart-symbols",
@@ -475,6 +481,12 @@
     const abbreviationUS = terms.us || (craft === "Crochet" ? abbreviation.toLowerCase() : abbreviation);
     const abbreviationUK = terms.uk || (craft === "Crochet" ? "" : abbreviation);
     const aliases = [...new Set([abbreviation, abbreviationUS, abbreviationUK, terms.cnAbbreviation, fullName, terms.enUS, terms.enUK, terms.zhHK, terms.zhCN, fullName.replace(/ Stitch$/i, ""), ...Object.values(localized).flatMap(value=>value.split(/\s*\/\s*/))].filter(Boolean))];
+    const localizedTerms=localizedAliases[`${craft}:${abbreviation}`]||{};
+    const abbreviations={
+      usUk:craft==="Crochet"?[terms.us||abbreviation,terms.uk||terms.us||abbreviation].filter((value,index,values)=>values.indexOf(value)===index).join(" / "):abbreviation||"—",
+      cn:abbreviation==="P"&&craft==="Knitting"?"上 / 反":terms.cnAbbreviation||localizedTerms["zh-HK"]||"—",
+      jp:abbreviation==="P"&&craft==="Knitting"?"裏":localizedTerms.ja||"—"
+    };
     return {
       id: `${craftConfig[craft].prefix}-${slug(abbreviation || fullName)}-${index}`,
       section: craftConfig[craft].section,
@@ -499,6 +511,12 @@
       description: `${fullName} is a ${craft.toLowerCase()} ${category.toLowerCase()} instruction. Its exact chart mark can vary by publication.`,
       howTo: `Follow the pattern's written instructions and legend for ${fullName}. Confirm stitch placement, orientation, and resulting stitch count before continuing.`,
       beginnerExplanation: `Read this as “${fullName}”. Practice it on a small swatch before using it in a fitted or counted section.`,
+      abbreviations,
+      meaning:explanationFor(craft, abbreviation, terms.enUS || fullName, category),
+      howToRead:craft==="Knitting"&&abbreviation==="P"?"Usually read as purl on a right-side row. In flat knitting charts, wrong-side rows may reverse the action, so always check the legend.":`Read this as ${terms.enUS||fullName}. Check the row direction, right-side or wrong-side context, and the pattern legend before working it.`,
+      beginnerNote:craft==="Knitting"&&abbreviation==="P"?"Purl creates a bump on the front of the fabric. Together with knit, it forms many basic stitch patterns.":`This is a ${category.toLowerCase()} ${craft.toLowerCase()} instruction. Practise it on a small swatch if it is new to you.`,
+      relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
+      legendWarning:chartLegendWarning,
       difficulty: ["Basic"].includes(category) ? "Beginner" : ["Increase", "Decrease"].includes(category) ? "Intermediate" : "Advanced",
       aliases,
       languageVariants: {
@@ -511,7 +529,7 @@
         ...localized
       },
       relatedSymbols: definitions.filter(row => row[0] === craft && row[1] === category && row[2] !== abbreviation).slice(0, 4).map(row => row[2]),
-      commonMistakes: ["Using a generic internet symbol instead of the pattern legend", "Missing direction, side, placement, or stitch-count changes"],
+      commonMistakes: craft==="Knitting"&&abbreviation==="P"?["Reading wrong-side chart rows the same as right-side rows","Forgetting to bring the yarn to the front","Assuming all charts use the same purl symbol"]:["Using a generic internet symbol instead of the pattern legend", "Missing direction, side, placement, or stitch-count changes"],
       chartExamples: [`${visualSymbol} → possible ${abbreviation}`, `${abbreviation} in a repeat or chart cell`],
       recognitionAliases: [...new Set([...aliases, visualSymbol, symbol].filter(Boolean))],
       ocrKeywords: [...new Set(aliases.map(value => String(value).toLowerCase()))],
@@ -568,6 +586,12 @@
       description,
       howTo: description,
       beginnerExplanation: `Pause before row one and use this ${craft.toLowerCase()} chart-reading check.`,
+      abbreviations:{usUk:"—",cn:"—",jp:"—"},
+      meaning:description,
+      howToRead:description,
+      beginnerNote:`Use this check before reading the first chart row or round.`,
+      relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
+      legendWarning:chartLegendWarning,
       difficulty: "Beginner",
       aliases: [fullName],
       languageVariants: { en: fullName, "zh-HK": fullName, "zh-CN": fullName, ja: fullName },

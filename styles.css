@@ -2532,6 +2532,12 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 .symbol-detail-hero { display:grid; grid-template-columns:120px minmax(0,1fr); gap:22px; align-items:center; }
 .symbol-glyph { min-height:120px; display:grid; place-items:center; padding:12px; border:1px solid var(--border); border-radius:var(--radius-card); background:var(--bg-secondary); color:var(--accent); text-align:center; }
 .symbol-detail-hero h2 { margin:0 0 7px; font-size:clamp(28px,5vw,44px); }
+.symbol-abbreviation-block { display:grid; gap:8px; margin-top:14px; }
+.symbol-abbreviation-block h3 { margin:0; font-family:var(--font-body); font-size:13px; }
+.symbol-abbreviation-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.symbol-abbreviation-chips span { min-height:44px; display:inline-flex; align-items:center; gap:9px; padding:8px 12px; border:1px solid var(--border); border-radius:12px; background:var(--bg-secondary); }
+.symbol-abbreviation-chips small { color:var(--text-secondary); font-size:11px; font-weight:800; }
+.symbol-abbreviation-chips strong { font-size:14px; }
 .symbol-abbreviation { margin:0; color:var(--text-secondary); font-weight:800; }
 .symbol-chinese-name { margin:0 0 6px; color:var(--text-secondary); font-size:17px; font-weight:700; }
 .symbol-global-warning { margin:0; padding:12px 14px; border-left:3px solid var(--accent); background:var(--bg-secondary); color:var(--text-secondary); line-height:1.5; }
@@ -2546,6 +2552,14 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 .symbol-detail-grid dl { display:grid; grid-template-columns:70px 1fr; gap:5px 10px; margin:0; }
 .symbol-detail-grid dt { font-weight:900; }
 .symbol-detail-grid dd { margin:0; }
+.related-symbol-links { display:flex; flex-wrap:wrap; gap:8px; }
+.related-symbol-links button,.related-symbol-links span { min-height:44px; display:inline-flex; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text-primary); font:inherit; font-weight:700; }
+.related-symbol-links button { cursor:pointer; }
+.related-symbol-links button:hover,.related-symbol-links button:focus-visible { border-color:var(--accent); color:var(--accent); }
+.symbol-reference-notes { border:1px solid var(--border); border-radius:var(--radius-card); background:var(--bg-secondary); }
+.symbol-reference-notes summary { min-height:48px; display:flex; align-items:center; padding:12px 16px; cursor:pointer; font-weight:800; }
+.symbol-reference-notes > div { padding:0 16px 16px; color:var(--text-secondary); line-height:1.55; }
+.symbol-reference-notes p { overflow-wrap:anywhere; }
 .flow-reference-note { padding:18px; border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border)); border-radius:var(--radius-card); background:color-mix(in srgb,var(--accent) 7%,var(--surface)); }
 .flow-reference-note h3 { margin:0 0 10px; }
 .flow-reference-note p { margin:7px 0; color:var(--text-secondary); line-height:1.5; }
@@ -2588,6 +2602,9 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
   .symbol-glyph { min-height:90px; }
   .symbol-detail-actions { display:grid; grid-template-columns:1fr; }
   .symbol-detail-actions button { width:100%; }
+  .symbol-detail { padding:16px; gap:16px; }
+  .symbol-abbreviation-chips { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .symbol-abbreviation-chips span { min-width:0; justify-content:center; padding-inline:8px; }
   .symbol-quick-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .symbol-quick-filters button { width:100%; }
   .symbol-editor-secondary-actions { display:grid; grid-template-columns:1fr; }

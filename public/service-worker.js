@@ -1,5 +1,5 @@
-const CACHE_NAME = "yarncha-shell-v123-repeat-footer";
-const APP_SHELL = ["/", "/index.html", "/styles.css?v=123-repeat-footer", "/calculator-engine.js?v=112-live-repeat-fix", "/repeat-engine.js?v=123-repeat-footer", "/symbol-database.js?v=112-live-repeat-fix", "/app.js?v=123-repeat-footer", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE_NAME = "yarncha-shell-v124-symbol-reference";
+const APP_SHELL = ["/", "/index.html", "/styles.css?v=124-symbol-reference", "/calculator-engine.js?v=112-live-repeat-fix", "/repeat-engine.js?v=123-repeat-footer", "/symbol-database.js?v=124-symbol-reference", "/app.js?v=124-symbol-reference", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
