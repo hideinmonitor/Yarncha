@@ -5,6 +5,7 @@
   "type": "module",
   "engines": { "node": ">=20.19" },
   "scripts": {
+    "test": "node tests/knitting-symbol-reference-contract.test.mjs && npm run test:symbols && npm run test:symbol-editor && npm run test:symbol-learning && npm run test:flow-mode && npm run test:library && npm run test:navigation && npm run test:calculators && npm run test:project-editor && npm run test:manual-save && npm run test:themes",
     "dev": "vite --host 0.0.0.0 --port 4183",
     "build": "vite build && node ./scripts/copy-static.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 4183",

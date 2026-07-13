@@ -1,12 +1,12 @@
-const CACHE_NAME = "yarncha-shell-v124-symbol-reference";
+const CACHE_NAME = "yarncha-shell-v125-knitting-symbols";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=124-symbol-reference",
+  "/styles.css?v=125-knitting-symbols",
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=123-repeat-footer",
-  "/symbol-database.js?v=124-symbol-reference",
-  "/app.js?v=124-symbol-reference",
+  "/symbol-database.js?v=125-knitting-symbols",
+  "/app.js?v=125-knitting-symbols",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

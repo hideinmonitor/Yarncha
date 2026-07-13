@@ -1,5 +1,5 @@
 (function initializeYarnchaSymbolDatabase(root) {
-  const categoryOrder = ["Basic", "Increase", "Decrease", "Lace", "Cable", "Special Stitch", "Chart Rule"];
+  const categoryOrder = ["Basic", "Increase", "Decrease", "Lace", "Cable", "Texture", "Colourwork", "Short Row", "Chart Structure", "Construction", "Special Stitch", "Chart Rule"];
 
   const craftConfig = {
     Knitting: { section: "Knitting Symbols & Abbreviations", prefix: "knit" },
@@ -113,7 +113,95 @@
     ["Shared", "Special Stitch", "Y Stitch", "Y Stitch", "Y-shaped group"],
     ["Shared", "Cable", "Cable Cross", "Cable Crosses", "crossing lines"],
     ["Shared", "Increase", "BR inc", "Brioche Increase", "brioche branching mark"],
-    ["Shared", "Decrease", "BR dec", "Brioche Decrease", "brioche joined mark"]
+    ["Shared", "Decrease", "BR dec", "Brioche Decrease", "brioche joined mark"],
+    ["Knitting","Basic","St st","Stockinette Stitch","smooth knit fabric"],
+    ["Knitting","Basic","G st","Garter Stitch","horizontal ridges"],
+    ["Knitting","Basic","Rev St st","Reverse Stockinette","purl-side fabric"],
+    ["Knitting","Basic","Rib","Ribbing","alternating knit and purl columns"],
+    ["Knitting","Texture","Seed","Seed Stitch","alternating knit and purl texture"],
+    ["Knitting","Texture","Moss","Moss Stitch","staggered knit and purl texture"],
+    ["Knitting","Basic","K1B","Knit One Below","work into stitch below"],
+    ["Knitting","Basic","P1B","Purl One Below","purl into stitch below"],
+    ["Knitting","Decrease","Sl1-k1-psso","Slip One, Knit One, Pass Slipped Stitch Over","left decrease"],
+    ["Knitting","Increase","M1","Make One","single increase"],
+    ["Knitting","Increase","M1PL","Make One Purlwise Left","left purl increase"],
+    ["Knitting","Increase","M1PR","Make One Purlwise Right","right purl increase"],
+    ["Knitting","Increase","LLI","Left Lifted Increase","left lifted increase"],
+    ["Knitting","Increase","RLI","Right Lifted Increase","right lifted increase"],
+    ["Knitting","Increase","Backward loop CO inc","Backward Loop Cast-on Increase","cast-on increase"],
+    ["Knitting","Increase","Cable CO inc","Cable Cast-on Increase","cast-on increase"],
+    ["Knitting","Decrease","K3TOG","Knit Three Together","right double decrease"],
+    ["Knitting","Decrease","P3TOG","Purl Three Together","purl double decrease"],
+    ["Knitting","Decrease","S2KP","Slip Two, Knit One, Pass Slipped Stitches Over","centred double decrease"],
+    ["Knitting","Decrease","Sl1-k2tog-psso","Slip One, Knit Two Together, Pass Slipped Stitch Over","double decrease"],
+    ["Knitting","Lace","YRN","Yarn Round Needle","yarn over"],
+    ["Knitting","Lace","YFWD","Yarn Forward","yarn over"],
+    ["Knitting","Lace","Double YO","Double Yarn Over","double eyelet"],
+    ["Knitting","Chart Structure","No stitch","No Stitch","empty chart placeholder"],
+    ["Knitting","Lace","K2tog + YO","K2tog and Yarn Over Pair","balanced lace pair"],
+    ["Knitting","Lace","SSK + YO","SSK and Yarn Over Pair","balanced lace pair"],
+    ["Knitting","Chart Structure","Lace repeat","Lace Repeat Box","repeat boundary"],
+    ["Knitting","Basic","Sl1 wyif","Slip One With Yarn in Front","slipped stitch"],
+    ["Knitting","Basic","Sl1 wyib","Slip One With Yarn in Back","slipped stitch"],
+    ["Knitting","Basic","Sl knitwise","Slip Knitwise","slipped stitch"],
+    ["Knitting","Basic","Sl purlwise","Slip Purlwise","slipped stitch"],
+    ["Knitting","Decrease","PSSO","Pass Slipped Stitch Over","decrease step"],
+    ["Knitting","Basic","WYIF","With Yarn in Front","yarn position"],
+    ["Knitting","Basic","WYIB","With Yarn in Back","yarn position"],
+    ["Knitting","Cable","C2F","Cable Two Front","one-over-one left cable"],
+    ["Knitting","Cable","C2B","Cable Two Back","one-over-one right cable"],
+    ["Knitting","Cable","C4F","Cable Four Front","two-over-two left cable"],
+    ["Knitting","Cable","C4B","Cable Four Back","two-over-two right cable"],
+    ["Knitting","Cable","C6F","Cable Six Front","three-over-three left cable"],
+    ["Knitting","Cable","C6B","Cable Six Back","three-over-three right cable"],
+    ["Knitting","Cable","LC","Left Cross","left cable cross"],
+    ["Knitting","Cable","RC","Right Cross","right cable cross"],
+    ["Knitting","Cable","Cable over purl","Cable Over Purl Stitches","cable with purl background"],
+    ["Knitting","Cable","Cable no needle","Cable Without a Cable Needle","cable cross"],
+    ["Knitting","Cable","RT","Right Twist","small right twist"],
+    ["Knitting","Cable","LT","Left Twist","small left twist"],
+    ["Knitting","Texture","Twisted rib","Twisted Rib","twisted rib columns"],
+    ["Knitting","Texture","Kfbf","Knit Front, Back, Front","multi-stitch texture increase"],
+    ["Knitting","Texture","Purl bump","Purl Bump Texture","raised purl bump"],
+    ["Knitting","Colourwork","MC","Main Colour","main colour cell"],
+    ["Knitting","Colourwork","CC","Contrast Colour","contrast colour cell"],
+    ["Knitting","Colourwork","Colour A/B","Colour A / Colour B","colour chart cell"],
+    ["Knitting","Colourwork","Stranded cell","Stranded Colourwork Cell","colour cell"],
+    ["Knitting","Colourwork","Intarsia block","Intarsia Colour Block","colour block"],
+    ["Knitting","Colourwork","Duplicate st","Duplicate Stitch Mark","embroidery mark"],
+    ["Knitting","Colourwork","Float","Float","carried yarn"],
+    ["Knitting","Colourwork","Catch float","Catch Float","secured carried yarn"],
+    ["Knitting","Short Row","W&T","Wrap and Turn","short-row turn"],
+    ["Knitting","Short Row","DS","German Short Row Double Stitch","double stitch"],
+    ["Knitting","Short Row","Japanese SR","Japanese Short Row Marker","short-row marker"],
+    ["Knitting","Short Row","Shadow wrap","Shadow Wrap","short-row turn"],
+    ["Knitting","Short Row","Turn","Turn","turn work"],
+    ["Knitting","Chart Structure","RS","Right Side","right-side row"],
+    ["Knitting","Chart Structure","WS","Wrong Side","wrong-side row"],
+    ["Knitting","Chart Structure","BOR","Beginning of Round","round start"],
+    ["Knitting","Chart Structure","PM","Place Marker","marker instruction"],
+    ["Knitting","Chart Structure","SM","Slip Marker","marker instruction"],
+    ["Knitting","Chart Structure","RM","Remove Marker","marker instruction"],
+    ["Knitting","Chart Structure","Repeat box","Repeat Box","repeat boundary"],
+    ["Knitting","Chart Structure","Pattern repeat","Pattern Repeat","repeat instruction"],
+    ["Knitting","Chart Structure","Bracket repeat","Bracket Repeat","repeat instruction"],
+    ["Knitting","Chart Structure","* repeat","Asterisk Repeat","repeat instruction"],
+    ["Knitting","Chart Structure","Edge st","Edge Stitch","edge cell"],
+    ["Knitting","Chart Structure","Selvedge","Selvedge Stitch","edge stitch"],
+    ["Knitting","Chart Structure","Centre st","Centre Stitch","centre marker"],
+    ["Knitting","Chart Structure","Set-up row","Set-up Row","preparatory row"],
+    ["Knitting","Chart Structure","Legend","Chart Key / Legend","symbol key"],
+    ["Knitting","Construction","CO","Cast On","cast-on instruction"],
+    ["Knitting","Construction","BO","Bind Off","bind-off instruction"],
+    ["Knitting","Construction","Pick up & knit","Pick Up and Knit","picked-up stitches"],
+    ["Knitting","Construction","Pick up & purl","Pick Up and Purl","picked-up stitches"],
+    ["Knitting","Construction","Join round","Join in the Round","round join"],
+    ["Knitting","Construction","Join yarn","Join New Yarn","yarn join"],
+    ["Knitting","Construction","Break yarn","Break Yarn","cut yarn"],
+    ["Knitting","Construction","Return held sts","Place Held Stitches on Needle","held stitches"],
+    ["Knitting","Construction","Hold sts","Put Stitches on Holder","held stitches"],
+    ["Knitting","Construction","Kitchener","Graft / Kitchener Stitch","grafted seam"],
+    ["Knitting","Construction","3-needle BO","Three-needle Bind Off","joined bind-off"]
   ];
 
   const ruleDefinitions = [
@@ -174,7 +262,7 @@
     "Tunisian:T3-LC": { "zh-HK":"退針底的左上三針交叉", "zh-CN":"退针底的左上三针交叉", ja:"戻り目上の左3目交差" }
   };
 
-  const chartLegendWarning = "Chart symbols can vary by designer and region. Always check the pattern legend.";
+  const chartLegendWarning = "Chart symbols can vary by designer and region. Always check the pattern legend first.";
   const relatedToolsByCraft = {
     Knitting:["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"],
     Crochet:["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"],
@@ -462,6 +550,33 @@
     return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
 
+  const knittingReferenceTerms={
+    K:{cn:"下 / 正",jp:"表"},P:{cn:"上 / 反",jp:"裏"},M1L:{cn:"左加針 / 左扭加針",jp:"左増し目"},M1R:{cn:"右加針 / 右扭加針",jp:"右増し目"},
+    K2TOG:{cn:"右上二併一 / 右上2併1",jp:"右上2目一度"},SSK:{cn:"左上二併一 / 左上2併1",jp:"左上2目一度"},CDD:{cn:"中上三併一",jp:"中上3目一度"},
+    YO:{cn:"掛針 / 空針",jp:"掛け目"},C4F:{cn:"4針左交叉 / 左上交叉",jp:"左上交差"},C4B:{cn:"4針右交叉 / 右上交叉",jp:"右上交差"},
+    "No stitch":{cn:"無針 / 不織",jp:"編み目なし"},RS:{cn:"正面",jp:"表側"},WS:{cn:"反面",jp:"裏側"},BOR:{cn:"圈起點",jp:"輪の始まり"},CO:{cn:"起針",jp:"作り目"},BO:{cn:"收針",jp:"伏せ止め"}
+  };
+  const knittingTeaching={
+    P:{meaning:"Work a purl stitch.",howToRead:"Usually read as purl on a right-side row. In flat charts, wrong-side rows may reverse the action, so always check the legend.",howToWork:"Bring the yarn to the front, insert the right needle into the front of the stitch from right to left, wrap the yarn, and pull the new loop through.",beginnerNote:"Purl creates a bump on the front of the fabric. Together with knit, it forms many basic stitch patterns."},
+    M1L:{meaning:"Increase one stitch with a left-leaning twist.",howToRead:"Make one stitch leaning left. The stitch count increases by one.",howToWork:"Lift the strand between the needles from front to back, then knit through the back loop.",beginnerNote:"M1L is often paired with M1R for mirrored shaping."},
+    K2TOG:{meaning:"Decrease two stitches into one with a right-leaning decrease.",howToRead:"Knit the next two stitches together. The stitch count decreases by one.",howToWork:"Insert the right needle into the next two stitches together as if to knit, wrap the yarn, and pull through both stitches.",beginnerNote:"K2tog leans right and is often paired with SSK, which leans left."},
+    C4F:{meaning:"Cross four stitches with the first two held to the front, creating a left-leaning cable.",howToRead:"Cross two stitches over two, holding the first pair at the front.",howToWork:"Slip two stitches to a cable needle and hold in front, knit two, then knit the held stitches.",beginnerNote:"Front usually makes the cable lean left; back usually makes it lean right."},
+    "No stitch":{meaning:"A chart placeholder used to keep shaping visually aligned.",howToRead:"Skip this box and move to the next chart cell. Do not work a stitch.",howToWork:"No stitch is not a stitch. It is a placeholder in the chart to keep the visual layout correct.",beginnerNote:"Do not count this box as a stitch or consume a stitch from the needle."}
+  };
+
+  function knittingTeachingFor(category,abbreviation,fullName){
+    const exact=knittingTeaching[abbreviation]||{};
+    const countNote=category==="Increase"?"It increases the stitch count; check the pattern for the intended direction and whether a hole is decorative.":category==="Decrease"?"It reduces the stitch count; check whether the chart expects a left, right, or centred lean.":category==="Colourwork"?"The cell usually tells you which colour to use, while the row side tells you whether to knit or purl.":category==="Short Row"?"This marks a turning or resolution point used to shape the fabric without working a full row.":category==="Chart Structure"?"This is a chart-reading instruction rather than a stitch unless the legend says otherwise.":category==="Construction"?"This connects the charted fabric to a cast-on, join, edge, seam, or finishing step.":`Work ${fullName} as defined by the pattern legend.`;
+    return {
+      meaning:exact.meaning||countNote,
+      howToRead:exact.howToRead||`Read this as ${fullName}. Check the row direction and the pattern legend before working it.`,
+      howToWork:exact.howToWork||`Follow the pattern's written instruction for ${fullName}, keeping stitch orientation and count changes in view.`,
+      beginnerNote:exact.beginnerNote||`Pause after working this instruction and confirm the stitch count and fabric appearance before continuing.`,
+      flatChartNote:"Right-side rows are usually read right to left and wrong-side rows left to right. Some symbols reverse their action on wrong-side rows.",
+      roundChartNote:"Most in-the-round charts are read right to left on every round. The action usually stays the same unless the legend says otherwise."
+    };
+  }
+
   function makeEntry([craft, category, abbreviation, fullName, symbol], index) {
     const key = `${craft}:${abbreviation}`;
     const provisionalSymbolIcon = symbolIcons[key] || fallbackSymbolIcon(craft, category, abbreviation, fullName);
@@ -482,10 +597,12 @@
     const abbreviationUK = terms.uk || (craft === "Crochet" ? "" : abbreviation);
     const aliases = [...new Set([abbreviation, abbreviationUS, abbreviationUK, terms.cnAbbreviation, fullName, terms.enUS, terms.enUK, terms.zhHK, terms.zhCN, fullName.replace(/ Stitch$/i, ""), ...Object.values(localized).flatMap(value=>value.split(/\s*\/\s*/))].filter(Boolean))];
     const localizedTerms=localizedAliases[`${craft}:${abbreviation}`]||{};
+    const referenceTerms=craft==="Knitting"?knittingReferenceTerms[abbreviation]||{}:{};
+    const teaching=craft==="Knitting"?knittingTeachingFor(category,abbreviation,terms.enUS||fullName):{};
     const abbreviations={
       usUk:craft==="Crochet"?[terms.us||abbreviation,terms.uk||terms.us||abbreviation].filter((value,index,values)=>values.indexOf(value)===index).join(" / "):abbreviation||"—",
-      cn:abbreviation==="P"&&craft==="Knitting"?"上 / 反":terms.cnAbbreviation||localizedTerms["zh-HK"]||"—",
-      jp:abbreviation==="P"&&craft==="Knitting"?"裏":localizedTerms.ja||"—"
+      cn:referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對",
+      jp:referenceTerms.jp||localizedTerms.ja||"按圖例核對"
     };
     return {
       id: `${craftConfig[craft].prefix}-${slug(abbreviation || fullName)}-${index}`,
@@ -512,9 +629,12 @@
       howTo: `Follow the pattern's written instructions and legend for ${fullName}. Confirm stitch placement, orientation, and resulting stitch count before continuing.`,
       beginnerExplanation: `Read this as “${fullName}”. Practice it on a small swatch before using it in a fitted or counted section.`,
       abbreviations,
-      meaning:explanationFor(craft, abbreviation, terms.enUS || fullName, category),
-      howToRead:craft==="Knitting"&&abbreviation==="P"?"Usually read as purl on a right-side row. In flat knitting charts, wrong-side rows may reverse the action, so always check the legend.":`Read this as ${terms.enUS||fullName}. Check the row direction, right-side or wrong-side context, and the pattern legend before working it.`,
-      beginnerNote:craft==="Knitting"&&abbreviation==="P"?"Purl creates a bump on the front of the fabric. Together with knit, it forms many basic stitch patterns.":`This is a ${category.toLowerCase()} ${craft.toLowerCase()} instruction. Practise it on a small swatch if it is new to you.`,
+      meaning:teaching.meaning||explanationFor(craft, abbreviation, terms.enUS || fullName, category),
+      howToRead:teaching.howToRead||`Read this as ${terms.enUS||fullName}. Check the row direction, right-side or wrong-side context, and the pattern legend before working it.`,
+      howToWork:teaching.howToWork||`Follow the pattern's written instruction for ${fullName}.`,
+      flatChartNote:teaching.flatChartNote||"Check the pattern's flat-chart direction and right-side or wrong-side meaning.",
+      roundChartNote:teaching.roundChartNote||"Check the pattern's round direction and legend.",
+      beginnerNote:teaching.beginnerNote||`This is a ${category.toLowerCase()} ${craft.toLowerCase()} instruction. Practise it on a small swatch if it is new to you.`,
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
       legendWarning:chartLegendWarning,
       difficulty: ["Basic"].includes(category) ? "Beginner" : ["Increase", "Decrease"].includes(category) ? "Intermediate" : "Advanced",
@@ -590,6 +710,9 @@
       meaning:description,
       howToRead:description,
       beginnerNote:`Use this check before reading the first chart row or round.`,
+      howToWork:description,
+      flatChartNote:"Right-side rows are usually read right to left and wrong-side rows left to right unless the pattern says otherwise.",
+      roundChartNote:"Most round charts are read right to left on every round unless the pattern says otherwise.",
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
       legendWarning:chartLegendWarning,
       difficulty: "Beginner",
@@ -649,7 +772,7 @@
       if (filters.terminology && filters.terminology !== "All" && !entry.regionTags.includes(filters.terminology)) return false;
       if (filters.verification && filters.verification !== "All" && entry.verificationStatus !== filters.verification) return false;
       if (!needle) return true;
-      const haystack=[entry.visualSymbol, entry.abbreviation, entry.abbreviationUS, entry.abbreviationUK, entry.abbreviationChinese, entry.fullName, entry.nameEnglish, entry.nameTraditionalChinese, entry.nameSimplifiedChinese, entry.category, entry.description, entry.sourceName, entry.confidence, entry.verificationStatus, entry.variationNotes, ...(entry.sourceReferences||[]).flatMap(reference=>[reference.name,reference.scope]), ...(entry.tags||[]), ...(entry.regionTags||[]), ...entry.aliases, ...entry.recognitionAliases, ...entry.ocrKeywords]
+      const haystack=[entry.visualSymbol, entry.abbreviation, entry.abbreviationUS, entry.abbreviationUK, entry.abbreviationChinese, entry.abbreviations?.usUk, entry.abbreviations?.cn, entry.abbreviations?.jp, entry.fullName, entry.nameEnglish, entry.nameTraditionalChinese, entry.nameSimplifiedChinese, entry.category, entry.description, entry.sourceName, entry.confidence, entry.verificationStatus, entry.variationNotes, ...(entry.sourceReferences||[]).flatMap(reference=>[reference.name,reference.scope]), ...(entry.tags||[]), ...(entry.regionTags||[]), ...entry.aliases, ...entry.recognitionAliases, ...entry.ocrKeywords]
         .join(" ").toLowerCase();
       return needle.split(/\s+/).every(token=>haystack.includes(token));
     });
