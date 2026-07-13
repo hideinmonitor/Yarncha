@@ -14,9 +14,14 @@ assert.ok(database.search("UK tr",{craft:"Crochet",category:"All",difficulty:"Al
 assert.ok(database.search("短針",{craft:"Crochet",category:"All",difficulty:"All"}).some(entry=>entry.abbreviation==="SC"));
 assert.ok(database.search("細編み",{craft:"Crochet",category:"All",difficulty:"All"}).some(entry=>entry.abbreviation==="SC"));
 assert.match(crochet.find(entry=>entry.abbreviation==="no stitch").howToWork,/not a stitch/i);
+const expectedCnCodes={SC:"X",SC2TOG:"A","SC INC":"V","3 sc":"W",SC3TOG:"M",HDC:"T","HDC INC":"TV",HDC2TOG:"TA","3 hdc":"TW",HDC3TOG:"TM",DC:"F","DC INC":"FV",DC2TOG:"FA","3 dc":"FW",DC3TOG:"FM",TR:"E","2 tr":"EV",TR2TOG:"EA","3 tr":"EW",TR3TOG:"EM",Puff:"Q"};
+for(const [abbreviation,cn] of Object.entries(expectedCnCodes))assert.equal(crochet.find(entry=>entry.abbreviation===abbreviation)?.abbreviations.cn,cn,`${abbreviation} uses CN chart code ${cn}`);
+assert.equal(crochet.find(entry=>entry.abbreviation==="SC").localizedNames.zh,"短針");
+for(const [query,abbreviation] of [["X","SC"],["A","SC2TOG"],["V","SC INC"],["T","HDC"],["F","DC"],["E","TR"],["Q","Puff"],["短針","SC"],["長針","DC"],["中長針","HDC"]])assert.ok(database.search(query,{craft:"Crochet",category:"All",difficulty:"All"}).some(entry=>entry.abbreviation===abbreviation),`${query} finds ${abbreviation}`);
 
 const app=await readFile(new URL("../app.js",import.meta.url),"utf8");
 for(const text of ["Crochet chart reading basics","Rows","Rounds & motifs","Amigurumi","Row chart note","Round chart note","Loop placement","Post stitch","Finishing"])assert.match(app,new RegExp(text,"i"));
 assert.match(app,/crochet-abbreviation-chips/);
 assert.match(app,/US and UK crochet terms are different/);
+assert.match(app,/symbol-cn-warning/);
 console.log(`Crochet symbol reference contract passed with ${crochet.length} entries.`);

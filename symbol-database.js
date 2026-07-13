@@ -214,14 +214,22 @@
     ["Crochet","Basic","TRTR","Triple Treble Crochet","very tall stitch"],
     ["Crochet","Increase","inc","Increase","two stitches from one base"],
     ["Crochet","Increase","2 sc","Two Single Crochet in Same Stitch","two stitches from one base"],
+    ["Crochet","Increase","3 sc","Three Single Crochet in Same Stitch","three stitches from one base"],
     ["Crochet","Increase","2 hdc","Two Half Double Crochet in Same Stitch","two stitches from one base"],
     ["Crochet","Increase","2 dc","Two Double Crochet in Same Stitch","two stitches from one base"],
     ["Crochet","Increase","3 dc","Three Double Crochet in Same Stitch","three stitches from one base"],
+    ["Crochet","Increase","3 hdc","Three Half Double Crochet in Same Stitch","three stitches from one base"],
+    ["Crochet","Increase","2 tr","Two Treble Crochet in Same Stitch","two stitches from one base"],
+    ["Crochet","Increase","3 tr","Three Treble Crochet in Same Stitch","three stitches from one base"],
     ["Crochet","Increase","corner inc","Corner Increase","corner group"],
     ["Crochet","Increase","shell inc","Shell Increase","shell from one base"],
     ["Crochet","Increase","amigurumi inc","Amigurumi Increase","two single crochet from one base"],
     ["Crochet","Decrease","dec","Decrease","two bases joined at top"],
     ["Crochet","Decrease","TR2TOG","Treble Crochet Two Together","joined tall stitches"],
+    ["Crochet","Decrease","SC3TOG","Single Crochet Three Together","three bases joined at top"],
+    ["Crochet","Decrease","HDC3TOG","Half Double Crochet Three Together","three bases joined at top"],
+    ["Crochet","Decrease","DC3TOG","Double Crochet Three Together","three bases joined at top"],
+    ["Crochet","Decrease","TR3TOG","Treble Crochet Three Together","three bases joined at top"],
     ["Crochet","Decrease","inv dec","Invisible Decrease","front-loop decrease"],
     ["Crochet","Decrease","sk dec","Skipped-stitch Decrease","skipped base"],
     ["Crochet","Decrease","amigurumi dec","Amigurumi Decrease","invisible decrease"],
@@ -669,9 +677,19 @@
   };
   const crochetReferenceTerms={
     CH:{us:"ch",uk:"ch",cn:"鎖針",jp:"鎖編み"},"SL ST":{us:"sl st",uk:"ss",cn:"引拔針",jp:"引き抜き編み"},SC:{us:"sc",uk:"dc",cn:"短針",jp:"細編み"},HDC:{us:"hdc",uk:"htr",cn:"中長針",jp:"中長編み"},DC:{us:"dc",uk:"tr",cn:"長針",jp:"長編み"},TR:{us:"tr",uk:"dtr",cn:"長長針",jp:"長々編み"},DTR:{us:"dtr",uk:"trtr",cn:"三卷長針",jp:"三つ巻き長編み"},
-    "SC INC":{us:"sc inc",uk:"dc inc",cn:"短針加針",jp:"細編み増し目"},SC2TOG:{us:"sc2tog / dec",uk:"dc2tog / dec",cn:"短針減針",jp:"細編み減らし目"},FLO:{us:"FLO",uk:"FLO",cn:"外半針",jp:"前半目"},BLO:{us:"BLO",uk:"BLO",cn:"內半針",jp:"後半目"},FPDC:{us:"FPdc",uk:"FPtr",cn:"前柱長針",jp:"表引き上げ長編み"},BPDC:{us:"BPdc",uk:"BPtr",cn:"後柱長針",jp:"裏引き上げ長編み"},
+    "SC INC":{us:"inc / 2 sc",uk:"inc / 2 dc",jp:"細編み増し目"},SC2TOG:{us:"sc2tog / dec",uk:"dc2tog / dec",jp:"細編み2目一度"},FLO:{us:"FLO",uk:"FLO",jp:"前半目"},BLO:{us:"BLO",uk:"BLO",jp:"後半目"},FPDC:{us:"FPdc",uk:"FPtr",jp:"表引き上げ長編み"},BPDC:{us:"BPdc",uk:"BPtr",jp:"裏引き上げ長編み"},
     Puff:{us:"puff",uk:"puff",cn:"棗形針 / 泡泡針",jp:"玉編み"},PC:{us:"pc",uk:"pc",cn:"爆米花針",jp:"ポップコーン編み"},Bobble:{us:"bobble",uk:"bobble",cn:"球球針",jp:"玉編み"},Shell:{us:"shell",uk:"shell",cn:"貝殼針",jp:"シェル編み"},Picot:{us:"picot",uk:"picot",cn:"狗牙針",jp:"ピコット"},MR:{us:"MR",uk:"MR",cn:"魔術環 / 活動環",jp:"わの作り目"},"no stitch":{us:"no stitch",uk:"no stitch",cn:"無針 / 不織",jp:"編み目なし"}
   };
+  const crochetCnChartAbbreviations={
+    "single crochet":"X",sc:"X","single crochet decrease":"A",sc2tog:"A","single crochet two together":"A","single crochet increase":"V","sc inc":"V","2 sc":"V","two single crochet in same stitch":"V","3 sc":"W","three single crochet in same stitch":"W",sc3tog:"M","single crochet three together":"M",
+    "half double crochet":"T",hdc:"T","half double crochet increase":"TV","hdc inc":"TV","2 hdc":"TV","two half double crochet in same stitch":"TV","half double crochet decrease":"TA",hdc2tog:"TA","3 hdc":"TW","three half double crochet in same stitch":"TW",hdc3tog:"TM","half double crochet three together":"TM",
+    "double crochet":"F",dc:"F","double crochet increase":"FV","dc inc":"FV","2 dc":"FV","two double crochet in same stitch":"FV","double crochet decrease":"FA",dc2tog:"FA","3 dc":"FW","three double crochet in same stitch":"FW",dc3tog:"FM","double crochet three together":"FM",
+    "triple crochet":"E","treble crochet":"E",tr:"E","triple crochet increase":"EV","treble crochet increase":"EV","tr inc":"EV","2 tr":"EV","two treble crochet in same stitch":"EV","triple crochet decrease":"EA","treble crochet decrease":"EA",tr2tog:"EA","3 tr":"EW","three treble crochet in same stitch":"EW",tr3tog:"EM","treble crochet three together":"EM","triple crochet three together":"EM","puff stitch":"Q",puff:"Q"
+  };
+  function crochetCnChartCode(abbreviation,fullName,terms={}){
+    const candidates=[abbreviation,fullName,terms.us,terms.enUS].filter(Boolean).map(value=>String(value).trim().toLowerCase());
+    return candidates.map(value=>crochetCnChartAbbreviations[value]).find(Boolean)||terms.cnAbbreviation||"按圖例核對";
+  }
   const crochetTeaching={
     CH:{meaning:"Make one chain stitch.",howToRead:"A chain is usually shown as a small oval or circle. It may form a foundation, turning chain, space, or decorative loop.",howToWork:"Yarn over and pull the yarn through the loop on the hook.",beginnerNote:"Keep chains even and loose enough to work into comfortably."},
     SC:{meaning:"Work one single crochet stitch in US terms (double crochet in UK terms).",howToRead:"Single crochet is commonly shown as an X or +. Check the legend because the mark can vary.",howToWork:"Insert the hook, yarn over and pull up a loop, yarn over again and pull through both loops.",beginnerNote:"Single crochet makes a short, firm fabric and is common in amigurumi."},
@@ -728,7 +746,7 @@
       us:crochetTerms.us||terms.us||abbreviation||"—",
       uk:crochetTerms.uk||terms.uk||abbreviation||"—",
       usUk:craft==="Crochet"?[crochetTerms.us||terms.us||abbreviation,crochetTerms.uk||terms.uk||abbreviation].filter((value,index,values)=>values.indexOf(value)===index).join(" / "):abbreviation||"—",
-      cn:crochetTerms.cn||referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對",
+      cn:craft==="Crochet"?crochetCnChartCode(abbreviation,terms.enUS||fullName,terms):referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對",
       jp:crochetTerms.jp||referenceTerms.jp||localizedTerms.ja||"按圖例核對"
     };
     return {
@@ -750,6 +768,7 @@
       nameTraditionalChinese,
       nameEn: terms.enUS || fullName,
       nameZh: nameTraditionalChinese,
+      localizedNames:{zh:nameTraditionalChinese},
       nameSimplifiedChinese: terms.zhCN || localized["zh-CN"] || "需核对",
       explanation: explanationFor(craft, abbreviation, terms.enUS || fullName, category),
       description: `${fullName} is a ${craft.toLowerCase()} ${category.toLowerCase()} instruction. Its exact chart mark can vary by publication.`,
@@ -766,6 +785,7 @@
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
       legendWarning:craft==="Crochet"?crochetLegendWarning:chartLegendWarning,
       usUkWarning:craft==="Crochet"?crochetUsUkWarning:"",
+      cnChartWarning:craft==="Crochet"?"CN chart abbreviations can vary by designer and pattern source. Always check the pattern legend first.":"",
       difficulty: ["Basic","Chain","Slip Stitch","Amigurumi","Chart Structure"].includes(category) ? "Beginner" : ["Increase","Decrease","Loop Placement","Post Stitch","Shell","Texture","Lace","Colourwork","Finishing"].includes(category) ? "Intermediate" : "Advanced",
       aliases,
       languageVariants: {

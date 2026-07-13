@@ -1,12 +1,12 @@
-const CACHE_NAME = "yarncha-shell-v126-crochet-symbols";
+const CACHE_NAME = "yarncha-shell-v127-cn-chart-codes";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=126-crochet-symbols",
+  "/styles.css?v=127-cn-chart-codes",
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=123-repeat-footer",
-  "/symbol-database.js?v=126-crochet-symbols",
-  "/app.js?v=126-crochet-symbols",
+  "/symbol-database.js?v=127-cn-chart-codes",
+  "/app.js?v=127-cn-chart-codes",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

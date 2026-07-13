@@ -2542,6 +2542,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 .symbol-chinese-name { margin:0 0 6px; color:var(--text-secondary); font-size:17px; font-weight:700; }
 .symbol-global-warning { margin:0; padding:12px 14px; border-left:3px solid var(--accent); background:var(--bg-secondary); color:var(--text-secondary); line-height:1.5; }
 .symbol-terminology-warning { margin:0; padding:10px 12px; border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border)); border-radius:12px; background:color-mix(in srgb,var(--accent) 7%,var(--surface)); color:var(--text-secondary); font-size:13px; line-height:1.5; }
+.symbol-cn-warning { margin:0; color:var(--text-secondary); font-size:12px; line-height:1.5; }
 .symbol-reference-switch { display:flex; flex-wrap:wrap; gap:8px; }
 .symbol-reference-switch button { min-height:44px; }
 .crochet-reading-guide { display:grid; gap:14px; padding:var(--card-padding); }
