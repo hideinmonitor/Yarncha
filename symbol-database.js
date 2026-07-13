@@ -1,5 +1,5 @@
 (function initializeYarnchaSymbolDatabase(root) {
-  const categoryOrder = ["Basic", "Increase", "Decrease", "Lace", "Cable", "Texture", "Colourwork", "Short Row", "Chart Structure", "Construction", "Special Stitch", "Chart Rule"];
+  const categoryOrder = ["Basic", "Chain", "Slip Stitch", "Increase", "Decrease", "Loop Placement", "Post Stitch", "Shell", "Lace", "Cable", "Texture", "Colourwork", "Amigurumi", "Short Row", "Chart Structure", "Construction", "Finishing", "Special Stitch", "Chart Rule"];
 
   const craftConfig = {
     Knitting: { section: "Knitting Symbols & Abbreviations", prefix: "knit" },
@@ -50,8 +50,8 @@
     ["Knitting", "Special Stitch", "BR", "Brioche Symbol", "brioche-specific mark"],
     ["Knitting", "Special Stitch", "DK", "Double Knitting Symbol", "two-layer cell mark"],
 
-    ["Crochet", "Basic", "CH", "Chain", "oval"],
-    ["Crochet", "Basic", "SL ST", "Slip Stitch", "dot or filled oval"],
+    ["Crochet", "Chain", "CH", "Chain", "oval"],
+    ["Crochet", "Slip Stitch", "SL ST", "Slip Stitch", "dot or filled oval"],
     ["Crochet", "Basic", "SC", "Single Crochet", "+ or x"],
     ["Crochet", "Basic", "HDC", "Half Double Crochet", "T"],
     ["Crochet", "Basic", "DC", "Double Crochet", "T with one bar"],
@@ -65,19 +65,19 @@
     ["Crochet", "Decrease", "HDC2TOG", "Half Double Crochet Two Together", "joined HDC tops"],
     ["Crochet", "Decrease", "DC2TOG", "Double Crochet Two Together", "joined DC tops"],
     ["Crochet", "Decrease", "Cluster dec", "Cluster Decrease", "multiple stems joined at top"],
-    ["Crochet", "Special Stitch", "PC", "Popcorn", "outlined popcorn cluster"],
-    ["Crochet", "Special Stitch", "Puff", "Puff Stitch", "puffy oval cluster"],
-    ["Crochet", "Special Stitch", "Bobble", "Bobble Stitch", "compact cluster"],
-    ["Crochet", "Special Stitch", "CL", "Cluster", "joined unfinished stitches"],
-    ["Crochet", "Special Stitch", "Shell", "Shell Stitch", "fan of tall stitches"],
-    ["Crochet", "Special Stitch", "V-st", "V Stitch", "V-shaped pair"],
-    ["Crochet", "Special Stitch", "Y-st", "Y Stitch", "Y-shaped tall stitch"],
+    ["Crochet", "Texture", "PC", "Popcorn", "outlined popcorn cluster"],
+    ["Crochet", "Texture", "Puff", "Puff Stitch", "puffy oval cluster"],
+    ["Crochet", "Texture", "Bobble", "Bobble Stitch", "compact cluster"],
+    ["Crochet", "Texture", "CL", "Cluster", "joined unfinished stitches"],
+    ["Crochet", "Shell", "Shell", "Shell Stitch", "fan of tall stitches"],
+    ["Crochet", "Shell", "V-st", "V Stitch", "V-shaped pair"],
+    ["Crochet", "Shell", "Y-st", "Y Stitch", "Y-shaped tall stitch"],
     ["Crochet", "Special Stitch", "Cross", "Cross Stitch", "crossed tall stitches"],
     ["Crochet", "Special Stitch", "Picot", "Picot", "small loop or triangle"],
-    ["Crochet", "Basic", "FLO", "Front Loop Only", "upper arc"],
-    ["Crochet", "Basic", "BLO", "Back Loop Only", "lower arc"],
-    ["Crochet", "Special Stitch", "FPDC", "Front Post Double Crochet", "front-post double crochet"],
-    ["Crochet", "Special Stitch", "BPDC", "Back Post Double Crochet", "back-post double crochet"],
+    ["Crochet", "Loop Placement", "FLO", "Front Loop Only", "upper arc"],
+    ["Crochet", "Loop Placement", "BLO", "Back Loop Only", "lower arc"],
+    ["Crochet", "Post Stitch", "FPDC", "Front Post Double Crochet", "front-post double crochet"],
+    ["Crochet", "Post Stitch", "BPDC", "Back Post Double Crochet", "back-post double crochet"],
 
     ["Tunisian", "Basic", "TSS", "Tunisian Simple Stitch", "Afghan-chart cell with a vertical bar"],
     ["Tunisian", "Basic", "TPS", "Tunisian Purl Stitch", "Afghan-chart cell with a horizontal purl bar"],
@@ -201,7 +201,109 @@
     ["Knitting","Construction","Return held sts","Place Held Stitches on Needle","held stitches"],
     ["Knitting","Construction","Hold sts","Put Stitches on Holder","held stitches"],
     ["Knitting","Construction","Kitchener","Graft / Kitchener Stitch","grafted seam"],
-    ["Knitting","Construction","3-needle BO","Three-needle Bind Off","joined bind-off"]
+    ["Knitting","Construction","3-needle BO","Three-needle Bind Off","joined bind-off"],
+    ["Crochet","Chain","ch-sp","Chain Space","open chain space"],
+    ["Crochet","Chain","sp","Space","open stitch space"],
+    ["Crochet","Chain","foundation ch","Foundation Chain","foundation ovals"],
+    ["Crochet","Chain","turning ch","Turning Chain","row-height chains"],
+    ["Crochet","Chain","MR","Magic Ring / Magic Circle","adjustable ring"],
+    ["Crochet","Chain","adjustable ring","Adjustable Ring","adjustable ring"],
+    ["Crochet","Chain","fsc","Foundation Single Crochet","foundation single crochet"],
+    ["Crochet","Chain","fhdc","Foundation Half Double Crochet","foundation half double crochet"],
+    ["Crochet","Chain","fdc","Foundation Double Crochet","foundation double crochet"],
+    ["Crochet","Basic","TRTR","Triple Treble Crochet","very tall stitch"],
+    ["Crochet","Increase","inc","Increase","two stitches from one base"],
+    ["Crochet","Increase","2 sc","Two Single Crochet in Same Stitch","two stitches from one base"],
+    ["Crochet","Increase","2 hdc","Two Half Double Crochet in Same Stitch","two stitches from one base"],
+    ["Crochet","Increase","2 dc","Two Double Crochet in Same Stitch","two stitches from one base"],
+    ["Crochet","Increase","3 dc","Three Double Crochet in Same Stitch","three stitches from one base"],
+    ["Crochet","Increase","corner inc","Corner Increase","corner group"],
+    ["Crochet","Increase","shell inc","Shell Increase","shell from one base"],
+    ["Crochet","Increase","amigurumi inc","Amigurumi Increase","two single crochet from one base"],
+    ["Crochet","Decrease","dec","Decrease","two bases joined at top"],
+    ["Crochet","Decrease","TR2TOG","Treble Crochet Two Together","joined tall stitches"],
+    ["Crochet","Decrease","inv dec","Invisible Decrease","front-loop decrease"],
+    ["Crochet","Decrease","sk dec","Skipped-stitch Decrease","skipped base"],
+    ["Crochet","Decrease","amigurumi dec","Amigurumi Decrease","invisible decrease"],
+    ["Crochet","Loop Placement","both loops","Both Loops","top loops"],
+    ["Crochet","Loop Placement","third loop","Third Loop","rear horizontal loop"],
+    ["Crochet","Loop Placement","back bump","Back Bump of Chain","back chain bump"],
+    ["Crochet","Loop Placement","FLO dec","Front Loop Decrease","front-loop decrease"],
+    ["Crochet","Loop Placement","BLO rib","Back Loop Ribbing","ribbed loop placement"],
+    ["Crochet","Post Stitch","FPSC","Front Post Single Crochet","front post stitch"],
+    ["Crochet","Post Stitch","BPSC","Back Post Single Crochet","back post stitch"],
+    ["Crochet","Post Stitch","FPHDC","Front Post Half Double Crochet","front post stitch"],
+    ["Crochet","Post Stitch","BPHDC","Back Post Half Double Crochet","back post stitch"],
+    ["Crochet","Post Stitch","FPTR","Front Post Treble Crochet","front post tall stitch"],
+    ["Crochet","Post Stitch","BPTR","Back Post Treble Crochet","back post tall stitch"],
+    ["Crochet","Post Stitch","post rib","Post Stitch Ribbing","raised ribbing"],
+    ["Crochet","Post Stitch","raised texture","Raised Post Texture","raised stitches"],
+    ["Crochet","Post Stitch","crochet cable","Cable-style Crochet","crossed post stitches"],
+    ["Crochet","Shell","fan","Fan Stitch","fan group"],
+    ["Crochet","Shell","5 dc shell","Five Double Crochet Shell","five-stitch shell"],
+    ["Crochet","Shell","3 dc group","Three Double Crochet Group","three-stitch group"],
+    ["Crochet","Shell","granny cl","Granny Cluster","three-stitch cluster"],
+    ["Crochet","Shell","corner shell","Corner Shell","corner stitch group"],
+    ["Crochet","Shell","space cluster","Cluster in Chain Space","cluster group"],
+    ["Crochet","Shell","multi in sp","Multiple Stitches in One Space","grouped stitches"],
+    ["Crochet","Texture","dc cluster","Double Crochet Cluster","closed cluster"],
+    ["Crochet","Texture","tr cluster","Treble Crochet Cluster","tall closed cluster"],
+    ["Crochet","Texture","puff cluster","Puff Cluster","raised cluster"],
+    ["Crochet","Texture","closed cl","Closed Cluster","loops closed together"],
+    ["Crochet","Texture","loop st","Loop Stitch","looped texture"],
+    ["Crochet","Finishing","fringe","Fringe","decorative strands"],
+    ["Crochet","Finishing","surface crochet","Surface Crochet","surface slip stitches"],
+    ["Crochet","Lace","open mesh","Open Mesh","open filet cell"],
+    ["Crochet","Lace","filled mesh","Filled Mesh","filled filet cell"],
+    ["Crochet","Lace","filet block","Filet Crochet Block","filet block"],
+    ["Crochet","Lace","skip st","Skip Stitch","skipped base"],
+    ["Crochet","Lace","dc-ch mesh","Double Crochet Chain Mesh","mesh repeat"],
+    ["Crochet","Lace","pineapple","Pineapple Motif","pineapple lace"],
+    ["Crochet","Lace","lace repeat","Lace Repeat","repeat boundary"],
+    ["Crochet","Colourwork","MC","Main Colour","main colour cell"],
+    ["Crochet","Colourwork","CC","Contrast Colour","contrast colour cell"],
+    ["Crochet","Colourwork","colour change","Colour Change","colour transition"],
+    ["Crochet","Colourwork","tapestry cell","Tapestry Crochet Cell","colour cell"],
+    ["Crochet","Colourwork","intarsia block","Intarsia Crochet Block","colour block"],
+    ["Crochet","Colourwork","carry yarn","Carry Yarn","carried colour"],
+    ["Crochet","Colourwork","drop yarn","Drop Yarn","released colour"],
+    ["Crochet","Colourwork","join colour","Join New Colour","colour join"],
+    ["Crochet","Colourwork","surface colour","Surface Colour Mark","surface decoration"],
+    ["Crochet","Amigurumi","continuous rnds","Continuous Rounds","spiral rounds"],
+    ["Crochet","Amigurumi","st marker","Stitch Marker / BOR","round marker"],
+    ["Crochet","Amigurumi","stuff","Stuff","stuffing instruction"],
+    ["Crochet","Amigurumi","safety eyes","Attach Safety Eyes","eye placement"],
+    ["Crochet","Amigurumi","sew piece","Sew Piece","assembly instruction"],
+    ["Crochet","Amigurumi","embroider","Embroider Detail","surface detail"],
+    ["Crochet","Amigurumi","close hole","Close Hole","final closure"],
+    ["Crochet","Finishing","sl st join","Slip Stitch Join","round join"],
+    ["Crochet","Finishing","join yarn","Join New Yarn","yarn join"],
+    ["Crochet","Finishing","FO","Fasten Off","finish yarn"],
+    ["Crochet","Finishing","weave ends","Weave in Ends","hidden ends"],
+    ["Crochet","Finishing","seam","Seam Pieces","joined edges"],
+    ["Crochet","Finishing","join motifs","Join Motifs","motif join"],
+    ["Crochet","Finishing","JAYG","Join as You Go","live motif join"],
+    ["Crochet","Finishing","whip join","Whip Stitch Join","sewn join"],
+    ["Crochet","Finishing","mattress seam","Mattress-style Crochet Seam","hidden seam"],
+    ["Crochet","Finishing","invisible join","Invisible Join","seamless round finish"],
+    ["Crochet","Finishing","standing st","Standing Stitch Join","new-round join"],
+    ["Crochet","Chart Structure","RS","Right Side","right-side row"],
+    ["Crochet","Chart Structure","WS","Wrong Side","wrong-side row"],
+    ["Crochet","Chart Structure","turn","Turn","turn work"],
+    ["Crochet","Chart Structure","do not turn","Do Not Turn","continue same direction"],
+    ["Crochet","Chart Structure","rnd","Round","round instruction"],
+    ["Crochet","Chart Structure","row","Row","row instruction"],
+    ["Crochet","Chart Structure","repeat","Repeat","repeat instruction"],
+    ["Crochet","Chart Structure","repeat box","Repeat Box","repeat boundary"],
+    ["Crochet","Chart Structure","* repeat","Asterisk Repeat","repeat instruction"],
+    ["Crochet","Chart Structure","bracket repeat","Bracket Repeat","repeat instruction"],
+    ["Crochet","Chart Structure","corner","Corner","corner placement"],
+    ["Crochet","Chart Structure","st count","Stitch Count","count checkpoint"],
+    ["Crochet","Chart Structure","BOR","Beginning of Round","round start"],
+    ["Crochet","Chart Structure","PM","Place Marker","marker instruction"],
+    ["Crochet","Chart Structure","MM","Move Marker","marker instruction"],
+    ["Crochet","Chart Structure","EOR","End of Round","round end"],
+    ["Crochet","Chart Structure","no stitch","No Stitch","empty chart placeholder"]
   ];
 
   const ruleDefinitions = [
@@ -263,6 +365,8 @@
   };
 
   const chartLegendWarning = "Chart symbols can vary by designer and region. Always check the pattern legend first.";
+  const crochetLegendWarning = "Crochet symbols and terms can vary by designer and region. Always check the pattern legend first.";
+  const crochetUsUkWarning = "US and UK crochet terms are different. The same stitch name can mean different stitches. Always check whether your pattern uses US or UK terms.";
   const relatedToolsByCraft = {
     Knitting:["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"],
     Crochet:["OG Chart Mode","Row / Round Counter Helper","Annotation Tool"],
@@ -563,6 +667,21 @@
     C4F:{meaning:"Cross four stitches with the first two held to the front, creating a left-leaning cable.",howToRead:"Cross two stitches over two, holding the first pair at the front.",howToWork:"Slip two stitches to a cable needle and hold in front, knit two, then knit the held stitches.",beginnerNote:"Front usually makes the cable lean left; back usually makes it lean right."},
     "No stitch":{meaning:"A chart placeholder used to keep shaping visually aligned.",howToRead:"Skip this box and move to the next chart cell. Do not work a stitch.",howToWork:"No stitch is not a stitch. It is a placeholder in the chart to keep the visual layout correct.",beginnerNote:"Do not count this box as a stitch or consume a stitch from the needle."}
   };
+  const crochetReferenceTerms={
+    CH:{us:"ch",uk:"ch",cn:"鎖針",jp:"鎖編み"},"SL ST":{us:"sl st",uk:"ss",cn:"引拔針",jp:"引き抜き編み"},SC:{us:"sc",uk:"dc",cn:"短針",jp:"細編み"},HDC:{us:"hdc",uk:"htr",cn:"中長針",jp:"中長編み"},DC:{us:"dc",uk:"tr",cn:"長針",jp:"長編み"},TR:{us:"tr",uk:"dtr",cn:"長長針",jp:"長々編み"},DTR:{us:"dtr",uk:"trtr",cn:"三卷長針",jp:"三つ巻き長編み"},
+    "SC INC":{us:"sc inc",uk:"dc inc",cn:"短針加針",jp:"細編み増し目"},SC2TOG:{us:"sc2tog / dec",uk:"dc2tog / dec",cn:"短針減針",jp:"細編み減らし目"},FLO:{us:"FLO",uk:"FLO",cn:"外半針",jp:"前半目"},BLO:{us:"BLO",uk:"BLO",cn:"內半針",jp:"後半目"},FPDC:{us:"FPdc",uk:"FPtr",cn:"前柱長針",jp:"表引き上げ長編み"},BPDC:{us:"BPdc",uk:"BPtr",cn:"後柱長針",jp:"裏引き上げ長編み"},
+    Puff:{us:"puff",uk:"puff",cn:"棗形針 / 泡泡針",jp:"玉編み"},PC:{us:"pc",uk:"pc",cn:"爆米花針",jp:"ポップコーン編み"},Bobble:{us:"bobble",uk:"bobble",cn:"球球針",jp:"玉編み"},Shell:{us:"shell",uk:"shell",cn:"貝殼針",jp:"シェル編み"},Picot:{us:"picot",uk:"picot",cn:"狗牙針",jp:"ピコット"},MR:{us:"MR",uk:"MR",cn:"魔術環 / 活動環",jp:"わの作り目"},"no stitch":{us:"no stitch",uk:"no stitch",cn:"無針 / 不織",jp:"編み目なし"}
+  };
+  const crochetTeaching={
+    CH:{meaning:"Make one chain stitch.",howToRead:"A chain is usually shown as a small oval or circle. It may form a foundation, turning chain, space, or decorative loop.",howToWork:"Yarn over and pull the yarn through the loop on the hook.",beginnerNote:"Keep chains even and loose enough to work into comfortably."},
+    SC:{meaning:"Work one single crochet stitch in US terms (double crochet in UK terms).",howToRead:"Single crochet is commonly shown as an X or +. Check the legend because the mark can vary.",howToWork:"Insert the hook, yarn over and pull up a loop, yarn over again and pull through both loops.",beginnerNote:"Single crochet makes a short, firm fabric and is common in amigurumi."},
+    DC:{meaning:"Work one double crochet stitch in US terms (treble crochet in UK terms).",howToRead:"Double crochet is commonly a T-shaped mark with one slash and is taller than single crochet.",howToWork:"Yarn over, insert the hook and pull up a loop, then yarn over and pull through two loops twice.",beginnerNote:"Check whether the turning chain counts as the first stitch."},
+    "SC INC":{meaning:"Work two single crochet stitches into the same stitch.",howToRead:"Two stitches rise from one base, increasing the stitch count by one.",howToWork:"Work one single crochet into the stitch, then a second single crochet into the same stitch.",beginnerNote:"Mark rounds and count carefully so increases stay evenly spaced."},
+    SC2TOG:{meaning:"Decrease two single crochet stitches into one.",howToRead:"Two stitch bases join into one top, reducing the stitch count by one.",howToWork:"Pull up a loop in each of the next two stitches, yarn over, and pull through all loops.",beginnerNote:"An invisible decrease is often neater for amigurumi."},
+    FPDC:{meaning:"Work a double crochet around the post from the front.",howToRead:"The stitch wraps around the post and sits raised on the front of the fabric.",howToWork:"Yarn over, insert front-to-back-to-front around the post, then complete a double crochet.",beginnerNote:"Insert around the post, not through the top loops."},
+    Puff:{meaning:"Create a soft raised stitch by pulling up several loops and closing them together.",howToRead:"Several elongated loops are worked into one place before closing.",howToWork:"Repeat yarn over, insert, and pull up a loop in one place, then close as the pattern directs.",beginnerNote:"Loop count and height vary, so use the pattern legend."},
+    "no stitch":{meaning:"A placeholder that keeps the chart layout aligned.",howToRead:"Skip this chart box. Do not work or consume a stitch.",howToWork:"No stitch is not a stitch. Move directly to the next chart symbol.",beginnerNote:"Do not include this placeholder in the stitch count."}
+  };
 
   function knittingTeachingFor(category,abbreviation,fullName){
     const exact=knittingTeaching[abbreviation]||{};
@@ -575,6 +694,11 @@
       flatChartNote:"Right-side rows are usually read right to left and wrong-side rows left to right. Some symbols reverse their action on wrong-side rows.",
       roundChartNote:"Most in-the-round charts are read right to left on every round. The action usually stays the same unless the legend says otherwise."
     };
+  }
+  function crochetTeachingFor(category,abbreviation,fullName){
+    const exact=crochetTeaching[abbreviation]||{};
+    const meaning=category==="Increase"?"Work multiple stitches into the same stitch or space to increase the stitch count and shape the fabric.":category==="Decrease"?"Join or omit stitches as directed to reduce the stitch count.":category==="Colourwork"?"Use the indicated colour; the chart cell may show colour rather than a different stitch action.":category==="Amigurumi"?"Use this instruction while shaping or assembling a firm three-dimensional crochet piece.":category==="Chart Structure"?"This is a chart-reading instruction rather than a stitch unless the legend says otherwise.":category==="Finishing"?"Use this instruction to join, secure, seam, or finish part of the project.":`Work ${fullName} as defined by the pattern legend.`;
+    return {meaning:exact.meaning||meaning,howToRead:exact.howToRead||`Read this as ${fullName}. Check whether it is worked into a stitch, space, loop, or post.`,howToWork:exact.howToWork||`Follow the pattern's written steps for ${fullName}, checking loop placement and stitch count.`,beginnerNote:exact.beginnerNote||"Pause after the instruction and confirm the placement and stitch count before continuing.",rowChartNote:"Rows usually alternate direction. Turning chains may or may not count as stitches, so check the pattern.",roundChartNote:"Rounds are usually read from the centre outward and counter-clockwise for right-handed work. Watch corners, chain spaces, and the beginning of round."};
   }
 
   function makeEntry([craft, category, abbreviation, fullName, symbol], index) {
@@ -598,11 +722,14 @@
     const aliases = [...new Set([abbreviation, abbreviationUS, abbreviationUK, terms.cnAbbreviation, fullName, terms.enUS, terms.enUK, terms.zhHK, terms.zhCN, fullName.replace(/ Stitch$/i, ""), ...Object.values(localized).flatMap(value=>value.split(/\s*\/\s*/))].filter(Boolean))];
     const localizedTerms=localizedAliases[`${craft}:${abbreviation}`]||{};
     const referenceTerms=craft==="Knitting"?knittingReferenceTerms[abbreviation]||{}:{};
-    const teaching=craft==="Knitting"?knittingTeachingFor(category,abbreviation,terms.enUS||fullName):{};
+    const teaching=craft==="Knitting"?knittingTeachingFor(category,abbreviation,terms.enUS||fullName):craft==="Crochet"?crochetTeachingFor(category,abbreviation,terms.enUS||fullName):{};
+    const crochetTerms=craft==="Crochet"?crochetReferenceTerms[abbreviation]||{}:{};
     const abbreviations={
-      usUk:craft==="Crochet"?[terms.us||abbreviation,terms.uk||terms.us||abbreviation].filter((value,index,values)=>values.indexOf(value)===index).join(" / "):abbreviation||"—",
-      cn:referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對",
-      jp:referenceTerms.jp||localizedTerms.ja||"按圖例核對"
+      us:crochetTerms.us||terms.us||abbreviation||"—",
+      uk:crochetTerms.uk||terms.uk||abbreviation||"—",
+      usUk:craft==="Crochet"?[crochetTerms.us||terms.us||abbreviation,crochetTerms.uk||terms.uk||abbreviation].filter((value,index,values)=>values.indexOf(value)===index).join(" / "):abbreviation||"—",
+      cn:crochetTerms.cn||referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對",
+      jp:crochetTerms.jp||referenceTerms.jp||localizedTerms.ja||"按圖例核對"
     };
     return {
       id: `${craftConfig[craft].prefix}-${slug(abbreviation || fullName)}-${index}`,
@@ -634,10 +761,12 @@
       howToWork:teaching.howToWork||`Follow the pattern's written instruction for ${fullName}.`,
       flatChartNote:teaching.flatChartNote||"Check the pattern's flat-chart direction and right-side or wrong-side meaning.",
       roundChartNote:teaching.roundChartNote||"Check the pattern's round direction and legend.",
+      rowChartNote:teaching.rowChartNote||"Check row direction and whether the turning chain counts as a stitch.",
       beginnerNote:teaching.beginnerNote||`This is a ${category.toLowerCase()} ${craft.toLowerCase()} instruction. Practise it on a small swatch if it is new to you.`,
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
-      legendWarning:chartLegendWarning,
-      difficulty: ["Basic"].includes(category) ? "Beginner" : ["Increase", "Decrease"].includes(category) ? "Intermediate" : "Advanced",
+      legendWarning:craft==="Crochet"?crochetLegendWarning:chartLegendWarning,
+      usUkWarning:craft==="Crochet"?crochetUsUkWarning:"",
+      difficulty: ["Basic","Chain","Slip Stitch","Amigurumi","Chart Structure"].includes(category) ? "Beginner" : ["Increase","Decrease","Loop Placement","Post Stitch","Shell","Texture","Lace","Colourwork","Finishing"].includes(category) ? "Intermediate" : "Advanced",
       aliases,
       languageVariants: {
         en: terms.enUS || fullName,
@@ -706,15 +835,17 @@
       description,
       howTo: description,
       beginnerExplanation: `Pause before row one and use this ${craft.toLowerCase()} chart-reading check.`,
-      abbreviations:{usUk:"—",cn:"—",jp:"—"},
+      abbreviations:{us:"—",uk:"—",usUk:"—",cn:"—",jp:"—"},
       meaning:description,
       howToRead:description,
       beginnerNote:`Use this check before reading the first chart row or round.`,
       howToWork:description,
       flatChartNote:"Right-side rows are usually read right to left and wrong-side rows left to right unless the pattern says otherwise.",
       roundChartNote:"Most round charts are read right to left on every round unless the pattern says otherwise.",
+      rowChartNote:"Rows usually alternate direction. Check turning chains, edge stitches, and whether they count.",
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
-      legendWarning:chartLegendWarning,
+      legendWarning:craft==="Crochet"?crochetLegendWarning:chartLegendWarning,
+      usUkWarning:craft==="Crochet"?crochetUsUkWarning:"",
       difficulty: "Beginner",
       aliases: [fullName],
       languageVariants: { en: fullName, "zh-HK": fullName, "zh-CN": fullName, ja: fullName },

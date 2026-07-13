@@ -2541,6 +2541,14 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 .symbol-abbreviation { margin:0; color:var(--text-secondary); font-weight:800; }
 .symbol-chinese-name { margin:0 0 6px; color:var(--text-secondary); font-size:17px; font-weight:700; }
 .symbol-global-warning { margin:0; padding:12px 14px; border-left:3px solid var(--accent); background:var(--bg-secondary); color:var(--text-secondary); line-height:1.5; }
+.symbol-terminology-warning { margin:0; padding:10px 12px; border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border)); border-radius:12px; background:color-mix(in srgb,var(--accent) 7%,var(--surface)); color:var(--text-secondary); font-size:13px; line-height:1.5; }
+.symbol-reference-switch { display:flex; flex-wrap:wrap; gap:8px; }
+.symbol-reference-switch button { min-height:44px; }
+.crochet-reading-guide { display:grid; gap:14px; padding:var(--card-padding); }
+.crochet-reading-guide > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.crochet-reading-guide section { min-width:0; padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--bg-secondary); }
+.crochet-reading-guide h3,.crochet-reading-guide p { margin:0; }
+.crochet-reading-guide section p { margin-top:6px; color:var(--text-secondary); font-size:13px; line-height:1.5; }
 .symbol-detail-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .symbol-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .symbol-detail-grid article { padding:16px; border:1px solid var(--border); border-radius:var(--radius-card); background:var(--bg-secondary); }
@@ -2612,6 +2620,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
   .symbol-detail-actions button { width:100%; }
   .symbol-detail { padding:16px; gap:16px; }
   .symbol-abbreviation-chips { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .symbol-abbreviation-chips.crochet-abbreviation-chips { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .symbol-abbreviation-chips span { min-width:0; justify-content:center; padding-inline:8px; }
   .symbol-quick-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .symbol-quick-filters button { width:100%; }
@@ -2620,6 +2629,7 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
   .symbol-picture-actions { display:grid; grid-template-columns:1fr; }
   .symbol-picture-actions button { width:100%; }
   .symbol-full-explanation-grid { grid-template-columns:1fr; }
+  .crochet-reading-guide > div { grid-template-columns:1fr; }
   .symbol-edit-form .modal-actions { display:grid; grid-template-columns:1fr; }
 .symbol-edit-form .modal-actions > button { width:100%; height:auto; min-height:44px; flex:none; }
 }
