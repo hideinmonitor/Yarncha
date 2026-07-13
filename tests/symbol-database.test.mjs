@@ -44,7 +44,7 @@ for(const abbreviation of ["K","P","YO","Sl","K2TOG","SSK","KFB","PFB","KTBL","P
   const entry=database.entries.find(item=>item.craft==="Knitting"&&item.abbreviation===abbreviation);
   assert.ok(entry?.symbolIcon,`${abbreviation} has a reusable chart icon`);
 }
-for(const [abbreviation,symbolType] of [["CH","chain"],["SL ST","slip-stitch-crochet"],["SC","single-crochet"],["HDC","half-double-crochet"],["DC","double-crochet"],["TR","treble-crochet"],["PC","popcorn"],["Puff","legend-specific"],["Bobble","legend-specific"],["CL","cluster"],["Shell","shell"],["Picot","picot"],["FPDC","front-post"],["BPDC","back-post"]]){
+for(const [abbreviation,symbolType] of [["CH","chain"],["SL ST","slip-stitch-crochet"],["SC","single-crochet"],["HDC","half-double-crochet"],["DC","double-crochet"],["TR","treble-crochet"],["PC","popcorn"],["Puff","puff"],["Bobble","legend-specific"],["CL","cluster"],["Shell","shell"],["Picot","picot"],["FPDC","front-post"],["BPDC","back-post"]]){
   const entry=database.entries.find(item=>item.craft==="Crochet"&&item.abbreviation===abbreviation);
   assert.equal(entry?.symbolType,symbolType,`${abbreviation} uses its own crochet symbol family`);
 }
@@ -56,12 +56,12 @@ for(const abbreviation of tunisianRequired){
   assert.ok(entry,`Tunisian database contains ${abbreviation}`);
   assert.match(entry.symbolType,/^(tunisian-|legend-specific$)/,`${abbreviation} never reuses a regular knitting or crochet icon`);
   assert.ok(entry.nameTraditionalChinese&&entry.nameTraditionalChinese!=="需核對",`${abbreviation} has a Chinese reference name`);
-  assert.ok(entry.sourceName.includes("IMG_4154–IMG_4165"),`${abbreviation} cites the uploaded Tunisian reference set`);
+  assert.ok(entry.sourceName.includes("Tunisian crochet pp. 6–11"),`${abbreviation} cites the uploaded Tunisian reference pages`);
 }
 for(const abbreviation of ["TRS","TFS","TYO","TYO-FS"]){
   const entry=database.entries.find(item=>item.craft==="Tunisian"&&item.abbreviation===abbreviation);
-  assert.equal(entry.verificationStatus,"To Be Confirmed",`${abbreviation} remains unconfirmed because its modern-label mapping is not universal`);
-  assert.equal(entry.flowModeReady,false,`${abbreviation} cannot be auto-confirmed by future Flow Mode`);
+  assert.equal(entry.verificationStatus,"Manually Verified",`${abbreviation} is confirmed by the supplied Tunisian pages`);
+  assert.equal(entry.flowModeReady,true,`${abbreviation} can use its approved reference SVG in Flow Mode`);
 }
 for(const abbreviation of ["TSS","TPS","TKS","TDC","TSLST"]){
   const entry=database.entries.find(item=>item.craft==="Tunisian"&&item.abbreviation===abbreviation);

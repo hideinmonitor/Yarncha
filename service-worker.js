@@ -1,13 +1,13 @@
-const CACHE_NAME = "yarncha-shell-v132-reference-traces";
+const CACHE_NAME = "yarncha-shell-v133-reference-symbol-audit";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css?v=130-symbol-library-quality",
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=123-repeat-footer",
-  "/symbol-database.js?v=130-symbol-library-quality",
-  "/src/data/symbolReferenceMap.js?v=132-reference-traces",
-  "/app.js?v=132-reference-traces",
+  "/symbol-database.js?v=133-reference-symbol-audit",
+  "/src/data/symbolReferenceMap.js?v=133-reference-symbol-audit",
+  "/app.js?v=133-reference-symbol-audit",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

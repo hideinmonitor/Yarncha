@@ -1,43 +1,68 @@
 (function initializeSymbolReferenceMap(root) {
   /**
    * @typedef {Object} SymbolReferenceRecord
-   * @property {string} symbolKey Yarncha symbolSvgPaths key.
-   * @property {"01-05.pdf"|"Printable-crochet-symbols.pdf"} document
-   * @property {number} page One-based PDF page number.
-   * @property {string} tracedSvgKey Registry key containing the normalized trace.
-   * @property {"exact-match"|"adjusted"|"added"} verificationStatus
+   * @property {string} symbolKey Yarncha semantic symbol key.
+   * @property {"Untitled (Draft).pdf"|"Yarncha registry"} document
+   * @property {number|null} page One-based PDF page number, or null for a retained fallback.
+   * @property {string} tracedSvgKey Single symbolSvgPaths registry key used for rendering.
+   * @property {"exact"|"minor-adjustment"|"rebuilt"|"duplicate"|"unsupported"} verificationStatus
+   * @property {"High"|"Medium"|"Low"} confidence
    */
 
+  const pdf = "Untitled (Draft).pdf";
+  const rows = [
+    ["knit",pdf,1,"knit","rebuilt","High"], ["purl",pdf,1,"purl","rebuilt","High"],
+    ["yarn-over",pdf,1,"yarn-over","exact","High"], ["knit-twisted",pdf,1,"knit-twisted","minor-adjustment","Medium"],
+    ["purl-twisted",pdf,1,"purl-twisted","minor-adjustment","Medium"], ["increase-kfb",pdf,2,"increase-kfb","exact","High"],
+    ["increase-left",pdf,2,"increase-left","exact","High"], ["increase-right",pdf,2,"increase-right","exact","High"],
+    ["purl-increase",pdf,2,"purl-increase","exact","High"], ["decrease-right",pdf,2,"decrease-right","exact","High"],
+    ["decrease-left",pdf,2,"decrease-left","exact","High"], ["purl-decrease-right",pdf,2,"purl-decrease-right","exact","High"],
+    ["purl-decrease-left",pdf,2,"purl-decrease-left","exact","High"], ["decrease-centred",pdf,2,"decrease-centred","exact","High"],
+    ["cable-left",pdf,5,"cable-left","exact","High"], ["cable-right",pdf,5,"cable-right","exact","High"],
+    ["cable-left-wide",pdf,5,"cable-left-wide","exact","High"], ["cable-right-wide",pdf,5,"cable-right-wide","exact","High"],
+    ["cable-left-3-3",pdf,5,"cable-left-3-3","exact","High"], ["cable-right-3-3",pdf,5,"cable-right-3-3","exact","High"],
+    ["cable-left-4-4",pdf,5,"cable-left-4-4","exact","High"], ["cable-right-4-4",pdf,5,"cable-right-4-4","exact","High"],
+    ["cable-left-purl",pdf,5,"cable-left-purl","exact","High"], ["cable-right-purl",pdf,5,"cable-right-purl","exact","High"],
+
+    ["tunisian-simple",pdf,6,"tunisian-simple","minor-adjustment","High"], ["tunisian-purl",pdf,7,"tunisian-purl","minor-adjustment","High"],
+    ["tunisian-knit",pdf,7,"tunisian-knit","minor-adjustment","High"], ["tunisian-reverse",pdf,10,"tunisian-reverse","minor-adjustment","High"],
+    ["tunisian-full",pdf,6,"tunisian-full","minor-adjustment","High"], ["tunisian-double",pdf,7,"tunisian-double","minor-adjustment","High"],
+    ["tunisian-slip",pdf,8,"tunisian-slip","minor-adjustment","High"], ["tunisian-yarn-over",pdf,6,"tunisian-yarn-over","minor-adjustment","Medium"],
+    ["tunisian-yarn-over-space",pdf,6,"tunisian-yarn-over-space","minor-adjustment","Medium"],
+    ["tunisian-increase-1-3",pdf,8,"tunisian-increase-1-3","minor-adjustment","High"],
+    ["tunisian-decrease-2",pdf,10,"tunisian-decrease-2","minor-adjustment","High"],
+    ["tunisian-decrease-3",pdf,10,"tunisian-decrease-3","minor-adjustment","High"],
+    ["tunisian-decrease-4",pdf,11,"tunisian-decrease-4","minor-adjustment","High"],
+    ["tunisian-decrease-5",pdf,11,"tunisian-decrease-5","minor-adjustment","High"],
+    ["tunisian-cross-a",pdf,9,"tunisian-cross-a","minor-adjustment","High"],
+    ["tunisian-cross-b",pdf,9,"tunisian-cross-b","minor-adjustment","High"],
+    ["tunisian-double-cross",pdf,9,"tunisian-double-cross","minor-adjustment","High"],
+    ["tunisian-cable-left-3",pdf,10,"tunisian-cable-left-3","minor-adjustment","High"],
+
+    ["chain",pdf,16,"chain","exact","High"], ["slip-stitch-crochet",pdf,16,"slip-stitch-crochet","exact","High"],
+    ["single-crochet",pdf,14,"single-crochet","exact","High"], ["half-double-crochet",pdf,14,"half-double-crochet","exact","High"],
+    ["double-crochet",pdf,16,"double-crochet","exact","High"], ["treble-crochet",pdf,16,"treble-crochet","exact","High"],
+    ["double-treble-crochet",pdf,16,"double-treble-crochet","exact","High"],
+    ["single-crochet-increase",pdf,17,"single-crochet-increase","exact","High"],
+    ["half-double-crochet-increase",pdf,17,"half-double-crochet-increase","exact","High"],
+    ["double-crochet-increase",pdf,17,"double-crochet-increase","exact","High"],
+    ["v-stitch",pdf,12,"double-crochet-increase","duplicate","High"],
+    ["single-crochet-decrease",pdf,17,"single-crochet-decrease","exact","High"],
+    ["half-double-crochet-decrease",pdf,17,"half-double-crochet-decrease","exact","High"],
+    ["double-crochet-decrease",pdf,17,"double-crochet-decrease","exact","High"],
+    ["front-loop",pdf,13,"front-loop","rebuilt","High"], ["back-loop",pdf,13,"back-loop","rebuilt","High"],
+    ["front-post",pdf,15,"front-post","minor-adjustment","High"], ["back-post",pdf,15,"back-post","minor-adjustment","High"],
+    ["cluster",pdf,15,"cluster","exact","High"], ["cluster-decrease",pdf,15,"cluster-decrease","exact","High"],
+    ["puff",pdf,15,"puff","exact","High"], ["popcorn",pdf,16,"popcorn","exact","High"],
+    ["shell",pdf,13,"shell","exact","High"], ["y-stitch",pdf,12,"y-stitch","exact","High"],
+    ["crochet-cross",pdf,12,"crochet-cross","exact","High"], ["picot",pdf,13,"picot","exact","High"]
+  ];
+
   /** @type {Readonly<Record<string, Readonly<SymbolReferenceRecord>>>} */
-  const records = Object.freeze(Object.fromEntries([
-    ["knit", "01-05.pdf", 3, "exact-match"], ["purl", "01-05.pdf", 3, "exact-match"],
-    ["slip", "01-05.pdf", 9, "adjusted"], ["yarn-over", "01-05.pdf", 4, "exact-match"],
-    ["double-yarn-over", "01-05.pdf", 8, "exact-match"], ["knit-twisted", "01-05.pdf", 9, "exact-match"],
-    ["purl-twisted", "01-05.pdf", 10, "exact-match"], ["increase-kfb", "01-05.pdf", 7, "exact-match"],
-    ["increase-left", "01-05.pdf", 7, "exact-match"], ["increase-right", "01-05.pdf", 7, "exact-match"],
-    ["purl-increase", "01-05.pdf", 8, "exact-match"], ["decrease-right", "01-05.pdf", 4, "exact-match"],
-    ["decrease-left", "01-05.pdf", 5, "exact-match"], ["purl-decrease-right", "01-05.pdf", 7, "adjusted"],
-    ["purl-decrease-left", "01-05.pdf", 7, "adjusted"], ["decrease-centred", "01-05.pdf", 5, "exact-match"],
-    ["cable-left", "01-05.pdf", 12, "exact-match"], ["cable-right", "01-05.pdf", 12, "exact-match"],
-    ["cable-left-wide", "01-05.pdf", 12, "exact-match"], ["cable-right-wide", "01-05.pdf", 12, "exact-match"],
-    ["cable-left-3-3", "01-05.pdf", 14, "exact-match"], ["cable-right-3-3", "01-05.pdf", 14, "exact-match"],
-    ["cable-left-4-4", "01-05.pdf", 14, "added"], ["cable-right-4-4", "01-05.pdf", 14, "added"],
-    ["chain", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["slip-stitch-crochet", "Printable-crochet-symbols.pdf", 1, "exact-match"],
-    ["single-crochet", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["half-double-crochet", "Printable-crochet-symbols.pdf", 1, "exact-match"],
-    ["double-crochet", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["treble-crochet", "Printable-crochet-symbols.pdf", 1, "exact-match"],
-    ["double-treble-crochet", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["single-crochet-increase", "Printable-crochet-symbols.pdf", 1, "exact-match"],
-    ["half-double-crochet-increase", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["double-crochet-increase", "Printable-crochet-symbols.pdf", 1, "exact-match"],
-    ["single-crochet-decrease", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["half-double-crochet-decrease", "Printable-crochet-symbols.pdf", 2, "exact-match"],
-    ["double-crochet-decrease", "Printable-crochet-symbols.pdf", 2, "exact-match"], ["front-loop", "Printable-crochet-symbols.pdf", 1, "exact-match"],
-    ["back-loop", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["front-post", "Printable-crochet-symbols.pdf", 1, "exact-match"],
-    ["back-post", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["cluster", "Printable-crochet-symbols.pdf", 2, "adjusted"],
-    ["cluster-decrease", "Printable-crochet-symbols.pdf", 2, "exact-match"], ["puff", "Printable-crochet-symbols.pdf", 2, "exact-match"],
-    ["popcorn", "Printable-crochet-symbols.pdf", 2, "adjusted"], ["shell", "Printable-crochet-symbols.pdf", 1, "adjusted"],
-    ["v-stitch", "Printable-crochet-symbols.pdf", 1, "exact-match"], ["y-stitch", "Printable-crochet-symbols.pdf", 2, "adjusted"],
-    ["crochet-cross", "Printable-crochet-symbols.pdf", 2, "exact-match"], ["picot", "Printable-crochet-symbols.pdf", 2, "exact-match"]
-  ].map(([symbolKey, document, page, verificationStatus]) => [symbolKey, Object.freeze({
-    symbolKey, document, page, tracedSvgKey: symbolKey, verificationStatus
-  })])));
+  const records = Object.freeze(Object.fromEntries(rows.map(([symbolKey, document, page, tracedSvgKey, verificationStatus, confidence]) => [
+    symbolKey,
+    Object.freeze({ symbolKey, document, page, tracedSvgKey, verificationStatus, confidence })
+  ])));
 
   root.YarnchaSymbolReferenceMap = records;
 })(globalThis);

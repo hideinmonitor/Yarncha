@@ -12,7 +12,7 @@ for(const entry of database.entries){
 
 const knitting=database.entries.filter(entry=>entry.craft==="Knitting");
 const expected={
-  YO:["掛針 / 空針","commonNotUniversal"],KTBL:["扭下針","commonNotUniversal"],PTBL:["扭上針","commonNotUniversal"],M1L:["左加針","commonNotUniversal"],M1R:["右加針","commonNotUniversal"],LI:["挑起加針 / 提針加針","variesByDesigner"],KFB:["同針前後加針 / 下針前後加針","commonNotUniversal"],PFB:["上針前後加針","variesByDesigner"],K2TOG:["右上二併一","commonNotUniversal"],P2TOG:["上針右上二併一","commonNotUniversal"],SSK:["左上二併一","commonNotUniversal"],SSP:["上針左上二併一","commonNotUniversal"],SKP:["滑一針、下一針、套收 / 左斜減針","variesByDesigner"],CDD:["中上三併一","commonNotUniversal"],DYO:["雙掛針","variesByDesigner"]
+  YO:["掛針 / 空針","commonNotUniversal"],KTBL:["扭下針","commonNotUniversal"],PTBL:["扭上針","commonNotUniversal"],M1L:["左加針","commonNotUniversal"],M1R:["右加針","commonNotUniversal"],LI:["挑起加針 / 提針加針","variesByDesigner"],KFB:["同針前後加針 / 下針前後加針","commonNotUniversal"],PFB:["上針前後加針","commonNotUniversal"],K2TOG:["右上二併一","commonNotUniversal"],P2TOG:["上針右上二併一","commonNotUniversal"],SSK:["左上二併一","commonNotUniversal"],SSP:["上針左上二併一","commonNotUniversal"],SKP:["滑一針、下一針、套收 / 左斜減針","variesByDesigner"],CDD:["中上三併一","commonNotUniversal"],DYO:["雙掛針","variesByDesigner"]
 };
 for(const [abbr,[chinese,status]] of Object.entries(expected)){
   const entry=knitting.find(item=>item.abbreviation===abbr);

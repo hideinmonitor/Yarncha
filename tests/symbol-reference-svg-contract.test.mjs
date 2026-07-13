@@ -14,6 +14,7 @@ vm.createContext(context);
 vm.runInContext(app.slice(registryStart, registryEnd).replace("const symbolSvgPaths=", "registry="), context);
 const registry = context.registry;
 const references = globalThis.YarnchaSymbolReferenceMap;
+const databaseEntries = globalThis.YarnchaSymbolDatabase.entries;
 
 assert.doesNotMatch(app, /const symbolDrawings=/, "the duplicate primitive registry is not reintroduced");
 for (const entry of globalThis.YarnchaSymbolDatabase.entries.filter(entry => ["verified", "commonNotUniversal"].includes(entry.symbolStatus))) {
@@ -21,17 +22,35 @@ for (const entry of globalThis.YarnchaSymbolDatabase.entries.filter(entry => ["v
   assert.ok(registry[key], `${entry.id} resolves to a real SVG instead of Check key`);
 }
 for (const reference of Object.values(references)) {
-  assert.equal(reference.symbolKey, reference.tracedSvgKey, `${reference.symbolKey} maps directly to its traced SVG`);
   assert.ok(registry[reference.tracedSvgKey], `${reference.symbolKey} has traced geometry`);
   assert.ok(reference.page > 0, `${reference.symbolKey} records a one-based source page`);
+  assert.equal(reference.document, "Untitled (Draft).pdf", `${reference.symbolKey} names the primary reference`);
+  assert.ok(["High", "Medium", "Low"].includes(reference.confidence), `${reference.symbolKey} records confidence`);
+}
+for (const reference of Object.values(references)) {
+  const matchingEntries = databaseEntries.filter(entry => (entry.svgKey || entry.symbolType) === reference.tracedSvgKey);
+  for (const entry of matchingEntries) {
+    assert.notEqual(entry.symbolStatus, "needsReview", `${entry.id} uses its approved reference SVG instead of Check key`);
+  }
 }
 for (const [key, markup] of Object.entries(registry)) {
   assert.doesNotMatch(markup, /<image\b|data:image|base64/i, `${key} contains no raster image`);
   assert.doesNotMatch(markup, /<text\b|mycrochet|logo|branding/i, `${key} contains no embedded text or branding`);
-  assert.match(markup, /^<(?:path|line|circle|ellipse|rect)/, `${key} contains SVG geometry`);
+  assert.match(markup, /^<(?:path|line|polyline|circle|ellipse)/, `${key} contains approved SVG geometry`);
+  assert.doesNotMatch(markup, /<(?:rect|polygon|image|text|use|filter)\b/i, `${key} uses only approved SVG primitives`);
 }
 assert.match(app, /viewBox="0 0 64 64"/, "all symbols render through the shared viewBox");
 assert.match(app, /function symbolVisualHtml[\s\S]*neutralSymbolHtml/, "unapproved entries retain neutral fallback behavior");
+assert.equal(references["v-stitch"].tracedSvgKey, "double-crochet-increase", "V stitch reuses its equivalent two-double-crochet geometry");
+assert.equal(registry["v-stitch"], undefined, "the duplicate V-stitch registry entry is removed");
+assert.equal(registry["crochet-chain"], undefined, "the duplicate crochet chain alias is removed");
+assert.equal(registry["crochet-slip"], undefined, "the duplicate crochet slip alias is removed");
+assert.equal(registry["crochet-sc"], undefined, "the duplicate crochet SC alias is removed");
+
+assert.equal(registry.knit, '<path d="M10 32h44"></path>', "knit uses the reference horizontal mark");
+assert.equal(registry.purl, '<path d="M32 10v44"></path>', "purl uses the reference vertical mark");
+assert.match(registry["front-loop"], /M10 25c11 22/, "front-loop-only uses the reference lower bowl");
+assert.match(registry["back-loop"], /M10 39c11-22/, "back-loop-only uses the reference upper arch");
 
 const count = (value, pattern) => (value.match(pattern) || []).length;
 assert.equal(count(registry["cable-left-wide"], /M(?:8|20) 52/g), 2, "2/2 left cable contains two left-crossing strands");

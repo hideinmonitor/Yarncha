@@ -491,8 +491,8 @@
     tlYarnTunisianBasics:"https://tlycblog.com/3-tunisian-crochet-stitches/",
     tlYarnTunisianKnit:"https://tlycblog.com/how-to-crochet-the-tunisian-crochet-knit-stitch-video-tutorial/"
   };
-  const uploadedReferenceName="User-provided Chinese/Japanese chart reference sheets (IMG_4166–IMG_4176)";
-  const uploadedTunisianReferenceName="User-provided Afghan/Tunisian crochet reference sheets (IMG_4154–IMG_4165)";
+  const uploadedReferenceName="Untitled (Draft).pdf — knitting pp. 1–5; crochet pp. 12–17";
+  const uploadedTunisianReferenceName="Untitled (Draft).pdf — Tunisian crochet pp. 6–11";
   const duplicateAliasesToRemove=new Set([
     "Knitting:YO inc","Knitting:Eyelet","Knitting:Yarn Over (Lace)",
     "Shared:Bobble","Shared:Popcorn","Shared:Puff","Shared:Nupp","Shared:Cluster","Shared:Shell","Shared:V Stitch","Shared:Y Stitch","Shared:Cable Cross","Shared:BR inc","Shared:BR dec"
@@ -548,7 +548,7 @@
     "Crochet:FLO":"front-loop", "Crochet:BLO":"back-loop", "Crochet:FPDC":"front-post",
     "Crochet:BPDC":"back-post", "Crochet:Cluster inc":"cluster", "Crochet:Cluster dec":"cluster-decrease",
     "Crochet:PC":"popcorn", "Crochet:Puff":"puff", "Crochet:Bobble":"bobble", "Crochet:CL":"cluster",
-    "Crochet:Shell":"shell", "Crochet:V-st":"v-stitch", "Crochet:Y-st":"y-stitch",
+    "Crochet:Shell":"shell", "Crochet:V-st":"double-crochet-increase", "Crochet:Y-st":"y-stitch",
     "Crochet:Cross":"crochet-cross", "Crochet:Picot":"picot",
     "Tunisian:TSS":"tunisian-simple", "Tunisian:TPS":"tunisian-purl", "Tunisian:TKS":"tunisian-knit",
     "Tunisian:TRS":"tunisian-reverse", "Tunisian:TFS":"tunisian-full", "Tunisian:TDC":"tunisian-double",
@@ -564,10 +564,10 @@
   const cycKnittingSymbols = new Set(["K","P","YO","K2TOG","P2TOG","SSK","SSP","KFB","M1L","M1R","KTBL","PTBL","MB"]);
   const cycCableSymbols = new Set(["1/1 LC","1/1 RC","2/2 LC","2/2 RC","1/1 LPC","1/1 RPC"]);
 
-  const uploadedKnittingSymbols=new Set(["K","P","YO","KTBL","PTBL","M1L","M1R","K2TOG","P2TOG","SSK","SSP","CDD","1/1 LC","1/1 RC","2/2 LC","2/2 RC","3/3 LC","3/3 RC","1/1 LPC","1/1 RPC"]);
-  const uploadedCrochetSymbols=new Set(["CH","SL ST","SC","HDC","DC","TR","DTR","SC INC","HDC INC","DC INC","SC2TOG","HDC2TOG","DC2TOG","PC","CL","Shell","Y-st","Picot","FLO","BLO","FPDC","BPDC"]);
-  const uploadedTunisianConfirmedSymbols=new Set(["TSS","TPS","TKS","TDC","TSLST","T INC 1→3","T2TOG","T3TOG","T4TOG","T5TOG","TC-A","TC-B","TDC-X","T3-LC"]);
-  const uploadedTunisianReviewSymbols=new Set(["TRS","TFS","TYO","TYO-FS"]);
+  const uploadedKnittingSymbols=new Set(["K","P","YO","KTBL","PTBL","M1L","M1R","KFB","PFB","K2TOG","P2TOG","SSK","SSP","CDD","C left","C right","1/1 LC","1/1 RC","2/2 LC","2/2 RC","3/3 LC","3/3 RC","1/1 LPC","1/1 RPC"]);
+  const uploadedCrochetSymbols=new Set(["CH","SL ST","SC","HDC","DC","TR","DTR","SC INC","HDC INC","DC INC","Cluster inc","SC2TOG","HDC2TOG","DC2TOG","Cluster dec","PC","Puff","CL","Shell","V-st","Y-st","Cross","Picot","FLO","BLO","FPDC","BPDC"]);
+  const uploadedTunisianConfirmedSymbols=new Set(["TSS","TPS","TKS","TRS","TFS","TDC","TSLST","TYO","TYO-FS","T INC 1→3","T2TOG","T3TOG","T4TOG","T5TOG","TC-A","TC-B","TDC-X","T3-LC"]);
+  const uploadedTunisianReviewSymbols=new Set([]);
 
   function sourceMetadata(craft, abbreviation, category, symbolIcon) {
     if(craft==="Tunisian"&&uploadedTunisianConfirmedSymbols.has(abbreviation))return{
