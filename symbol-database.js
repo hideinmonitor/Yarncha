@@ -311,7 +311,93 @@
     ["Crochet","Chart Structure","PM","Place Marker","marker instruction"],
     ["Crochet","Chart Structure","MM","Move Marker","marker instruction"],
     ["Crochet","Chart Structure","EOR","End of Round","round end"],
-    ["Crochet","Chart Structure","no stitch","No Stitch","empty chart placeholder"]
+    ["Crochet","Chart Structure","no stitch","No Stitch","empty chart placeholder"],
+    ["Tunisian","Chart Structure","TC","Tunisian Crochet","two-pass crochet fabric"],
+    ["Tunisian","Chart Structure","FwP","Forward Pass","loops collected on hook"],
+    ["Tunisian","Chart Structure","RetP","Return Pass","loops worked off hook"],
+    ["Tunisian","Chart Structure","Std RetP","Standard Return Pass","chain then pairs closed"],
+    ["Tunisian","Construction","foundation ch","Foundation Chain","foundation chain"],
+    ["Tunisian","Construction","set-up row","Set-up / Foundation Row","first pickup row"],
+    ["Tunisian","Chart Structure","loop on hook","Loop on Hook","retained loop"],
+    ["Tunisian","Chart Structure","vertical bar","Vertical Bar","upright stitch bar"],
+    ["Tunisian","Chart Structure","front bar","Front Vertical Bar","front upright bar"],
+    ["Tunisian","Chart Structure","back bar","Back Vertical Bar","back upright bar"],
+    ["Tunisian","Chart Structure","horizontal bar","Horizontal Bar","horizontal strand"],
+    ["Tunisian","Chart Structure","top bar","Top Bar","top stitch loops"],
+    ["Tunisian","Construction","edge st","Edge Stitch","edge loop"],
+    ["Tunisian","Construction","last st","Last / End Stitch","two side loops"],
+    ["Tunisian","Chart Structure","RS","Right Side","right side"],
+    ["Tunisian","Chart Structure","WS","Wrong Side","wrong side"],
+    ["Tunisian","Chart Structure","no turn","Do Not Turn","keep right side facing"],
+    ["Tunisian","Chart Structure","turn","Turn When Instructed","turn work"],
+    ["Tunisian","Finishing","BO","Bind Off / Cast Off","finished edge"],
+    ["Tunisian","Finishing","sl st BO","Slip-stitch Bind Off","slip-stitch edge"],
+    ["Tunisian","Basic","TWTSS","Tunisian Twisted Simple Stitch","twisted vertical bar"],
+    ["Tunisian","Basic","ETSS","Extended Tunisian Simple Stitch","extended vertical bar"],
+    ["Tunisian","Basic","TSC","Tunisian Single Crochet","short Tunisian stitch"],
+    ["Tunisian","Basic","THDC","Tunisian Half Double Crochet","medium Tunisian stitch"],
+    ["Tunisian","Basic","TTR","Tunisian Treble Crochet","tall Tunisian stitch"],
+    ["Tunisian","Increase","TYO inc","Yarn Over Increase","extra loop"],
+    ["Tunisian","Increase","TFS inc","Tunisian Full Stitch Increase","loop in space"],
+    ["Tunisian","Increase","VB inc","Increase in Vertical Bar","extra loop from bar"],
+    ["Tunisian","Increase","HB inc","Increase in Horizontal Bar","extra loop from horizontal strand"],
+    ["Tunisian","Increase","beg inc","Increase at Beginning of Row","edge increase"],
+    ["Tunisian","Increase","end inc","Increase at End of Row","edge increase"],
+    ["Tunisian","Increase","M1T","Make One Tunisian Increase","hidden increase"],
+    ["Tunisian","Increase","multi-loop inc","Multiple Loops in Same Space","fan increase"],
+    ["Tunisian","Increase","eyelet inc","Eyelet Increase","open increase"],
+    ["Tunisian","Increase","invisible inc","Invisible Increase","hidden increase"],
+    ["Tunisian","Decrease","TSS2TOG","Tunisian Simple Stitch Two Together","two bars joined"],
+    ["Tunisian","Decrease","TKS2TOG","Tunisian Knit Stitch Two Together","two knit insertions joined"],
+    ["Tunisian","Decrease","TPS2TOG","Tunisian Purl Stitch Two Together","two purl insertions joined"],
+    ["Tunisian","Decrease","beg dec","Decrease at Beginning of Row","edge decrease"],
+    ["Tunisian","Decrease","end dec","Decrease at End of Row","edge decrease"],
+    ["Tunisian","Decrease","centred dec","Centered Decrease","centred joined bars"],
+    ["Tunisian","Decrease","left dec","Left-leaning Decrease","left-leaning join"],
+    ["Tunisian","Decrease","right dec","Right-leaning Decrease","right-leaning join"],
+    ["Tunisian","Decrease","skip dec","Skip-stitch Decrease","skipped bar"],
+    ["Tunisian","Decrease","BO dec","Bind-off Decrease","decreased bind off"],
+    ["Tunisian","Chart Structure","YO pull 1","Yarn Over, Pull Through One Loop","return-pass chain"],
+    ["Tunisian","Chart Structure","YO pull 2","Yarn Over, Pull Through Two Loops","return-pass closing"],
+    ["Tunisian","Lace","RetP ch-sp","Return Pass With Chain Spaces","return-pass spaces"],
+    ["Tunisian","Colourwork","RetP colour","Return Pass With Colour Change","return-pass colour change"],
+    ["Tunisian","Lace","RetP lace","Return Pass With Lace Opening","return-pass opening"],
+    ["Tunisian","Basic","RetP ext","Return Pass With Extended Stitch","extended return step"],
+    ["Tunisian","Chart Structure","reverse RetP","Reverse Return Pass","designer-specific return"],
+    ["Tunisian","Colourwork","FwP colour","Colour Change at Start of Forward Pass","new forward-pass colour"],
+    ["Tunisian","Colourwork","stripes","Tunisian Stripes","striped fabric"],
+    ["Tunisian","Colourwork","intarsia","Intarsia-style Tunisian Colourwork","separate colour areas"],
+    ["Tunisian","Colourwork","carry yarn","Carrying Yarn","carried colour"],
+    ["Tunisian","Colourwork","floats","Floats","carried strands"],
+    ["Tunisian","Colourwork","two colour","Two-colour Tunisian Crochet","two-colour fabric"],
+    ["Tunisian","Special Stitch","entrelac","Entrelac Tunisian Crochet","joined blocks"],
+    ["Tunisian","Cable","T cable","Tunisian Cables","crossed Tunisian stitches"],
+    ["Tunisian","Texture","T rib","Tunisian Ribbing","ribbed Tunisian fabric"],
+    ["Tunisian","Construction","T round","Tunisian in the Round","circular Tunisian fabric"],
+    ["Tunisian","Construction","double-ended hook","Double-ended Tunisian Hook","hook at both ends"],
+    ["Tunisian","Short Row","T short rows","Tunisian Short Rows","partial two-pass rows"],
+    ["Tunisian","Finishing","join panels","Joining Panels","joined panel edges"],
+    ["Tunisian","Finishing","seam","Seaming Tunisian Fabric","seamed fabric"],
+    ["Tunisian","Chart Structure","chart FwP","Chart Shows Forward Pass Only","forward-pass chart"],
+    ["Tunisian","Chart Structure","chart RetP","Chart Includes Return Pass","two-pass chart"],
+    ["Tunisian","Chart Structure","symbol key","Designer Symbol Key","chart legend"],
+    ["Tunisian","Chart Structure","case variants","Abbreviation Case Variants","mixed-case abbreviation"],
+    ["Tunisian","Chart Structure","count loops","Count Loops After Forward Pass","loop checkpoint"],
+    ["Tunisian","Chart Structure","count sts","Count Stitches After Return Pass","stitch checkpoint"],
+    ["Tunisian","Chart Structure","first loop","First Loop Already on Hook","starting loop"],
+    ["Tunisian","Chart Structure","edge count","Avoid Extra Edge Stitch","edge checkpoint"],
+    ["Tunisian","Chart Structure","end two loops","Last Stitch Under Two Side Loops","end stitch"],
+    ["Tunisian","Chart Rule","many loops","Why Are There So Many Loops on My Hook?","beginner question"],
+    ["Tunisian","Chart Rule","one row","Is One Tunisian Row One Pass or Two?","beginner question"],
+    ["Tunisian","Chart Rule","turn work?","Do I Turn the Work?","beginner question"],
+    ["Tunisian","Chart Rule","curling","Why Is My Fabric Curling?","beginner question"],
+    ["Tunisian","Chart Rule","count grows","Why Is My Stitch Count Increasing?","beginner question"],
+    ["Tunisian","Chart Rule","messy edge","Why Is My Edge Messy?","beginner question"],
+    ["Tunisian","Chart Rule","knit look","Why Does Tunisian Knit Stitch Look Like Knitting?","beginner question"],
+    ["Tunisian","Chart Rule","same as crochet?","Is Tunisian Crochet the Same as Crochet?","beginner question"],
+    ["Tunisian","Chart Rule","normal hook?","Can I Use a Normal Crochet Hook?","beginner question"],
+    ["Tunisian","Chart Rule","long hook?","When Do I Need a Long or Cable Hook?","beginner question"],
+    ["Tunisian","Chart Rule","which symbol?","Is This Normal or Tunisian Crochet?","beginner question"]
   ];
 
   const ruleDefinitions = [
@@ -718,6 +804,19 @@
     const meaning=category==="Increase"?"Work multiple stitches into the same stitch or space to increase the stitch count and shape the fabric.":category==="Decrease"?"Join or omit stitches as directed to reduce the stitch count.":category==="Colourwork"?"Use the indicated colour; the chart cell may show colour rather than a different stitch action.":category==="Amigurumi"?"Use this instruction while shaping or assembling a firm three-dimensional crochet piece.":category==="Chart Structure"?"This is a chart-reading instruction rather than a stitch unless the legend says otherwise.":category==="Finishing"?"Use this instruction to join, secure, seam, or finish part of the project.":`Work ${fullName} as defined by the pattern legend.`;
     return {meaning:exact.meaning||meaning,howToRead:exact.howToRead||`Read this as ${fullName}. Check whether it is worked into a stitch, space, loop, or post.`,howToWork:exact.howToWork||`Follow the pattern's written steps for ${fullName}, checking loop placement and stitch count.`,beginnerNote:exact.beginnerNote||"Pause after the instruction and confirm the placement and stitch count before continuing.",rowChartNote:"Rows usually alternate direction. Turning chains may or may not count as stitches, so check the pattern.",roundChartNote:"Rounds are usually read from the centre outward and counter-clockwise for right-handed work. Watch corners, chain spaces, and the beginning of round."};
   }
+  const tunisianChinese={TSS:["突簡針","突尼斯簡單針"],TKS:["突下針","突尼斯下針"],TPS:["突上針","突尼斯上針"],TRS:["突反針","突尼斯反針"],TFS:["突全針","突尼斯全針"],TWTSS:["突扭簡針","突尼斯扭簡針"],ETSS:["突延簡針","突尼斯延伸簡單針"],TSLST:["突滑針","突尼斯滑針"],TSC:["突短針","突尼斯短針"],THDC:["突中長針","突尼斯中長針"],TDC:["突長針","突尼斯長針"],TTR:["突長長針","突尼斯長長針"],TC:["突鉤","突尼斯鉤針"],FwP:["前行","前進行程"],RetP:["回行","返回行程"],"Std RetP":["標準回行","標準返回行程"],"foundation ch":["基礎鎖針","突尼斯基礎鎖針"],"set-up row":["起始行","突尼斯起始行"],"loop on hook":["鉤上線圈","鉤針上的線圈"],"vertical bar":["直條","直向針柱"],"front bar":["前直條","前方直向針柱"],"back bar":["後直條","後方直向針柱"],"horizontal bar":["橫條","橫向線圈"],"top bar":["頂條","頂部線圈"],"edge st":["邊針","突尼斯邊針"],"last st":["末針","行末針"],RS:["正面","織物正面"],WS:["反面","織物反面"],"no turn":["不翻面","保持正面朝前"],turn:["翻面","依指示翻面"],BO:["收針","突尼斯收針"],"sl st BO":["滑針收邊","滑針收針"],"TYO inc":["掛線加針","突尼斯掛線加針"],"TFS inc":["全針加針","突尼斯全針加針"],"VB inc":["直條加針","直向針柱加針"],"HB inc":["橫條加針","橫向線圈加針"],"beg inc":["行首加針","行首加一針"],"end inc":["行末加針","行末加一針"],M1T:["隱形加針","突尼斯隱形加針"],"eyelet inc":["鏤空加針","突尼斯鏤空加針"],"invisible inc":["隱形加針","突尼斯隱形加針"],TSS2TOG:["突簡二併一","突尼斯簡單針二併一"],TKS2TOG:["突下二併一","突尼斯下針二併一"],TPS2TOG:["突上二併一","突尼斯上針二併一"],"beg dec":["行首減針","行首減一針"],"end dec":["行末減針","行末減一針"],"centred dec":["中上減針","突尼斯中上減針"],"left dec":["左斜減針","突尼斯左斜減針"],"right dec":["右斜減針","突尼斯右斜減針"],"skip dec":["跳針減針","突尼斯跳針減針"],"BO dec":["收針減針","收邊時減針"],"YO pull 1":["掛線穿一圈","回行掛線穿一圈"],"YO pull 2":["掛線穿兩圈","回行掛線穿兩圈"],"RetP ch-sp":["回行鎖針空間","帶鎖針空間的回行"],"RetP colour":["回行換色","返回行程換色"],"RetP lace":["回行鏤空","帶鏤空的返回行程"],"RetP ext":["延伸回行","延伸針返回行程"],"reverse RetP":["反向回行","反向返回行程"],"FwP colour":["前行換色","前進行程起始換色"],stripes:["條紋","突尼斯條紋"],intarsia:["嵌花","突尼斯嵌花配色"],"carry yarn":["帶線","沿行帶線"],floats:["浮線","背面浮線"],"two colour":["雙色突鉤","雙色突尼斯鉤針"],entrelac:["方塊拼接","突尼斯方塊拼接"],"T cable":["突纜針","突尼斯麻花針"],"T rib":["突羅紋","突尼斯羅紋"],"T round":["突環織","突尼斯環形鉤織"],"double-ended hook":["雙頭鉤針","雙頭突尼斯鉤針"],"T short rows":["突引返","突尼斯引返編織"],"join panels":["拼接片幅","突尼斯片幅拼接"],seam:["縫合","突尼斯織片縫合"]};
+  const tunisianCore=new Set(["TSS","TKS","TPS","TRS","TFS","TWTSS","ETSS","TSLST","TSC","THDC","TDC","TTR"]);
+  const tunisianBasics=new Set(["Tunisian Crochet","Forward Pass","Return Pass","Standard Return Pass","Foundation Chain","Set-up / Foundation Row","Loop on Hook","Vertical Bar","Front Vertical Bar","Back Vertical Bar","Horizontal Bar","Top Bar","Edge Stitch","Last / End Stitch","Right Side","Wrong Side","Do Not Turn","Turn When Instructed","Bind Off / Cast Off","Slip-stitch Bind Off"]);
+  const tunisianChartNotes=new Set(["Chart Shows Forward Pass Only","Chart Includes Return Pass","Designer Symbol Key","Abbreviation Case Variants","Count Loops After Forward Pass","Count Stitches After Return Pass","First Loop Already on Hook","Avoid Extra Edge Stitch","Last Stitch Under Two Side Loops"]);
+  function tunisianFieldsFor(category,abbreviation,fullName){
+    const lower=`${abbreviation} ${fullName}`.toLowerCase();
+    const passType=/return pass|retp|pull through/.test(lower)?"Return Pass":tunisianCore.has(abbreviation)||["Increase","Decrease"].includes(category)?"Forward Pass":"Both";
+    const referenceCategory=category==="Chart Rule"?"Beginner Confusion Notes":tunisianBasics.has(fullName)?"Tunisian Crochet Basics":tunisianChartNotes.has(fullName)?"Chart Reading Notes":/return pass|retp|pull through/.test(lower)?"Return Pass Variations":tunisianCore.has(abbreviation)?"Core Tunisian Stitches":category==="Increase"?"Tunisian Increases":category==="Decrease"?"Tunisian Decreases":["Colourwork","Cable","Texture","Lace","Short Row","Special Stitch"].includes(category)||/round|hook|panels|seam|entrelac/.test(lower)?"Colourwork & Special Techniques":"Chart Reading Notes";
+    const [chineseAbbr,chineseName]=tunisianChinese[abbreviation]||["突圖例","突尼斯圖例項目"];
+    const insertion=abbreviation==="TSS"?"under the front vertical bar":abbreviation==="TKS"?"between the front and back vertical bars":abbreviation==="TPS"?"under the front vertical bar with the yarn held in front":abbreviation==="TRS"?"under the back vertical bar":abbreviation==="TFS"?"into the space between vertical bars":"at the bar, space, edge, or loop specified by the pattern";
+    const howToWork=passType==="Return Pass"?`On the Return Pass, ${fullName.toLowerCase()} as instructed while working loops off the hook. Treat the Return Pass as part of the same row unless the designer says otherwise.`:passType==="Forward Pass"?`On the Forward Pass, insert ${insertion}, yarn over, and pull up a loop. Keep it on the hook, then work the stated Return Pass.`:`Follow ${fullName} across the Forward Pass and Return Pass where instructed. Keep the right side facing unless the pattern tells you to turn.`;
+    return {referenceCategory,passType,englishName:fullName,usAbbr:abbreviation||"—",ukAbbr:"same",chineseAbbr,chineseName,japaneseNote:`${fullName} / 記号は編み図により異なる`,symbolCue:"Symbol varies by designer. Always check the pattern’s symbol key.",shortExplanation:`${fullName} is a Tunisian crochet ${category.toLowerCase()} reference used during the ${passType}.`,howToWork,whyItMatters:category==="Chart Structure"||category==="Chart Rule"?"It helps you read the two-pass row correctly and keep the edge and count stable.":"It changes the fabric texture, shaping, colour, or construction while loops are held on the hook.",commonMistakes:["Counting the first loop on the hook incorrectly","Using the wrong bar, space, or pass","Skipping the end stitch or adding an extra edge stitch"],beginnerNote:"Count loops after the Forward Pass and stitches after the Return Pass.",countingTip:"Count loops after the Forward Pass and stitches after the Return Pass; include the first loop already on the hook.",relatedStitches:["TSS","TKS","TPS","TFS"].filter(value=>value!==abbreviation),examplePatternWording:`${passType==="Return Pass"?"RetP":"FwP"}: ${abbreviation||fullName} as instructed.`,appDisplayLevel:["Basic","Chart Structure","Chart Rule"].includes(category)?"Beginner":["Increase","Decrease","Lace","Colourwork","Texture"].includes(category)?"Intermediate":"Advanced"};
+  }
 
   function makeEntry([craft, category, abbreviation, fullName, symbol], index) {
     const key = `${craft}:${abbreviation}`;
@@ -741,13 +840,14 @@
     const localizedTerms=localizedAliases[`${craft}:${abbreviation}`]||{};
     const referenceTerms=craft==="Knitting"?knittingReferenceTerms[abbreviation]||{}:{};
     const teaching=craft==="Knitting"?knittingTeachingFor(category,abbreviation,terms.enUS||fullName):craft==="Crochet"?crochetTeachingFor(category,abbreviation,terms.enUS||fullName):{};
+    const tunisian=craft==="Tunisian"?tunisianFieldsFor(category,abbreviation,fullName):{};
     const crochetTerms=craft==="Crochet"?crochetReferenceTerms[abbreviation]||{}:{};
     const abbreviations={
-      us:crochetTerms.us||terms.us||abbreviation||"—",
-      uk:crochetTerms.uk||terms.uk||abbreviation||"—",
+      us:tunisian.usAbbr||crochetTerms.us||terms.us||abbreviation||"—",
+      uk:tunisian.ukAbbr||crochetTerms.uk||terms.uk||abbreviation||"—",
       usUk:craft==="Crochet"?[crochetTerms.us||terms.us||abbreviation,crochetTerms.uk||terms.uk||abbreviation].filter((value,index,values)=>values.indexOf(value)===index).join(" / "):abbreviation||"—",
-      cn:craft==="Crochet"?crochetCnChartCode(abbreviation,terms.enUS||fullName,terms):referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對",
-      jp:crochetTerms.jp||referenceTerms.jp||localizedTerms.ja||"按圖例核對"
+      cn:tunisian.chineseAbbr||(craft==="Crochet"?crochetCnChartCode(abbreviation,terms.enUS||fullName,terms):referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對"),
+      jp:tunisian.japaneseNote||crochetTerms.jp||referenceTerms.jp||localizedTerms.ja||"按圖例核對"
     };
     return {
       id: `${craftConfig[craft].prefix}-${slug(abbreviation || fullName)}-${index}`,
@@ -769,24 +869,28 @@
       nameEn: terms.enUS || fullName,
       nameZh: nameTraditionalChinese,
       localizedNames:{zh:nameTraditionalChinese},
+      ...tunisian,
+      nameTraditionalChinese:tunisian.chineseName||nameTraditionalChinese,
+      nameZh:tunisian.chineseName||nameTraditionalChinese,
+      localizedNames:{zh:tunisian.chineseName||nameTraditionalChinese},
       nameSimplifiedChinese: terms.zhCN || localized["zh-CN"] || "需核对",
       explanation: explanationFor(craft, abbreviation, terms.enUS || fullName, category),
       description: `${fullName} is a ${craft.toLowerCase()} ${category.toLowerCase()} instruction. Its exact chart mark can vary by publication.`,
       howTo: `Follow the pattern's written instructions and legend for ${fullName}. Confirm stitch placement, orientation, and resulting stitch count before continuing.`,
       beginnerExplanation: `Read this as “${fullName}”. Practice it on a small swatch before using it in a fitted or counted section.`,
       abbreviations,
-      meaning:teaching.meaning||explanationFor(craft, abbreviation, terms.enUS || fullName, category),
-      howToRead:teaching.howToRead||`Read this as ${terms.enUS||fullName}. Check the row direction, right-side or wrong-side context, and the pattern legend before working it.`,
-      howToWork:teaching.howToWork||`Follow the pattern's written instruction for ${fullName}.`,
+      meaning:tunisian.shortExplanation||teaching.meaning||explanationFor(craft, abbreviation, terms.enUS || fullName, category),
+      howToRead:tunisian.symbolCue||teaching.howToRead||`Read this as ${terms.enUS||fullName}. Check the row direction, right-side or wrong-side context, and the pattern legend before working it.`,
+      howToWork:tunisian.howToWork||teaching.howToWork||`Follow the pattern's written instruction for ${fullName}.`,
       flatChartNote:teaching.flatChartNote||"Check the pattern's flat-chart direction and right-side or wrong-side meaning.",
       roundChartNote:teaching.roundChartNote||"Check the pattern's round direction and legend.",
       rowChartNote:teaching.rowChartNote||"Check row direction and whether the turning chain counts as a stitch.",
-      beginnerNote:teaching.beginnerNote||`This is a ${category.toLowerCase()} ${craft.toLowerCase()} instruction. Practise it on a small swatch if it is new to you.`,
+      beginnerNote:tunisian.beginnerNote||teaching.beginnerNote||`This is a ${category.toLowerCase()} ${craft.toLowerCase()} instruction. Practise it on a small swatch if it is new to you.`,
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
       legendWarning:craft==="Crochet"?crochetLegendWarning:chartLegendWarning,
       usUkWarning:craft==="Crochet"?crochetUsUkWarning:"",
       cnChartWarning:craft==="Crochet"?"CN chart abbreviations can vary by designer and pattern source. Always check the pattern legend first.":"",
-      difficulty: ["Basic","Chain","Slip Stitch","Amigurumi","Chart Structure"].includes(category) ? "Beginner" : ["Increase","Decrease","Loop Placement","Post Stitch","Shell","Texture","Lace","Colourwork","Finishing"].includes(category) ? "Intermediate" : "Advanced",
+      difficulty:tunisian.appDisplayLevel||(["Basic","Chain","Slip Stitch","Amigurumi","Chart Structure"].includes(category) ? "Beginner" : ["Increase","Decrease","Loop Placement","Post Stitch","Shell","Texture","Lace","Colourwork","Finishing"].includes(category) ? "Intermediate" : "Advanced"),
       aliases,
       languageVariants: {
         en: terms.enUS || fullName,
@@ -798,7 +902,7 @@
         ...localized
       },
       relatedSymbols: definitions.filter(row => row[0] === craft && row[1] === category && row[2] !== abbreviation).slice(0, 4).map(row => row[2]),
-      commonMistakes: craft==="Knitting"&&abbreviation==="P"?["Reading wrong-side chart rows the same as right-side rows","Forgetting to bring the yarn to the front","Assuming all charts use the same purl symbol"]:["Using a generic internet symbol instead of the pattern legend", "Missing direction, side, placement, or stitch-count changes"],
+      commonMistakes:tunisian.commonMistakes||(craft==="Knitting"&&abbreviation==="P"?["Reading wrong-side chart rows the same as right-side rows","Forgetting to bring the yarn to the front","Assuming all charts use the same purl symbol"]:["Using a generic internet symbol instead of the pattern legend", "Missing direction, side, placement, or stitch-count changes"]),
       chartExamples: [`${visualSymbol} → possible ${abbreviation}`, `${abbreviation} in a repeat or chart cell`],
       recognitionAliases: [...new Set([...aliases, visualSymbol, symbol].filter(Boolean))],
       ocrKeywords: [...new Set(aliases.map(value => String(value).toLowerCase()))],
@@ -831,6 +935,8 @@
   }
 
   function makeRule([craft, fullName, description], index) {
+    const tunisian=craft==="Tunisian"?tunisianFieldsFor("Chart Rule","",fullName):{};
+    if(craft==="Tunisian")tunisian.referenceCategory="Chart Reading Notes";
     return {
       id: `rule-${slug(craft)}-${slug(fullName)}-${index}`,
       section: "Chart Reading Rules",
@@ -850,27 +956,28 @@
       nameTraditionalChinese: "圖表閱讀規則",
       nameEn: fullName,
       nameZh: "圖表閱讀規則",
+      ...tunisian,
       nameSimplifiedChinese: "图表阅读规则",
       explanation: description,
       description,
       howTo: description,
       beginnerExplanation: `Pause before row one and use this ${craft.toLowerCase()} chart-reading check.`,
-      abbreviations:{us:"—",uk:"—",usUk:"—",cn:"—",jp:"—"},
+      abbreviations:{us:tunisian.usAbbr||"—",uk:tunisian.ukAbbr||"—",usUk:"—",cn:tunisian.chineseAbbr||"—",jp:tunisian.japaneseNote||"—"},
       meaning:description,
       howToRead:description,
-      beginnerNote:`Use this check before reading the first chart row or round.`,
-      howToWork:description,
+      beginnerNote:tunisian.beginnerNote||`Use this check before reading the first chart row or round.`,
+      howToWork:tunisian.howToWork||description,
       flatChartNote:"Right-side rows are usually read right to left and wrong-side rows left to right unless the pattern says otherwise.",
       roundChartNote:"Most round charts are read right to left on every round unless the pattern says otherwise.",
       rowChartNote:"Rows usually alternate direction. Check turning chains, edge stitches, and whether they count.",
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
       legendWarning:craft==="Crochet"?crochetLegendWarning:chartLegendWarning,
       usUkWarning:craft==="Crochet"?crochetUsUkWarning:"",
-      difficulty: "Beginner",
+      difficulty:tunisian.appDisplayLevel||"Beginner",
       aliases: [fullName],
       languageVariants: { en: fullName, "zh-HK": fullName, "zh-CN": fullName, ja: fullName },
       relatedSymbols: [],
-      commonMistakes: ["Assuming direction or terminology without checking the pattern", "Ignoring repeat boundaries or row-side information"],
+      commonMistakes:tunisian.commonMistakes||["Assuming direction or terminology without checking the pattern", "Ignoring repeat boundaries or row-side information"],
       chartExamples: [description],
       recognitionAliases: [fullName, craft, "chart rule"],
       ocrKeywords: fullName.toLowerCase().split(/\s+/),
@@ -923,7 +1030,7 @@
       if (filters.terminology && filters.terminology !== "All" && !entry.regionTags.includes(filters.terminology)) return false;
       if (filters.verification && filters.verification !== "All" && entry.verificationStatus !== filters.verification) return false;
       if (!needle) return true;
-      const haystack=[entry.visualSymbol, entry.abbreviation, entry.abbreviationUS, entry.abbreviationUK, entry.abbreviationChinese, entry.abbreviations?.usUk, entry.abbreviations?.cn, entry.abbreviations?.jp, entry.fullName, entry.nameEnglish, entry.nameTraditionalChinese, entry.nameSimplifiedChinese, entry.category, entry.description, entry.sourceName, entry.confidence, entry.verificationStatus, entry.variationNotes, ...(entry.sourceReferences||[]).flatMap(reference=>[reference.name,reference.scope]), ...(entry.tags||[]), ...(entry.regionTags||[]), ...entry.aliases, ...entry.recognitionAliases, ...entry.ocrKeywords]
+      const haystack=[entry.visualSymbol, entry.abbreviation, entry.abbreviationUS, entry.abbreviationUK, entry.abbreviationChinese, entry.abbreviations?.usUk, entry.abbreviations?.cn, entry.abbreviations?.jp, entry.fullName, entry.nameEnglish, entry.nameTraditionalChinese, entry.nameSimplifiedChinese, entry.englishName, entry.usAbbr, entry.ukAbbr, entry.chineseAbbr, entry.chineseName, entry.japaneseNote, entry.referenceCategory, entry.passType, entry.examplePatternWording, entry.category, entry.description, entry.sourceName, entry.confidence, entry.verificationStatus, entry.variationNotes, ...(entry.sourceReferences||[]).flatMap(reference=>[reference.name,reference.scope]), ...(entry.tags||[]), ...(entry.regionTags||[]), ...entry.aliases, ...entry.recognitionAliases, ...entry.ocrKeywords]
         .join(" ").toLowerCase();
       return needle.split(/\s+/).every(token=>haystack.includes(token));
     });

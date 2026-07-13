@@ -1,12 +1,12 @@
-const CACHE_NAME = "yarncha-shell-v127-cn-chart-codes";
+const CACHE_NAME = "yarncha-shell-v128-tunisian-reference";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=127-cn-chart-codes",
+  "/styles.css?v=128-tunisian-reference",
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=123-repeat-footer",
-  "/symbol-database.js?v=127-cn-chart-codes",
-  "/app.js?v=127-cn-chart-codes",
+  "/symbol-database.js?v=128-tunisian-reference",
+  "/app.js?v=128-tunisian-reference",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

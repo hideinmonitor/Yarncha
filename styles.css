@@ -2550,6 +2550,12 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
 .crochet-reading-guide section { min-width:0; padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--bg-secondary); }
 .crochet-reading-guide h3,.crochet-reading-guide p { margin:0; }
 .crochet-reading-guide section p { margin-top:6px; color:var(--text-secondary); font-size:13px; line-height:1.5; }
+.tunisian-reading-guide { display:grid; gap:14px; padding:var(--card-padding); }
+.tunisian-reading-guide > p { margin:0; }
+.tunisian-reading-guide > p:not(.eyebrow) { color:var(--text-secondary); line-height:1.55; }
+.tunisian-reading-guide > div { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:8px 14px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--bg-secondary); }
+.tunisian-reading-guide strong { color:var(--text-primary); }
+.tunisian-reading-guide span { min-width:0; color:var(--text-secondary); line-height:1.45; }
 .symbol-detail-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .symbol-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .symbol-detail-grid article { padding:16px; border:1px solid var(--border); border-radius:var(--radius-card); background:var(--bg-secondary); }
@@ -2631,6 +2637,8 @@ button,.primary-button,.secondary-button,.mini-button,.icon-button { min-height:
   .symbol-picture-actions button { width:100%; }
   .symbol-full-explanation-grid { grid-template-columns:1fr; }
   .crochet-reading-guide > div { grid-template-columns:1fr; }
+  .tunisian-reading-guide > div { grid-template-columns:1fr; gap:5px; }
+  .tunisian-reading-guide > div strong:not(:first-child) { margin-top:7px; }
   .symbol-edit-form .modal-actions { display:grid; grid-template-columns:1fr; }
 .symbol-edit-form .modal-actions > button { width:100%; height:auto; min-height:44px; flex:none; }
 }
