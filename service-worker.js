@@ -1,4 +1,4 @@
-const CACHE_NAME = "yarncha-shell-v130-symbol-library-quality";
+const CACHE_NAME = "yarncha-shell-v132-reference-traces";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -6,7 +6,8 @@ const APP_SHELL = [
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=123-repeat-footer",
   "/symbol-database.js?v=130-symbol-library-quality",
-  "/app.js?v=130-symbol-library-quality",
+  "/src/data/symbolReferenceMap.js?v=132-reference-traces",
+  "/app.js?v=132-reference-traces",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",
