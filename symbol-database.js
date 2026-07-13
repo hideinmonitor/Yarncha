@@ -417,8 +417,8 @@
   ];
 
   const localizedAliases = {
-    "Knitting:K": { "zh-HK":"K（中文名稱需按圖例核對）", "zh-CN":"K（中文名称需按图例核对）", ja:"表目" },
-    "Knitting:P": { "zh-HK":"P（中文名稱需按圖例核對）", "zh-CN":"P（中文名称需按图例核对）", ja:"裏目" },
+    "Knitting:K": { "zh-HK":"下針 / 平針", "zh-CN":"下针 / 平针", ja:"表目" },
+    "Knitting:P": { "zh-HK":"上針 / 反針", "zh-CN":"上针 / 反针", ja:"裏目" },
     "Knitting:YO": { "zh-HK":"掛針 / 空針", "zh-CN":"挂针 / 空针", ja:"掛け目" },
     "Knitting:K2TOG": { "zh-HK":"右上二併一", "zh-CN":"右上二并一", ja:"右上2目一度" },
     "Knitting:SSK": { "zh-HK":"左上二併一", "zh-CN":"左上二并一", ja:"左上2目一度" },
@@ -427,9 +427,14 @@
     "Knitting:PTBL": { "zh-HK":"扭上針", "zh-CN":"扭上针", ja:"ねじり裏目" },
     "Knitting:M1L": { "zh-HK":"左加針", "zh-CN":"左加针", ja:"左増し目" },
     "Knitting:M1R": { "zh-HK":"右加針", "zh-CN":"右加针", ja:"右増し目" },
+    "Knitting:LI": { "zh-HK":"挑起加針 / 提針加針", "zh-CN":"挑起加针 / 提针加针", ja:"引き上げ増し目。記号は編み図により異なります。" },
+    "Knitting:KFB": { "zh-HK":"同針前後加針 / 下針前後加針", "zh-CN":"同针前后加针 / 下针前后加针", ja:"表目の前後編み増し目。" },
+    "Knitting:PFB": { "zh-HK":"上針前後加針", "zh-CN":"上针前后加针", ja:"裏目の前後編み増し目。記号は編み図により異なります。" },
     "Knitting:P2TOG": { "zh-HK":"上針右上二併一", "zh-CN":"上针右上二并一", ja:"裏目の右上2目一度" },
     "Knitting:SSP": { "zh-HK":"上針左上二併一", "zh-CN":"上针左上二并一", ja:"裏目の左上2目一度" },
     "Knitting:CDD": { "zh-HK":"中上三併一", "zh-CN":"中上三并一", ja:"中上3目一度" },
+    "Knitting:SKP": { "zh-HK":"滑一針、下一針、套收 / 左斜減針", "zh-CN":"滑一针、下一针、套收 / 左斜减针", ja:"すべり目をかぶせる左減らし目。記号は編み図により異なります。" },
+    "Knitting:DYO": { "zh-HK":"雙掛針", "zh-CN":"双挂针", ja:"二重掛け目。記号は編み図により異なります。" },
     "Crochet:CH": { "zh-HK":"鎖針", "zh-CN":"锁针", ja:"鎖編み" },
     "Crochet:SL ST": { "zh-HK":"引拔針", "zh-CN":"引拔针", ja:"引き抜き編み" },
     "Crochet:SC": { "zh-HK":"短針", "zh-CN":"短针", ja:"細編み" },
@@ -808,6 +813,15 @@
   const tunisianCore=new Set(["TSS","TKS","TPS","TRS","TFS","TWTSS","ETSS","TSLST","TSC","THDC","TDC","TTR"]);
   const tunisianBasics=new Set(["Tunisian Crochet","Forward Pass","Return Pass","Standard Return Pass","Foundation Chain","Set-up / Foundation Row","Loop on Hook","Vertical Bar","Front Vertical Bar","Back Vertical Bar","Horizontal Bar","Top Bar","Edge Stitch","Last / End Stitch","Right Side","Wrong Side","Do Not Turn","Turn When Instructed","Bind Off / Cast Off","Slip-stitch Bind Off"]);
   const tunisianChartNotes=new Set(["Chart Shows Forward Pass Only","Chart Includes Return Pass","Designer Symbol Key","Abbreviation Case Variants","Count Loops After Forward Pass","Count Stitches After Return Pass","First Loop Already on Hook","Avoid Extra Edge Stitch","Last Stitch Under Two Side Loops"]);
+  const verifiedSymbolKeys=new Set(["Knitting:K","Knitting:P","Crochet:CH","Crochet:SL ST","Crochet:SC","Crochet:HDC","Crochet:DC","Crochet:TR"]);
+  function publicSymbolStatus(craft,abbreviation,symbolIcon,source){
+    const key=`${craft}:${abbreviation}`;
+    if(verifiedSymbolKeys.has(key)&&source.confidence==="High")return"verified";
+    if(craft==="Tunisian"||symbolIcon==="legend-specific"||symbolIcon==="chart-rule")return"variesByDesigner";
+    if(source.confidence==="High")return"commonNotUniversal";
+    if(source.confidence==="Low")return"needsReview";
+    return"variesByDesigner";
+  }
   function tunisianFieldsFor(category,abbreviation,fullName){
     const lower=`${abbreviation} ${fullName}`.toLowerCase();
     const passType=/return pass|retp|pull through/.test(lower)?"Return Pass":tunisianCore.has(abbreviation)||["Increase","Decrease"].includes(category)?"Forward Pass":"Both";
@@ -836,7 +850,7 @@
     const needsReview = confidence!=="High" || !hasKnownIcon || source.requiresReview || source.sourceType === "needs-review" || nameTraditionalChinese === "需核對" || (craft === "Crochet" && !regional);
     const abbreviationUS = terms.us || (craft === "Crochet" ? abbreviation.toLowerCase() : abbreviation);
     const abbreviationUK = terms.uk || (craft === "Crochet" ? "" : abbreviation);
-    const aliases = [...new Set([abbreviation, abbreviationUS, abbreviationUK, terms.cnAbbreviation, fullName, terms.enUS, terms.enUK, terms.zhHK, terms.zhCN, fullName.replace(/ Stitch$/i, ""), ...Object.values(localized).flatMap(value=>value.split(/\s*\/\s*/))].filter(Boolean))];
+    const aliases = [...new Set([abbreviation, String(abbreviation||"").toLowerCase(), String(abbreviation||"").toUpperCase(), String(abbreviation||"").replace(/\s+/g,""), abbreviationUS, abbreviationUK, terms.cnAbbreviation, fullName, terms.enUS, terms.enUK, terms.zhHK, terms.zhCN, fullName.replace(/ Stitch$/i, ""), ...Object.values(localized).flatMap(value=>value.split(/\s*\/\s*/))].filter(Boolean))];
     const localizedTerms=localizedAliases[`${craft}:${abbreviation}`]||{};
     const referenceTerms=craft==="Knitting"?knittingReferenceTerms[abbreviation]||{}:{};
     const teaching=craft==="Knitting"?knittingTeachingFor(category,abbreviation,terms.enUS||fullName):craft==="Crochet"?crochetTeachingFor(category,abbreviation,terms.enUS||fullName):{};
@@ -849,6 +863,7 @@
       cn:tunisian.chineseAbbr||(craft==="Crochet"?crochetCnChartCode(abbreviation,terms.enUS||fullName,terms):referenceTerms.cn||terms.cnAbbreviation||localizedTerms["zh-HK"]||"按圖例核對"),
       jp:tunisian.japaneseNote||crochetTerms.jp||referenceTerms.jp||localizedTerms.ja||"按圖例核對"
     };
+    const symbolStatus=publicSymbolStatus(craft,abbreviation,symbolIcon,source);
     return {
       id: `${craftConfig[craft].prefix}-${slug(abbreviation || fullName)}-${index}`,
       section: craftConfig[craft].section,
@@ -858,6 +873,10 @@
       visualSymbol,
       symbolIcon,
       symbolType:symbolIcon,
+      svgKey:symbolStatus==="verified"||symbolStatus==="commonNotUniversal"?symbolIcon:"",
+      symbolStatus,
+      chartSymbolStatus:symbolStatus,
+      displayMode:category==="Chart Rule"||category==="Chart Structure"&&symbolIcon==="chart-rule"?"abbreviationOnly":"chartSymbol",
       symbolDescription: symbol,
       abbreviation,
       abbreviationUS,
@@ -886,6 +905,8 @@
       roundChartNote:teaching.roundChartNote||"Check the pattern's round direction and legend.",
       rowChartNote:teaching.rowChartNote||"Check row direction and whether the turning chain counts as a stitch.",
       beginnerNote:tunisian.beginnerNote||teaching.beginnerNote||`This is a ${category.toLowerCase()} ${craft.toLowerCase()} instruction. Practise it on a small swatch if it is new to you.`,
+      countingTip:tunisian.countingTip||(category==="Increase"?"Count again after the row; this instruction usually adds a stitch.":category==="Decrease"?"Count again after the row; this instruction usually removes one or more stitches.":"Pause at the end of the row or round and confirm the stitch count."),
+      examplePatternWording:tunisian.examplePatternWording||`${abbreviation||fullName} as directed; check the pattern key before working the next instruction.`,
       relatedTools:relatedToolsByCraft[craft]||relatedToolsByCraft.Shared,
       legendWarning:craft==="Crochet"?crochetLegendWarning:chartLegendWarning,
       usUkWarning:craft==="Crochet"?crochetUsUkWarning:"",
@@ -946,6 +967,10 @@
       visualSymbol: "↔",
       symbolIcon: "chart-rule",
       symbolType: "chart-rule",
+      svgKey:"",
+      symbolStatus:"variesByDesigner",
+      chartSymbolStatus:"variesByDesigner",
+      displayMode:"abbreviationOnly",
       symbolDescription: "Context rule",
       abbreviation: "",
       abbreviationUS: "",
@@ -966,6 +991,8 @@
       meaning:description,
       howToRead:description,
       beginnerNote:tunisian.beginnerNote||`Use this check before reading the first chart row or round.`,
+      countingTip:tunisian.countingTip||"Pause at the end of the row or round and confirm the stitch count and repeat position.",
+      examplePatternWording:tunisian.examplePatternWording||description,
       howToWork:tunisian.howToWork||description,
       flatChartNote:"Right-side rows are usually read right to left and wrong-side rows left to right unless the pattern says otherwise.",
       roundChartNote:"Most round charts are read right to left on every round unless the pattern says otherwise.",
