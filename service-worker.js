@@ -1,4 +1,4 @@
-const CACHE_NAME = "yarncha-shell-v133-reference-symbol-audit";
+const CACHE_NAME = "yarncha-shell-v134-production-symbol-svg-audit";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -6,8 +6,8 @@ const APP_SHELL = [
   "/calculator-engine.js?v=112-live-repeat-fix",
   "/repeat-engine.js?v=123-repeat-footer",
   "/symbol-database.js?v=133-reference-symbol-audit",
-  "/src/data/symbolReferenceMap.js?v=133-reference-symbol-audit",
-  "/app.js?v=133-reference-symbol-audit",
+  "/src/data/symbolReferenceMap.js?v=134-production-symbol-svg-audit",
+  "/app.js?v=134-production-symbol-svg-audit",
   "/src/cloud/bootstrap.js?v=46",
   "/src/document-tools.js?v=46",
   "/public/manifest.json?v=46",

@@ -53,18 +53,30 @@ assert.match(registry["front-loop"], /M10 25c11 22/, "front-loop-only uses the r
 assert.match(registry["back-loop"], /M10 39c11-22/, "back-loop-only uses the reference upper arch");
 
 const count = (value, pattern) => (value.match(pattern) || []).length;
-assert.equal(count(registry["cable-left-wide"], /M(?:8|20) 52/g), 2, "2/2 left cable contains two left-crossing strands");
-assert.equal(count(registry["cable-right-wide"], /M(?:8|20) 12/g), 2, "2/2 right cable contains two right-crossing strands");
-assert.equal(count(registry["cable-left-3-3"], /M(?:4|14|24) 54/g), 3, "3/3 left cable contains three left-crossing strands");
-assert.equal(count(registry["cable-right-3-3"], /M(?:4|14|24) 10/g), 3, "3/3 right cable contains three right-crossing strands");
-assert.equal(count(registry["cable-left-4-4"], /M(?:2|12|22|32) 56/g), 4, "4/4 left cable contains four left-crossing strands");
-assert.equal(count(registry["cable-right-4-4"], /M(?:2|12|22|32) 8/g), 4, "4/4 right cable contains four right-crossing strands");
+for (const key of ["cable-left","cable-right","cable-left-wide","cable-right-wide","cable-left-3-3","cable-right-3-3","cable-left-4-4","cable-right-4-4","cable-left-purl","cable-right-purl"]) {
+  assert.equal(count(registry[key], /class="symbol-svg-under"/g), 1, `${key} has one explicit under-strand knockout`);
+}
+assert.notEqual(registry["cable-left"], registry["cable-right"], "1/1 cable directions remain distinct");
+assert.notEqual(registry["cable-left-wide"], registry["cable-right-wide"], "2/2 cable directions remain distinct");
+assert.notEqual(registry["cable-left-3-3"], registry["cable-right-3-3"], "3/3 cable directions remain distinct");
+assert.notEqual(registry["cable-left-4-4"], registry["cable-right-4-4"], "4/4 cable directions remain distinct");
+assert.equal(count(registry["cable-left-wide"], /M(?:8|20) 52/g), 4, "2/2 left cable contains two visible left-crossing strands plus their knockout pass");
+assert.equal(count(registry["cable-left-3-3"], /M(?:4|14|24) 54/g), 6, "3/3 left cable contains three visible left-crossing strands plus their knockout pass");
+assert.equal(count(registry["cable-left-4-4"], /M(?:2|12|22|32) 56/g), 8, "4/4 left cable contains four visible left-crossing strands plus their knockout pass");
+
+assert.equal(count(registry["knit-twisted"], /<ellipse/g), 1, "twisted knit has one enclosed stitch loop");
+assert.match(registry["knit-twisted"], /M32 42c-5 8[^<]+M32 42c5 8/, "twisted knit has two balanced lower tails");
+assert.equal(count(registry["purl-twisted"], /<ellipse/g), 1, "twisted purl has one enclosed stitch loop");
+assert.match(registry["purl-twisted"], /M19 54h26/, "twisted purl retains the reference purl bar");
+assert.match(registry["increase-left"], /M48 52V14M48 34 16 14/, "left increase anchors on the right and leans left");
+assert.match(registry["increase-right"], /M16 52V14M16 34 48 14/, "right increase anchors on the left and leans right");
 
 assert.equal(count(registry.shell, /M32 54/g), 5, "shell has five stitches");
 assert.equal(count(registry.popcorn, /M32 52/g), 5, "popcorn has five stitches");
 assert.equal(count(registry.cluster, /M(?:16|32|48) 52/g), 3, "cluster has three joined stitches");
 assert.match(registry["y-stitch"], /M32 56V32M32 32 15 12M32 32 49 12/, "Y stitch has one stem and two branches");
-assert.equal(count(registry.picot, /<ellipse/g), 3, "picot has three chain loops");
+assert.equal(count(registry.picot, /<ellipse/g), 1, "picot has the reference top chain loop");
+assert.match(registry.picot, /M22 18c-10 4[^<]+M42 18c10 4/, "picot has two symmetrical dog-tooth side loops");
 
 assert.match(css, /\.symbol-card-open[^}]+grid-template-columns:64px minmax\(0,1fr\)/, "mobile symbol cards use a fixed mark and shrink-safe content column");
 assert.match(css, /\.symbol-card-mark[^}]+width:64px[^}]+height:64px/, "mobile symbol marks remain bounded");

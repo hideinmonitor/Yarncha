@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <style>.symbol-svg-under{stroke:#fff;stroke-width:8}</style>
+  <svg id="fixture-knit" x="0" y="0" width="64" height="64" viewBox="0 0 64 64"><path d="M10 32h44"/></svg>
+  <svg id="fixture-purl" x="64" y="0" width="64" height="64" viewBox="0 0 64 64"><path d="M32 10v44"/></svg>
+  <svg id="fixture-yarn-over" x="128" y="0" width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="17"/></svg>
+  <svg id="fixture-knit-twisted" x="192" y="0" width="64" height="64" viewBox="0 0 64 64"><ellipse cx="32" cy="27" rx="9" ry="15"/><path d="M32 42c-5 8-13 10-20 5M32 42c5 8 13 10 20 5"/></svg>
+  <svg id="fixture-decrease-right" x="0" y="64" width="64" height="64" viewBox="0 0 64 64"><path d="m16 52 32-40"/></svg>
+  <svg id="fixture-decrease-left" x="64" y="64" width="64" height="64" viewBox="0 0 64 64"><path d="m16 12 32 40"/></svg>
+  <svg id="fixture-decrease-centred" x="128" y="64" width="64" height="64" viewBox="0 0 64 64"><path d="m12 18 20 34 20-34M32 52V10"/></svg>
+  <svg id="fixture-cable-right" x="192" y="64" width="64" height="64" viewBox="0 0 64 64"><path d="M14 52 50 12"/><path class="symbol-svg-under" d="M25 25 39 39"/><path d="M14 12 50 52"/></svg>
+  <svg id="fixture-cable-left" x="0" y="128" width="64" height="64" viewBox="0 0 64 64"><path d="M14 12 50 52"/><path class="symbol-svg-under" d="M25 39 39 25"/><path d="M14 52 50 12"/></svg>
+  <svg id="fixture-single-crochet" x="64" y="128" width="64" height="64" viewBox="0 0 64 64"><path d="m14 14 36 36M50 14 14 50"/></svg>
+  <svg id="fixture-double-crochet" x="128" y="128" width="64" height="64" viewBox="0 0 64 64"><path d="M10 15h44M32 15v40M23 31l18-10"/></svg>
+  <svg id="fixture-treble-crochet" x="192" y="128" width="64" height="64" viewBox="0 0 64 64"><path d="M10 15h44M32 15v40M23 28l18-9M23 39l18-9"/></svg>
+  <svg id="fixture-shell" x="0" y="192" width="64" height="64" viewBox="0 0 64 64"><path d="M32 54 10 20M32 54 21 17M32 54V16M32 54 43 17M32 54 54 20M7 20h12M16 17h12M26 16h12M36 17h12M45 20h12M12 36l10-6M22 32l9-5M33 27l9 5M42 30l10 6"/></svg>
+  <svg id="fixture-cluster" x="64" y="192" width="64" height="64" viewBox="0 0 64 64"><path d="M16 52 27 18M32 52V18M48 52 37 18M25 18h14M20 38l11-6M33 32l11 6"/><path d="M25 14h14"/></svg>
+  <svg id="fixture-popcorn" x="128" y="192" width="64" height="64" viewBox="0 0 64 64"><path d="M32 52 12 20M32 52 22 17M32 52V16M32 52 42 17M32 52 52 20M9 33l10-6M18 30l10-6M27 29l10-6M36 30l10-6M45 33l8-5"/><ellipse cx="32" cy="14" rx="20" ry="6"/></svg>
+  <svg id="fixture-y-stitch" x="192" y="192" width="64" height="64" viewBox="0 0 64 64"><path d="M32 56V32M32 32 15 12M32 32 49 12M23 43l18-9M10 12h12M42 12h12M19 27l12-7M33 20l12 7"/></svg>
+</svg>

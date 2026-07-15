@@ -1,5 +1,5 @@
-const CACHE_NAME = "yarncha-shell-v133-reference-symbol-audit";
-const APP_SHELL = ["/", "/index.html", "/styles.css?v=130-symbol-library-quality", "/calculator-engine.js?v=112-live-repeat-fix", "/repeat-engine.js?v=123-repeat-footer", "/src/data/symbolReferenceMap.js?v=133-reference-symbol-audit", "/symbol-database.js?v=133-reference-symbol-audit", "/app.js?v=133-reference-symbol-audit", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE_NAME = "yarncha-shell-v134-production-symbol-svg-audit";
+const APP_SHELL = ["/", "/index.html", "/styles.css?v=130-symbol-library-quality", "/calculator-engine.js?v=112-live-repeat-fix", "/repeat-engine.js?v=123-repeat-footer", "/src/data/symbolReferenceMap.js?v=134-production-symbol-svg-audit", "/symbol-database.js?v=133-reference-symbol-audit", "/app.js?v=134-production-symbol-svg-audit", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));

@@ -12,17 +12,17 @@
   const pdf = "Untitled (Draft).pdf";
   const rows = [
     ["knit",pdf,1,"knit","rebuilt","High"], ["purl",pdf,1,"purl","rebuilt","High"],
-    ["yarn-over",pdf,1,"yarn-over","exact","High"], ["knit-twisted",pdf,1,"knit-twisted","minor-adjustment","Medium"],
-    ["purl-twisted",pdf,1,"purl-twisted","minor-adjustment","Medium"], ["increase-kfb",pdf,2,"increase-kfb","exact","High"],
-    ["increase-left",pdf,2,"increase-left","exact","High"], ["increase-right",pdf,2,"increase-right","exact","High"],
+    ["yarn-over",pdf,1,"yarn-over","exact","High"], ["knit-twisted",pdf,1,"knit-twisted","rebuilt","High"],
+    ["purl-twisted",pdf,1,"purl-twisted","rebuilt","High"], ["increase-kfb",pdf,2,"increase-kfb","exact","High"],
+    ["increase-left",pdf,2,"increase-left","rebuilt","High"], ["increase-right",pdf,2,"increase-right","rebuilt","High"],
     ["purl-increase",pdf,2,"purl-increase","exact","High"], ["decrease-right",pdf,2,"decrease-right","exact","High"],
     ["decrease-left",pdf,2,"decrease-left","exact","High"], ["purl-decrease-right",pdf,2,"purl-decrease-right","exact","High"],
     ["purl-decrease-left",pdf,2,"purl-decrease-left","exact","High"], ["decrease-centred",pdf,2,"decrease-centred","exact","High"],
-    ["cable-left",pdf,5,"cable-left","exact","High"], ["cable-right",pdf,5,"cable-right","exact","High"],
-    ["cable-left-wide",pdf,5,"cable-left-wide","exact","High"], ["cable-right-wide",pdf,5,"cable-right-wide","exact","High"],
-    ["cable-left-3-3",pdf,5,"cable-left-3-3","exact","High"], ["cable-right-3-3",pdf,5,"cable-right-3-3","exact","High"],
-    ["cable-left-4-4",pdf,5,"cable-left-4-4","exact","High"], ["cable-right-4-4",pdf,5,"cable-right-4-4","exact","High"],
-    ["cable-left-purl",pdf,5,"cable-left-purl","exact","High"], ["cable-right-purl",pdf,5,"cable-right-purl","exact","High"],
+    ["cable-left",pdf,5,"cable-left","rebuilt","High"], ["cable-right",pdf,5,"cable-right","rebuilt","High"],
+    ["cable-left-wide",pdf,5,"cable-left-wide","rebuilt","High"], ["cable-right-wide",pdf,5,"cable-right-wide","rebuilt","High"],
+    ["cable-left-3-3",pdf,5,"cable-left-3-3","rebuilt","High"], ["cable-right-3-3",pdf,5,"cable-right-3-3","rebuilt","High"],
+    ["cable-left-4-4",pdf,5,"cable-left-4-4","rebuilt","High"], ["cable-right-4-4",pdf,5,"cable-right-4-4","rebuilt","High"],
+    ["cable-left-purl",pdf,5,"cable-left-purl","rebuilt","High"], ["cable-right-purl",pdf,5,"cable-right-purl","rebuilt","High"],
 
     ["tunisian-simple",pdf,6,"tunisian-simple","minor-adjustment","High"], ["tunisian-purl",pdf,7,"tunisian-purl","minor-adjustment","High"],
     ["tunisian-knit",pdf,7,"tunisian-knit","minor-adjustment","High"], ["tunisian-reverse",pdf,10,"tunisian-reverse","minor-adjustment","High"],
@@ -55,7 +55,7 @@
     ["cluster",pdf,15,"cluster","exact","High"], ["cluster-decrease",pdf,15,"cluster-decrease","exact","High"],
     ["puff",pdf,15,"puff","exact","High"], ["popcorn",pdf,16,"popcorn","exact","High"],
     ["shell",pdf,13,"shell","exact","High"], ["y-stitch",pdf,12,"y-stitch","exact","High"],
-    ["crochet-cross",pdf,12,"crochet-cross","exact","High"], ["picot",pdf,13,"picot","exact","High"]
+    ["crochet-cross",pdf,12,"crochet-cross","exact","High"], ["picot",pdf,13,"picot","rebuilt","High"]
   ];
 
   /** @type {Readonly<Record<string, Readonly<SymbolReferenceRecord>>>} */
