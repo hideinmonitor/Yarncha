@@ -3,65 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f4efe5" />
+    <meta name="theme-color" content="#F6F0E6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Yarncha" />
     <meta name="description" content="Yarncha, your very best yarn craft friend." />
     <title>Yarncha</title>
-    <link rel="manifest" href="/public/manifest.json?v=111-library-wiki" />
-    <link rel="apple-touch-icon" href="/public/icons/icon-192.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="styles.css?v=130-symbol-library-quality" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="brand" href="#" aria-label="Yarncha home">
+        <a class="brand" href="#" data-view="today" aria-label="Yarncha home">
           <span class="brand-mark"><i></i><i></i><i></i></span>
           <span><strong>Yarncha</strong><small>Your very best yarn craft friend</small></span>
         </a>
 
+        <button class="sidebar-new-project" id="new-project" type="button" aria-label="Create new project">
+          <span class="sidebar-new-project-icon" aria-hidden="true">+</span>
+          <span>New project</span>
+        </button>
+
         <nav class="nav-list" aria-label="Main navigation">
-          <button class="nav-item active" data-view="today"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5v8.25A1.25 1.25 0 0 1 18.75 20H5.25A1.25 1.25 0 0 1 4 18.75Z"></path><path d="M9.5 20v-6h5v6"></path></svg></span>Today</button>
+          <button class="nav-item active" data-view="today" aria-current="page"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5v8.25A1.25 1.25 0 0 1 18.75 20H5.25A1.25 1.25 0 0 1 4 18.75Z"></path><path d="M9.5 20v-6h5v6"></path></svg></span>Today</button>
           <button class="nav-item" data-view="projects"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 5V3.5M16 5V3.5M4 9h16"></path></svg></span>Projects</button>
-          <button class="nav-item" data-view="market"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="12" r="6.5"></circle><path d="M5 8.5c3 1 6.7.8 10.2-.7M4 12c3.6 1.4 7.8 1.5 12 .2M6 17c2.2-3.6 4-7.8 4.8-11.4M13 18.2c.6-4.7.2-8.7-1.2-12M16 15.5l4 3.5"></path></svg></span>Yarn Stash</button>
-          <button class="nav-item" data-view="library"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v13H7a2 2 0 0 1-2-2Z"></path><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H18M9 8h5"></path></svg></span>Library</button>
           <button class="nav-item" data-view="tools"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14.5 5-9.8 9.8a2.1 2.1 0 0 0 3 3L17.5 8"></path><path d="M14 4.5 19.5 10M5 6h5M7.5 3.5v5"></path></svg></span>Tools</button>
-          <button class="nav-item" data-view="settings"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18"></path></svg></span>Settings</button>
+          <button class="nav-item secondary-mobile-nav" data-view="market"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="12" r="6.5"></circle><path d="M5 8.5c3 1 6.7.8 10.2-.7M4 12c3.6 1.4 7.8 1.5 12 .2M6 17c2.2-3.6 4-7.8 4.8-11.4M13 18.2c.6-4.7.2-8.7-1.2-12M16 15.5l4 3.5"></path></svg></span>Yarn Stash</button>
+          <button class="nav-item secondary-mobile-nav" data-view="library"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v13H7a2 2 0 0 1-2-2Z"></path><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H18M9 8h5"></path></svg></span>Library</button>
+          <button class="nav-item mobile-more" id="mobile-more" type="button" aria-haspopup="dialog"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"></circle><circle cx="12" cy="12" r="1.4"></circle><circle cx="19" cy="12" r="1.4"></circle></svg></span>More</button>
         </nav>
 
         <div class="sidebar-projects">
-          <div class="section-label">Your projects <button id="quick-add-project" aria-label="Add project">+</button></div>
+          <div class="section-label">Recent projects</div>
           <div id="sidebar-project-list"></div>
         </div>
 
         <div class="sidebar-foot">
-          <div class="avatar">M</div>
-          <div><strong>My workspace</strong><small>Saved on this device</small><button class="phone-help" id="phone-help">iPhone access</button></div>
+          <button class="sidebar-account" id="account-button" type="button" aria-haspopup="dialog" aria-label="Log in or manage account">
+            <span class="avatar" id="account-avatar" aria-hidden="true">Y</span>
+            <span class="sidebar-account-copy"><strong id="account-label">Log in</strong><small id="account-meta">Saved on this device</small></span>
+            <span class="sidebar-account-chevron" aria-hidden="true">›</span>
+          </button>
+          <button class="sidebar-settings" type="button" data-view="settings">
+            <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18"></path></svg></span>
+            <span>Settings</span>
+          </button>
         </div>
       </aside>
 
       <main>
         <header class="topbar">
           <div class="topbar-inner">
-            <button class="mobile-menu" id="mobile-menu" aria-label="Open menu"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
             <div class="header-left">
-              <span class="header-context" id="header-context">Workspace</span>
+              <span class="header-context" id="header-context">Yarncha</span>
               <strong class="breadcrumb" id="breadcrumb">Today</strong>
             </div>
             <div class="header-spacer" aria-hidden="true"></div>
             <div class="header-actions">
-              <button class="icon-button account-button" id="account-button" aria-label="Account and sync" title="Account and sync">
-                <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 19c.7-3.4 3-5.2 6.5-5.2s5.8 1.8 6.5 5.2"></path></svg>
-              </button>
-              <button class="secondary-button voice-button voice-button--header voice-icon-button header-voice" id="voice-top" aria-label="Voice controls" title="Voice controls"><svg class="voice-button-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path></svg></button>
-              <button class="secondary-button manual-save-button header-save-button" data-manual-save="Workspace" type="button">Save</button>
-              <button class="primary-button header-new-project" id="new-project"><span aria-hidden="true">+</span><span class="header-new-label">New project</span></button>
               <span class="save-status" id="save-status" aria-live="polite">✓ Saved on this device</span>
             </div>
           </div>
@@ -152,27 +152,9 @@
       <button id="stop-voice">Stop</button>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-    <script type="module" src="/src/document-tools.js?v=70-theme-gallery"></script>
-    <script type="module" src="/src/cloud/bootstrap.js?v=109-cloud-sync"></script>
-
-    <script src="src/data/sizeReference.js?v=111-library-wiki"></script>
-    <script src="src/calculations/core.js?v=111-library-wiki"></script>
-    <script src="src/calculations/gauge.js?v=111-library-wiki"></script>
-    <script src="src/calculations/yarn.js?v=111-library-wiki"></script>
-    <script src="src/calculations/sizing.js?v=111-library-wiki"></script>
-    <script src="src/calculations/repeat.js?v=111-library-wiki"></script>
-    <script src="src/calculations/shaping.js?v=111-library-wiki"></script>
-    <script src="src/calculations/garments.js?v=111-library-wiki"></script>
-    <script src="src/calculations/crochet.js?v=111-library-wiki"></script>
-    <script src="src/calculations/knitting.js?v=111-library-wiki"></script>
-    <script src="src/calculations/rendering.js?v=111-library-wiki"></script>
-    <script src="calculator-engine.js?v=111-library-wiki"></script>
-    <script src="repeat-engine.js?v=123-repeat-footer"></script>
-    <script src="src/data/symbolReferenceMap.js?v=134-production-symbol-svg-audit"></script>
-    <script src="symbol-database.js?v=133-reference-symbol-audit"></script>
-    <script src="app.js?v=134-production-symbol-svg-audit"></script>
+    <script type="module" src="/src/main.js"></script>
 
   </body>
 </html>

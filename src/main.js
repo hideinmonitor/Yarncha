@@ -1,0 +1,12 @@
+import "@fontsource/dm-sans/latin-400.css";
+import "@fontsource/dm-sans/latin-500.css";
+import "@fontsource/dm-sans/latin-600.css";
+import "@fontsource/dm-sans/latin-700.css";
+import "@fontsource/fraunces/latin-600.css";
+import "@fontsource/fraunces/latin-700.css";
+import "../styles.css";
+import "./security/backup-schema.js";
+import "./cloud/sync-protocol.js";
+import "./document-tools-loader.js";
+import "./cloud/bootstrap.js";
+import "virtual:yarncha-application";

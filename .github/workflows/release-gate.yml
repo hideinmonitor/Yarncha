@@ -1,0 +1,44 @@
+name: Yarncha release gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify
+
+  supabase-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ vars.RUN_YARNCHA_SUPABASE_INTEGRATION == 'true' }}
+    env:
+      YARNCHA_SUPABASE_INTEGRATION: "1"
+      YARNCHA_SUPABASE_URL: ${{ secrets.YARNCHA_SUPABASE_URL }}
+      YARNCHA_SUPABASE_ANON_KEY: ${{ secrets.YARNCHA_SUPABASE_ANON_KEY }}
+      YARNCHA_TEST_A_EMAIL: ${{ secrets.YARNCHA_TEST_A_EMAIL }}
+      YARNCHA_TEST_A_PASSWORD: ${{ secrets.YARNCHA_TEST_A_PASSWORD }}
+      YARNCHA_TEST_B_EMAIL: ${{ secrets.YARNCHA_TEST_B_EMAIL }}
+      YARNCHA_TEST_B_PASSWORD: ${{ secrets.YARNCHA_TEST_B_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/supabase-two-account.integration.test.mjs

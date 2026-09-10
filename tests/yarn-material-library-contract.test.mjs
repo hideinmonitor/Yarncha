@@ -1,3 +1,4 @@
+import { declarations } from './helpers/css-contract.mjs';
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
@@ -8,7 +9,7 @@ for(const filter of ["All","Wool","Cotton","Acrylic","Plant fibre","Animal fibre
 for(const guide of ["Best yarns for sweaters","Best yarns for socks","Best yarns for baby items","Best yarns for amigurumi","Best yarns for bags","Best yarns for blankets","Best yarns for summer tops","Best yarns for shawls","Best yarns for colourwork","Best yarns for cables","Yarn can grow after blocking","Same yarn weight does not mean same result","Machine washable yarn","Blocking by fibre","Substituting by fibre","Substituting for garments"]){assert.match(app,new RegExp(guide),`${guide} exists`);}
 assert.match(app,/<details class="material-card card"/,"Cards are collapsible");
 assert.match(app,/data-material-filter/,"Filter chips are interactive");
-assert.match(css,/\.material-filter-chips\{[^}]*overflow-x:auto/,"Filters scroll safely on narrow screens");
-assert.match(css,/@media \(max-width:760px\)\{\.material-grid\{grid-template-columns:1fr/,"Cards use one column on phones");
-assert.match(css,/\.material-card \.wiki-chip-row \.chip\{min-height:44px/,"Related tool targets remain touch friendly");
+assert.equal(declarations('.material-filter-chips')['overflow-x'],'auto','Material filters retain local scrolling');
+assert.equal(declarations('.material-grid','(max-width:760px)')['grid-template-columns'],'1fr','Materials use one column on phones');
+assert.equal(declarations(".material-card .wiki-chip-row .chip")["min-height"],"44px","Related tool targets remain touch friendly");
 console.log("Yarn Materials Library contract passed.");

@@ -41,8 +41,12 @@ for (const [key, markup] of Object.entries(registry)) {
 }
 assert.match(app, /viewBox="0 0 64 64"/, "all symbols render through the shared viewBox");
 assert.match(app, /function symbolVisualHtml[\s\S]*neutralSymbolHtml/, "unapproved entries retain neutral fallback behavior");
-assert.equal(references["v-stitch"].tracedSvgKey, "double-crochet-increase", "V stitch reuses its equivalent two-double-crochet geometry");
-assert.equal(registry["v-stitch"], undefined, "the duplicate V-stitch registry entry is removed");
+assert.equal(references["v-stitch"].tracedSvgKey, "v-stitch", "V stitch keeps its own verified geometry");
+assert.ok(registry["v-stitch"], "the V-stitch registry entry exists");
+assert.notEqual(registry["v-stitch"], registry["double-crochet-increase"], "V stitch and a plain double-crochet increase remain distinct");
+assert.notEqual(registry["cluster-increase"], registry.cluster, "cluster increase and cluster remain distinct");
+assert.notEqual(registry["cable-left-generic"], registry["cable-left"], "generic and 1/1 left cables remain distinct");
+assert.notEqual(registry["cable-right-generic"], registry["cable-right"], "generic and 1/1 right cables remain distinct");
 assert.equal(registry["crochet-chain"], undefined, "the duplicate crochet chain alias is removed");
 assert.equal(registry["crochet-slip"], undefined, "the duplicate crochet slip alias is removed");
 assert.equal(registry["crochet-sc"], undefined, "the duplicate crochet SC alias is removed");

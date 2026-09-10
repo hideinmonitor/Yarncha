@@ -16,11 +16,15 @@ assert.match(app, /ensureSafeToLeave/, "internal navigation waits for pending au
 assert.match(app, /beforeunload/, "browser leave is guarded while saving");
 assert.match(app, /event\.preventDefault\(\);\s*manualSave\("Workspace"\)/s, "Cmd/Ctrl+S runs manual save");
 
-for (const surface of ["Project", "Project notes", "Chart", "Flow Mode", "Settings", "Symbol Database"]) {
+for (const surface of ["Flow Mode", "Symbol Database"]) {
   assert.match(app, new RegExp(`data-manual-save="${surface}"`), `${surface} has a manual save control`);
 }
 
-assert.match(html, /data-manual-save="Workspace"/, "top header exposes a global manual Save button");
+for (const removedSurface of ["Project", "Project notes", "Chart", "Settings"]) {
+  assert.doesNotMatch(app, new RegExp(`data-manual-save="${removedSurface}"`), `${removedSurface} relies on autosave instead of a duplicate Save button`);
+}
+assert.doesNotMatch(html, /data-manual-save="Workspace"/, "the top header does not duplicate autosave with a global Save button");
+assert.match(html, /class="save-status" id="save-status" aria-live="polite"/, "the header retains truthful save and sync status");
 assert.match(css, /\.manual-save-button/, "manual save button is styled");
 assert.match(css, /\.manual-save-status\[data-tone="unsaved"\]/, "unsaved status has a distinct style");
 assert.match(css, /@media \(max-width:430px\)[\s\S]*\.manual-save-button/, "manual save is compact on mobile");

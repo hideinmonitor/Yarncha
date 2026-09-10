@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20.19" },
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
-    "test": "node tests/knitting-symbol-reference-contract.test.mjs && node tests/crochet-symbol-reference-contract.test.mjs && node tests/tunisian-symbol-reference-contract.test.mjs && node tests/symbol-library-quality-contract.test.mjs && node tests/symbol-reference-svg-contract.test.mjs && node tests/symbol-visual-fixture.test.mjs && npm run test:symbols && npm run test:symbol-editor && npm run test:symbol-learning && npm run test:flow-mode && npm run test:library && npm run test:navigation && npm run test:calculators && npm run test:project-editor && npm run test:manual-save && npm run test:themes",
+    "test": "node scripts/run-tests.mjs",
     "dev": "vite --host 0.0.0.0 --port 4183",
-    "build": "vite build && node ./scripts/copy-static.mjs",
+    "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4183",
     "start": "vite --host 0.0.0.0 --port 4183",
     "start:4184": "python3 -m http.server 4184 --bind 0.0.0.0",
@@ -27,14 +29,29 @@
     "test:settings": "node tests/settings-contract.test.mjs",
     "test:cloud-sync": "node tests/cloud-sync-contract.test.mjs",
     "test:manual-save": "node tests/manual-save-contract.test.mjs",
-    "test:library": "node tests/library-delete-contract.test.mjs && node tests/library-experience-contract.test.mjs && node tests/library-wiki-contract.test.mjs && node tests/cast-on-library-contract.test.mjs && node tests/yarn-material-library-contract.test.mjs"
+    "test:library": "node tests/library-delete-contract.test.mjs && node tests/library-experience-contract.test.mjs && node tests/library-wiki-contract.test.mjs && node tests/cast-on-library-contract.test.mjs && node tests/yarn-material-library-contract.test.mjs",
+    "lint": "eslint app.js src/**/*.js vite.config.js tests/**/*.mjs tests/**/*.js tests/**/*.cjs",
+    "typecheck": "npm run typecheck:client && npm run typecheck:edge",
+    "typecheck:client": "tsc --noEmit",
+    "typecheck:edge": "deno check supabase/functions/analyze-chart/index.ts supabase/functions/delete-account/index.ts",
+    "test:artifact": "node tests/production-artifact.test.mjs && node tests/pwa-contract.test.mjs",
+    "test:smoke": "node tests/production-smoke.test.mjs",
+    "test:production": "npm run build && npm run test:artifact && npm run test:smoke",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run test:calculators && npm run test:symbol-audit && npm run build && npm run test:artifact && npm run test:smoke && npm audit --audit-level=high"
   },
   "dependencies": {
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/fraunces": "^5.3.0",
     "@supabase/supabase-js": "^2.57.4",
-    "pdfjs-dist": "^5.4.149",
+    "pdfjs-dist": "^6.3.289",
     "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
-    "vite": "^7.1.7"
+    "@eslint/js": "^10.0.1",
+    "deno": "^2.9.6",
+    "eslint": "^10.10.0",
+    "playwright": "^1.63.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
   }
 }

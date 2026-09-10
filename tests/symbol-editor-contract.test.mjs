@@ -1,3 +1,4 @@
+import { declarations } from './helpers/css-contract.mjs';
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
@@ -22,7 +23,7 @@ assert.match(source,/symbolVisualHtml\(entry/, 'cards and details prefer uploade
 assert.match(source,/putAsset\(assetId,stagedPicture\)/,'symbol pictures are stored in IndexedDB only after save');
 assert.match(source,/deleteAsset\(previousAsset\)/,'replaced or removed pictures are cleaned up');
 assert.match(source,/raw\.verificationStatus\|\|"To Be Confirmed"/,'legacy imports default to To Be Confirmed');
-assert.match(styles,/\.symbol-card-edit[^}]+width:44px[^}]+height:44px/s,'card edit action has a 44px touch target');
+assert.equal(declarations('.symbol-card-edit')['min-height'],'var(--button-height-sm)','Symbol edit uses the shared 44px touch target');
 assert.match(styles,/@media \(max-width:600px\)[\s\S]+\.symbol-grid[^}]+grid-template-columns:1fr/,'symbol cards use one column on phones');
 assert.match(styles,/@media \(max-width:600px\)[\s\S]+\.symbol-picture-actions[^}]+grid-template-columns:1fr/,'picture actions stack on phones');
 

@@ -4,7 +4,7 @@ import "../symbol-database.js";
 
 const database=globalThis.YarnchaSymbolDatabase;
 const purl=database.entries.find(entry=>entry.craft==="Knitting"&&entry.abbreviation==="P");
-assert.deepEqual(purl.abbreviations,{usUk:"P",cn:"上 / 反",jp:"裏"});
+assert.deepEqual(purl.abbreviations,{us:"P",uk:"P",usUk:"P",cn:"上 / 反",jp:"裏"});
 assert.match(purl.howToRead,/wrong-side rows may reverse/);
 assert.equal(purl.relatedTools.length,3);
 

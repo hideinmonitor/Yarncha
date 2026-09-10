@@ -28,13 +28,19 @@ import {
   subscribeToSyncRecords,
   deleteAccountAndData
 } from "./supabase-client.ts";
+import {
+  SYNC_RESULT,
+  createSyncRecord,
+  createProjectTombstone,
+  supersedeQueuedRecord
+} from "./sync-protocol.js";
 
 const QUEUE_KEY = "yarncha.cloud.pendingRecords.v1";
 const META_KEY = "yarncha.cloud.meta.v1";
 const HISTORY_KEY = "yarncha.cloud.history.v1";
 const CONFLICT_KEY = "yarncha.cloud.conflicts.v1";
 const DEVICE_KEY = "yarncha.cloud.device.v1";
-const SYNC_VERSION = 1;
+const TOMBSTONE_KEY = "yarncha.cloud.projectTombstones.v2";
 
 const cloud = {
   configured: false,
@@ -132,8 +138,18 @@ function writeConflicts(items) {
   writeJson(CONFLICT_KEY, items);
 }
 
-function stableRecordId(type, localId) {
-  return `${type}:${String(localId).replace(/\s+/g, "-")}`;
+function safeLocalId(value) {
+  return String(value || "record").replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 96) || "record";
+}
+
+function rememberedTombstones() {
+  return new Set(readJson(TOMBSTONE_KEY, []).map(String));
+}
+
+function rememberTombstone(localId) {
+  const remembered = rememberedTombstones();
+  remembered.add(String(localId));
+  writeJson(TOMBSTONE_KEY, [...remembered].slice(-500));
 }
 
 function cloudSafeValue(value) {
@@ -159,17 +175,14 @@ function recordUpdatedAt(payload = {}, fallback = new Date().toISOString()) {
 function makeRecord(type, localId, payload, fallbackUpdatedAt) {
   const device = deviceProfile();
   const updatedAt = recordUpdatedAt(payload, fallbackUpdatedAt);
-  return {
-    id: stableRecordId(type, localId),
-    record_type: type,
-    local_id: String(localId),
+  return createSyncRecord({
+    type: safeLocalId(type),
+    localId: safeLocalId(localId),
     payload: cloudSafeValue(payload),
-    created_at: payload?.createdAt || updatedAt,
-    updated_at: updatedAt,
-    device_id: device.id,
-    sync_version: SYNC_VERSION,
-    deleted: false
-  };
+    createdAt: payload?.createdAt || updatedAt,
+    updatedAt,
+    deviceId: device.id
+  });
 }
 
 function buildSyncRecords(state = local().getState()) {
@@ -202,12 +215,28 @@ function buildSyncRecords(state = local().getState()) {
 }
 
 function queueStateForCloud(reason = "local-save") {
-  if (!cloud.user) return;
-  const byId = new Map(pendingQueue().map(record => [record.id, record]));
-  buildSyncRecords().forEach(record => byId.set(record.id, record));
-  writeQueue([...byId.values()]);
+  if (!cloud.user) return { status: SYNC_RESULT.LOCAL_ONLY };
+  const tombstones = rememberedTombstones();
+  let queue = pendingQueue();
+  for (const record of buildSyncRecords()) {
+    if (record.record_type === "project" && tombstones.has(String(record.local_id))) continue;
+    queue = supersedeQueuedRecord(queue, record);
+  }
+  writeQueue(queue);
   setSyncMeta({ health: navigator.onLine === false ? "Waiting to sync" : "Pending sync" });
-  addHistory({ status: "queued", reason, count: byId.size });
+  addHistory({ status: "queued", reason, count: queue.length });
+  return { status: navigator.onLine === false ? SYNC_RESULT.QUEUED_OFFLINE : SYNC_RESULT.ALREADY_RUNNING, queued: queue.length };
+}
+
+function queueProjectDeletion(localProjectId) {
+  const id = safeLocalId(localProjectId);
+  rememberTombstone(id);
+  const tombstone = createProjectTombstone(id, deviceProfile().id);
+  const queue = supersedeQueuedRecord(pendingQueue(), tombstone);
+  writeQueue(queue);
+  setSyncMeta({ health: navigator.onLine === false ? "Waiting to sync" : "Pending sync" });
+  addHistory({ status: "queued-deletion", reason: "project-delete", projectId: id });
+  return { status: cloud.user ? (navigator.onLine === false ? SYNC_RESULT.QUEUED_OFFLINE : SYNC_RESULT.ALREADY_RUNNING) : SYNC_RESULT.LOCAL_ONLY, queued: queue.length };
 }
 
 function mergeById(localItems = [], cloudItems = []) {
@@ -245,13 +274,27 @@ function applyRemoteRecords(records = []) {
   const localMeta = syncMeta();
   const nextConflicts = conflicts();
   let changed = false;
+  let removedByTombstone = false;
   const projectMap = new Map((current.projects || []).map(project => [String(project.id), project]));
+  const tombstones = rememberedTombstones();
+
+  for (const record of records) {
+    if (record.record_type !== "project" || !record.deleted) continue;
+    const id = String(record.local_id);
+    tombstones.add(id);
+    rememberTombstone(id);
+    if (projectMap.delete(id)) {
+      changed = true;
+      removedByTombstone = true;
+    }
+  }
 
   for (const record of records) {
     if (record.device_id === deviceProfile().id) continue;
     if (record.deleted) continue;
     const payload = record.payload || {};
     if (record.record_type === "project") {
+      if (tombstones.has(String(record.local_id))) continue;
       const existing = projectMap.get(String(record.local_id));
       if (existing && Date.parse(record.updated_at) > Date.parse(localMeta.lastPullAt || 0) && Date.parse(existing.updatedAt || existing.lastSavedAt || 0) > Date.parse(localMeta.lastPullAt || 0)) {
         nextConflicts.unshift({
@@ -264,9 +307,9 @@ function applyRemoteRecords(records = []) {
           cloudUpdatedAt: record.updated_at,
           status: "open"
         });
-        projectMap.set(String(record.local_id), mergeProject(existing, payload));
+        projectMap.set(String(record.local_id), mergeProject(existing, { ...payload, id: record.local_id }));
       } else {
-        projectMap.set(String(record.local_id), mergeProject(existing, payload));
+        projectMap.set(String(record.local_id), mergeProject(existing, { ...payload, id: record.local_id }));
       }
       changed = true;
     } else if (record.record_type === "settings") {
@@ -305,31 +348,41 @@ function applyRemoteRecords(records = []) {
   current.projects = [...projectMap.values()];
   if (!current.projects.some(project => String(project.id) === String(current.activeProjectId))) current.activeProjectId = current.projects[0]?.id || null;
   writeConflicts(nextConflicts.slice(0, 30));
-  if (changed) api.replaceState(current);
+  if (changed) api.replaceState(current, { allowEmpty: removedByTombstone });
   return { changed, conflicts: nextConflicts };
 }
 
 async function runFullSync(reason = "manual") {
-  if (!cloud.user) return openAccountModal();
-  if (cloud.syncing) return;
+  if (!cloud.user) return { status: SYNC_RESULT.LOCAL_ONLY };
+  if (cloud.syncing) return { status: SYNC_RESULT.ALREADY_RUNNING };
   cloud.syncing = true;
-  const started = new Date().toISOString();
   try {
+    queueStateForCloud(reason);
     if (navigator.onLine === false) {
       setCloudStatus("Waiting to sync", "pending");
       setSyncMeta({ health: "Waiting to sync" });
-      return;
+      return { status: SYNC_RESULT.QUEUED_OFFLINE, queued: pendingQueue().length };
     }
     setCloudStatus("Syncing Yarncha…");
     const device = deviceProfile();
     await registerSyncDevice({ ...device, user_agent: navigator.userAgent || "" });
-    queueStateForCloud(reason);
     const queue = pendingQueue();
+    const versionWarnings = [];
     if (queue.length) {
       await upsertSyncRecords(queue);
+      for (const tombstone of queue.filter(record => record.record_type === "project" && record.deleted)) {
+        await deleteProjectByLocalId(String(tombstone.local_id));
+      }
+      const pushedProjectIds = new Set(queue.filter(record => record.record_type === "project" && !record.deleted).map(record => String(record.local_id)));
       for (const project of local().getState().projects || []) {
-        if (project.updatedAt && Date.parse(project.updatedAt) >= Date.parse(started) - 60000) {
-          await saveProjectVersion(project, device.id).catch(() => {});
+        if (pushedProjectIds.has(String(project.id))) {
+          try {
+            await saveProjectVersion(project, device.id);
+          } catch (error) {
+            const message = `Version snapshot failed for ${project.name || project.id}: ${friendlyError(error)}`;
+            versionWarnings.push(message);
+            addHistory({ status: "version-warning", reason, message });
+          }
         }
       }
       writeQueue([]);
@@ -341,13 +394,16 @@ async function runFullSync(reason = "manual") {
     const now = new Date().toISOString();
     setSyncMeta({ lastSyncAt: now, lastPullAt: now, lastPushAt: now, health: result.conflicts?.length ? "Needs review" : "Healthy" });
     addHistory({ status: "synced", reason, uploaded: queue.length, downloaded: remote.length, conflicts: result.conflicts?.length || 0 });
-    setCloudStatus(result.conflicts?.length ? "Synced · review conflicts" : "✓ Synced to cloud", result.conflicts?.length ? "warning" : "success");
+    const warning = result.conflicts?.length || versionWarnings.length;
+    setCloudStatus(result.conflicts?.length ? "Synced · review conflicts" : versionWarnings.length ? "Synced · version snapshot needs retry" : "✓ Synced to cloud", warning ? "warning" : "success");
     local().rerenderSettings();
+    return { status: SYNC_RESULT.SYNCED, uploaded: queue.length, downloaded: remote.length, conflicts: result.conflicts?.length || 0, warnings: versionWarnings };
   } catch (error) {
     cloud.lastError = friendlyError(error);
     setSyncMeta({ health: navigator.onLine === false ? "Waiting to sync" : "Needs attention" });
     addHistory({ status: "failed", reason, message: cloud.lastError });
     setCloudStatus(navigator.onLine === false ? "Waiting to sync" : "Saved on this device · Cloud retry needed", "error");
+    return { status: SYNC_RESULT.FAILED, error: cloud.lastError, queued: pendingQueue().length };
   } finally {
     cloud.syncing = false;
   }
@@ -362,6 +418,7 @@ function scheduleFullSync(reason = "auto", delay = 1200) {
 async function initialize() {
   const client = await getSupabase();
   cloud.configured = Boolean(client);
+  local().refreshShell?.();
   if (!client) {
     window.dispatchEvent(new CustomEvent("yarncha:cloud-ready"));
     return;
@@ -373,6 +430,7 @@ async function initialize() {
       scheduleFullSync("sign-in", 400);
       startRealtimeSync().catch(() => {});
     }
+    local().refreshShell?.();
     local().rerenderSettings();
   });
   if (cloud.user) {
@@ -382,6 +440,7 @@ async function initialize() {
     await startRealtimeSync().catch(() => {});
   }
   window.dispatchEvent(new CustomEvent("yarncha:cloud-ready"));
+  local().refreshShell?.();
   local().rerenderSettings();
   injectChartReader();
 }
@@ -389,11 +448,15 @@ async function initialize() {
 function openAccountModal() {
   const api = local();
   if (!cloud.configured) {
-    api.openModal(`<p class="eyebrow">PRIVATE BETA</p><h2>Cloud setup is not connected</h2><p>This build is ready for Supabase, but the deployment still needs its public Supabase URL and publishable key.</p><div class="privacy-note">Your current projects remain saved locally. No secret service key should ever be placed in the browser.</div><div class="modal-actions"><button class="primary-button" onclick="closeModal()">Close</button></div>`);
+    api.openModal(`<p class="eyebrow">PRIVATE BETA</p><h2>Cloud setup is not connected</h2><p>This build is ready for Supabase, but the deployment still needs its public Supabase URL and publishable key.</p><div class="account-destination-list"><button class="secondary-button" id="cloud-unconfigured-settings">Settings</button><button class="secondary-button" id="cloud-unconfigured-appearance">Appearance</button></div><div class="privacy-note">Your current projects remain saved locally. No secret service key should ever be placed in the browser.</div><div class="modal-actions"><button class="primary-button" data-close-modal>Close</button></div>`);
+    document.getElementById("cloud-unconfigured-settings").onclick = () => api.openSettings?.();
+    document.getElementById("cloud-unconfigured-appearance").onclick = () => api.openSettings?.("settings-appearance");
     return;
   }
   if (cloud.user) {
-    api.openModal(`<p class="eyebrow">YARNCHA ACCOUNT</p><h2>${api.escapeHtml(cloud.user.email || "Signed in")}</h2><div class="sync-status"><strong id="cloud-sync-status">Cloud sync ready</strong><p>Local drafts stay on this device. Your owned cloud projects are protected by account-level database policies.</p></div><div class="modal-actions"><button class="secondary-button" id="cloud-migrate-now">Move my local projects to cloud</button><button class="secondary-button" id="cloud-refresh-now">Refresh from cloud</button><button class="secondary-button" id="cloud-sign-out">Sign out</button></div>`);
+    api.openModal(`<p class="eyebrow">YARNCHA ACCOUNT</p><h2>${api.escapeHtml(cloud.user.email || "Signed in")}</h2><div class="sync-status"><strong id="cloud-sync-status">Cloud sync ready</strong><p>Local drafts stay on this device. Your owned cloud projects are protected by account-level database policies.</p></div><div class="account-destination-list"><button class="secondary-button" id="cloud-account-settings">Account & sync settings</button><button class="secondary-button" id="cloud-appearance-settings">Appearance</button></div><div class="modal-actions"><button class="secondary-button" id="cloud-migrate-now">Move my local projects to cloud</button><button class="secondary-button" id="cloud-refresh-now">Refresh from cloud</button><button class="secondary-button" id="cloud-sign-out">Sign out</button></div>`);
+    document.getElementById("cloud-account-settings").onclick = () => api.openSettings?.("cloud-beta-settings");
+    document.getElementById("cloud-appearance-settings").onclick = () => api.openSettings?.("settings-appearance");
     document.getElementById("cloud-migrate-now").onclick = migrateLocalProjects;
     document.getElementById("cloud-refresh-now").onclick = async () => {
       await runBusy("Refreshing…", restoreCloudProjects, "Cloud projects restored");
@@ -403,11 +466,14 @@ function openAccountModal() {
       await signOut();
       cloud.user = null;
       api.closeModal();
+      api.refreshShell?.();
       api.toast("Signed out. Local drafts remain on this device.");
     };
     return;
   }
-  api.openModal(`<p class="eyebrow">PRIVATE BETA</p><h2>Sign in to Yarncha</h2><p class="muted-copy">Use Apple, Google, or email. Yarncha keeps saving on this device while cloud sync connects in the background.</p><div class="auth-buttons"><button class="auth-button apple" id="cloud-apple-sign-in">Continue with Apple</button><button class="auth-button" id="cloud-google-sign-in">Continue with Google</button></div><div class="form-grid"><div class="field full"><label>Email</label><input id="cloud-email" type="email" autocomplete="email" inputmode="email"></div><div class="field full"><label>Password</label><input id="cloud-password" type="password" autocomplete="current-password" minlength="8"></div></div><p class="form-error" id="cloud-auth-error" role="alert"></p><div class="modal-actions"><button class="secondary-button" id="cloud-sign-up">Create account</button><button class="primary-button" id="cloud-sign-in">Sign in</button></div><div class="privacy-note">Yarncha stores your account with Supabase Auth. Projects, counters, stash, charts, annotations, settings and tool history remain local-first and private to your account when synced.</div>`);
+  api.openModal(`<p class="eyebrow">PRIVATE BETA</p><h2>Sign in to Yarncha</h2><p class="muted-copy">Use Apple, Google, or email. Yarncha keeps saving on this device while cloud sync connects in the background.</p><div class="auth-buttons"><button class="auth-button apple" id="cloud-apple-sign-in">Continue with Apple</button><button class="auth-button" id="cloud-google-sign-in">Continue with Google</button></div><div class="form-grid"><div class="field full"><label for="cloud-email">Email</label><input id="cloud-email" type="email" autocomplete="email" inputmode="email"></div><div class="field full"><label for="cloud-password">Password</label><input id="cloud-password" type="password" autocomplete="current-password" minlength="8"></div></div><p class="form-error" id="cloud-auth-error" role="alert"></p><div class="modal-actions"><button class="secondary-button" id="cloud-sign-up">Create account</button><button class="primary-button" id="cloud-sign-in">Sign in</button></div><div class="account-destination-list"><button class="secondary-button" id="cloud-signed-out-settings">Settings</button><button class="secondary-button" id="cloud-signed-out-appearance">Appearance</button></div><div class="privacy-note">Yarncha stores your account with Supabase Auth. Projects, counters, stash, charts, annotations, settings and tool history remain local-first and private to your account when synced.</div>`);
+  document.getElementById("cloud-signed-out-settings").onclick = () => api.openSettings?.();
+  document.getElementById("cloud-signed-out-appearance").onclick = () => api.openSettings?.("settings-appearance");
   const credentials = () => ({
     email: document.getElementById("cloud-email").value.trim(),
     password: document.getElementById("cloud-password").value
@@ -429,6 +495,7 @@ function openAccountModal() {
       }
       api.closeModal();
       api.toast("Signed in. Your local projects are ready to migrate.");
+      api.refreshShell?.();
       api.rerenderSettings();
     } catch (error) {
       errorBox.textContent = friendlyError(error);
@@ -635,12 +702,9 @@ async function queueCoverUpload(projectId, localAssetId, file) {
 }
 
 async function deleteCloudProject(localProjectId) {
-  if (!cloud.user) return;
-  try {
-    await deleteProjectByLocalId(String(localProjectId));
-  } catch (error) {
-    local().toast(`Deleted locally. Cloud deletion needs retry: ${friendlyError(error)}`);
-  }
+  const queued = queueProjectDeletion(localProjectId);
+  if (!cloud.user || navigator.onLine === false) return queued;
+  return runFullSync("project-delete");
 }
 
 async function injectChartReader() {
@@ -671,7 +735,7 @@ async function injectChartReader() {
     return;
   }
   const uploads = await listChartUploads(project.cloudId).catch(() => []);
-  panel.innerHTML = `<p class="eyebrow">AI CHART READER</p><h3>Cloud analysis</h3><p>Choose an uploaded image. AI suggestions remain editable and every low-confidence cell must be checked manually.</p>${uploads.length ? `<div class="field"><label>Cloud chart</label><select id="cloud-chart-upload-select">${uploads.map(upload => `<option value="${upload.id}">${local().escapeHtml(upload.original_filename)} · ${upload.status}</option>`).join("")}</select></div><div class="button-row"><button class="secondary-button" id="run-cloud-analysis">Analyse chart</button><button class="secondary-button" id="load-cloud-cells">Review cells</button></div>` : `<p class="empty-state">Upload a chart while signed in, or migrate existing local chart files.</p>`}<div id="cloud-chart-reader-result" aria-live="polite"></div>`;
+  panel.innerHTML = `<p class="eyebrow">AI CHART READER</p><h3>Cloud analysis</h3><p>Choose an uploaded image. AI suggestions remain editable and every low-confidence cell must be checked manually.</p>${uploads.length ? `<div class="field"><label for="cloud-chart-upload-select">Cloud chart</label><select id="cloud-chart-upload-select">${uploads.map(upload => `<option value="${upload.id}">${local().escapeHtml(upload.original_filename)} · ${upload.status}</option>`).join("")}</select></div><div class="button-row"><button class="secondary-button" id="run-cloud-analysis">Analyse chart</button><button class="secondary-button" id="load-cloud-cells">Review cells</button></div>` : `<p class="empty-state">Upload a chart while signed in, or migrate existing local chart files.</p>`}<div id="cloud-chart-reader-result" aria-live="polite"></div>`;
   document.getElementById("run-cloud-analysis")?.addEventListener("click", runSelectedAnalysis);
   document.getElementById("load-cloud-cells")?.addEventListener("click", loadSelectedCells);
 }
@@ -913,6 +977,7 @@ function renderSettingsSection(host) {
     if (cloud.realtime?.unsubscribe) await cloud.realtime.unsubscribe();
     cloud.realtime = null;
     local().toast("Signed out. Local drafts remain on this device.");
+    local().refreshShell?.();
     local().rerenderSettings();
   });
   refreshDeviceList();
@@ -947,6 +1012,7 @@ function renderSettingsSection(host) {
       await deleteAccountAndData();
       cloud.user = null;
       local().toast("Cloud account deleted. Local drafts remain on this device.");
+      local().refreshShell?.();
       local().rerenderSettings();
     } catch (error) {
       local().toast(friendlyError(error));
@@ -960,6 +1026,7 @@ window.YarnchaCloud = {
   queueChartUpload,
   queueCoverUpload,
   deleteCloudProject,
+  queueProjectDeletion,
   injectChartReader,
   migrateLocalProjects,
   syncNow: runFullSync,

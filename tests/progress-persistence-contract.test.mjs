@@ -27,7 +27,9 @@ assert.match(cloud, /Cloud empty · kept device progress/, "empty cloud restore 
 assert.match(cloud, /current\.projects = \[\.\.\.byLocalId\.values\(\)\]/, "cloud restore merges projects by local id");
 assert.match(cloud, /if \(!current\.projects\.some\(project => String\(project\.id\) === String\(current\.activeProjectId\)\)\)/, "active project id is repaired after merge");
 assert.match(cloud, /const \{ theme, language, unitSystem, budgetSettings \} = remote;/, "cloud settings restore cannot replace projects accidentally");
-assert.match(cloud, /setCloudStatus\("✓ Saved to cloud"/, "cloud save status is shown only after cloud write succeeds");
+assert.match(cloud, /setCloudStatus\(result\.conflicts[\s\S]*"✓ Synced to cloud"/, "cloud success is shown only after acknowledged sync work");
 assert.match(cloud, /Saved on this device · Cloud retry needed/, "cloud failure keeps local save status honest");
+assert.match(cloud, /SYNC_RESULT\.QUEUED_OFFLINE/, "offline sync returns an explicit queued result");
+assert.match(cloud, /SYNC_RESULT\.FAILED/, "failed sync returns an explicit failure result");
 
 console.log("Progress persistence contract passed.");

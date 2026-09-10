@@ -1,3 +1,4 @@
+import { declarations } from './helpers/css-contract.mjs';
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
@@ -240,6 +241,6 @@ assert.match(styles, /\.flow-reader-grid/, "Flow Mode reader layout is styled");
 assert.match(styles, /\.flow-row-buttons/, "row buttons are styled");
 assert.match(styles, /\.flow-read-aloud/, "Read aloud controls are styled");
 assert.match(styles, /\.flow-ai-cloud-slot:empty \{ display:none;/, "empty cloud chart slot collapses");
-assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.flow-reader-grid \{ grid-template-columns:1fr; \}/, "Flow Mode reader collapses cleanly on mobile");
+assert.equal(declarations('.flow-reader-grid','(max-width:760px)')['grid-template-columns'],'1fr','Flow Mode reader collapses cleanly on mobile');
 
 console.log("Flow Mode reader contract passed.");

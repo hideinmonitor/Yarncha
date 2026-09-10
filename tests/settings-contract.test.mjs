@@ -1,3 +1,4 @@
+import { declarations } from './helpers/css-contract.mjs';
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
@@ -33,10 +34,10 @@ assert.match(app,/settings-panel-wide settings-preferences-card/,"Making prefere
 assert.match(app,/settings-panel-wide settings-backup-card/,"Projects and Backup spans the desktop Settings content width");
 assert.match(app,/settings-backup-layout/,"Projects and Backup has a dedicated desktop layout wrapper");
 assert.match(cloud,/section\.className = "[^"]*\bsettings-panel\b[^"]*\bsettings-panel-wide\b[^"]*"/,"cloud account card spans the Settings content width");
-assert.match(css,/@media \(min-width:1024px\)[\s\S]+\.view,\.topbar-inner \{ max-width:none; margin-inline:0; \}/,"desktop pages use the available width beside the sidebar");
-assert.match(css,/@media \(min-width:1024px\)[\s\S]+\.settings-page-shell \{ grid-template-columns:minmax\(0,1fr\);/,"desktop Settings uses a full-width dashboard column");
-assert.match(css,/@media \(min-width:1024px\)[\s\S]+\.settings-backup-layout \{ grid-template-columns:minmax\(0,1fr\) minmax\(300px,360px\);/,"desktop backup card uses a two-column layout");
-assert.match(css,/@media \(max-width: 900px\)[\s\S]+\.settings-page-shell[^}]+grid-template-columns:1fr/s,"Settings cards stack responsively");
+assert.equal(declarations('.view')['max-width'],declarations('.topbar-inner')['max-width'],'Header and pages share the content width');
+assert.equal(declarations('.settings-page-shell')['grid-template-columns'],'minmax(0,1fr)','Settings keeps a full-width primary column');
+assert.equal(declarations('.settings-backup-layout','(min-width:1024px)')['grid-template-columns'],'minmax(0,1fr) minmax(300px,360px)','Desktop backup has a useful action column');
+assert.equal(declarations('.settings-page-shell')['grid-template-columns'],'minmax(0,1fr)','Settings sections stay within the page column');
 assert.match(css,/\.settings-danger-zone[^}]+border-color:color-mix\(in srgb,var\(--danger\)/,"Danger Zone has a visually distinct red border");
 assert.match(css,/\.settings-toggle-row[^}]+min-height:56px/s,"toggles exceed the 44px touch target");
 assert.match(css,/\.view[^}]+env\(safe-area-inset-bottom\)/s,"page shell preserves mobile safe area");

@@ -19,7 +19,7 @@ const checks = [
   ["protects unsaved changes", /beforeClose:\(\)=>!dirty\|\|confirm\("Discard changes\?"\)/],
   ["requires exact DELETE confirmation", /event\.target\.value!=="DELETE"/],
   ["deletes project assets and stored project", /assetIdsForProject\(p\)\.map\(deleteAsset\)[\s\S]*state\.projects=state\.projects\.filter/],
-  ["navigates safely after deletion", /closeModal\(true\);showView\("projects"\);toast\("Project deleted"\)/],
+  ["navigates safely after deletion", /closeModal\(true\);showView\("projects"\);[\s\S]*Project deleted everywhere[\s\S]*cloud deletion will retry/],
   ["shows project Fit Check card", /FIT CHECK[\s\S]*Check the fit before you continue/],
   ["saves Fit Check measurements", /function saveProjectFitCheck\(\)[\s\S]*bodyChest:value\("fit-body-chest"\)[\s\S]*finishedChest:value\("fit-finished-chest"\)/],
   ["opens sizing tools from Fit Check", /function openProjectFitTools\(\)[\s\S]*p\.projectTools\.category="fit"/]

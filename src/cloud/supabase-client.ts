@@ -234,8 +234,7 @@ export async function upsertSyncRecords(records: Array<Omit<SyncRecord, "user_id
     user_id: user.id,
     last_synced_at: now
   }));
-  const { data, error } = await client.from("yarncha_sync_records")
-    .upsert(rows, { onConflict: "user_id,id" }).select("*");
+  const { data, error } = await client.rpc("upsert_yarncha_sync_records", { p_records: rows });
   if (error) throw error;
   return (data || []) as SyncRecord[];
 }
@@ -283,14 +282,21 @@ export async function removeSyncDevice(deviceId: string) {
 
 export async function saveProjectVersion(project: Record<string, any>, deviceId: string) {
   if (!project?.id) return null;
-  const { client, user } = await requireUser();
-  const { data, error } = await client.from("yarncha_project_versions").insert({
-    user_id: user.id,
-    project_local_id: String(project.id),
-    device_id: deviceId,
-    project_data: cloudSafeProject(project),
-    label: String(project.name || "Project version")
-  }).select("*").single();
+  const { client } = await requireUser();
+  const projectData = cloudSafeProject(project);
+  const canonical = JSON.stringify(projectData, (_key, value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)));
+  });
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+  const contentHash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+  const { data, error } = await client.rpc("save_yarncha_project_version", {
+    p_project_local_id: String(project.id),
+    p_device_id: deviceId,
+    p_project_data: projectData,
+    p_label: String(project.name || "Project version"),
+    p_content_hash: contentHash
+  });
   if (error) throw error;
   return data;
 }
@@ -360,7 +366,11 @@ export async function listChartUploads(projectId: string): Promise<ChartUpload[]
 
 export async function analyzeChart(uploadId: string) {
   const { client } = await requireUser();
-  const { data, error } = await client.functions.invoke("analyze-chart", { body: { uploadId } });
+  const idempotencyKey = `chart:${uploadId}`;
+  const { data, error } = await client.functions.invoke("analyze-chart", {
+    body: { uploadId, idempotencyKey },
+    headers: { "Idempotency-Key": idempotencyKey }
+  });
   if (error) throw error;
   return data;
 }

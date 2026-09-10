@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { declarations } from "./helpers/css-contract.mjs";
 
 const engineSource = readFileSync("repeat-engine.js", "utf8");
 const app = readFileSync("app.js", "utf8");
@@ -75,7 +76,9 @@ assert.equal(migrated[0].repeatRules.length, 1, "legacy sub counters migrate to 
 assert.equal(migrated[0].repeatRules[0].linkedFeature, "project", "migrated rule links to project");
 assert.equal(engine.createRepeatRule({startRow:12,repeatValue:4}).startAt,12,"legacy startRow migrates to the inclusive startAt anchor");
 
-assert.match(html, /repeat-engine\.js\?v=/, "Repeat Engine is loaded before app runtime");
+assert.match(html, /<script type="module" src="\/src\/main\.js"><\/script>/, "A single Vite entry loads the application runtime");
+const vite=readFileSync("vite.config.js","utf8");
+assert.ok(vite.indexOf('"repeat-engine.js"')<vite.indexOf('"app.js"'),"Repeat Engine is concatenated before the app in the single runtime scope");
 assert.match(app, /repeatEngine\(\)\?\.migrateRepeatRules/, "project load migrates repeat rules");
 assert.match(app, /repeatEngine\(\)\?\.getNextTrigger/, "sub-counter next trigger uses Repeat Engine");
 assert.match(app, /repeatEngine\(\)\.validateRepeatRule/, "UI validates repeat rules before save");
@@ -92,7 +95,7 @@ assert.match(refinedModal,/Section begins at main row \/ round/,"sub-counter sec
 assert.match(refinedModal,/Sub-counter starts at/,"sub-counter starting value is explicit");
 assert.doesNotMatch(refinedModal,/Current count|Repeat type|Anchor Row/,"ambiguous and mixed legacy fields are absent from the refined modal");
 assert.match(refinedModal,/host\.innerHTML=mode==="repeatCounter"\?/,"mode fields are rendered conditionally rather than hidden");
-assert.match(css,/\.modal:has\(\.repeat-engine-modal\) \{ width:min\(680px,calc\(100vw - 32px\)\)/,"Repeat modal is viewport bounded");
+assert.equal(declarations(".modal")["width"],"min(var(--dialog-width,var(--content-narrow)),100%)","Repeat modal inherits viewport-bounded shared dialog sizing");
 assert.match(app,/repeat-save-mobile">Save rule/,"Repeat Counter uses a compact mobile save label");
 assert.match(app,/repeat-save-mobile">Save counter/,"Sub-Counter uses a compact mobile save label");
 assert.match(css,/@media \(max-width:600px\)[\s\S]*\.modal \.repeat-modal-actions \{ display:grid !important; grid-template-columns:minmax\(0,1fr\) !important;/,"mobile footer actions stack safely below 600px");

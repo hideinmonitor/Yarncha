@@ -1,3 +1,4 @@
+import { declarations } from './helpers/css-contract.mjs';
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
@@ -28,17 +29,16 @@ function contrast(a, b) {
 }
 
 assert.equal(themePresets.length, 8, "Yarncha keeps eight theme identities");
-assert.equal(JSON.stringify(themePresets.map(theme => theme.id)), JSON.stringify(["corner-of-light","flower-blossom","sky-blessing","matcha-grove","ocean-mist","mediterranean-dream","sakura-milk","lavender-twilight"]), "theme gallery uses the requested theme set");
-assert.equal(themePresets[0].name, "Corner of Light", "Corner of Light is the first/default theme");
-assert.equal(themePresets[0].badge, "Vintage", "Corner of Light uses the Vintage badge");
-assert.equal(themePresets[0].description, "Warm paper layers, earthy accents, and a grounded craft journal feel.", "Corner of Light uses the requested description");
-assert.equal(themePresets[0].primary, "#793409", "Corner of Light uses deep cocoa primary");
-assert.equal(themePresets[0].accent, "#C96C23", "Corner of Light uses burnt orange accent");
-assert.equal(themePresets[0].secondary, "#AD9E66", "Corner of Light uses dusty olive support");
-assert.equal(themePresets[0].highlight, "#FCC277", "Corner of Light uses soft amber highlight");
-assert.equal(themePresets[0].recommended, true, "Corner of Light is recommended");
-assert.equal(themePresets[0].canDelete, false, "Corner of Light cannot be deleted");
-assert.match(app, /theme:\{name:"corner-of-light"/, "starter theme defaults to Corner of Light");
+assert.equal(JSON.stringify(themePresets.map(theme => theme.id)), JSON.stringify(["creamy-vanilla","flower-blossom","sky-blessing","matcha-grove","ocean-mist","mediterranean-dream","sakura-milk","lavender-twilight"]), "theme gallery uses the requested theme set");
+assert.equal(themePresets[0].name, "The defaults", "The defaults is the first/default theme");
+assert.equal(themePresets[0].badge, "Original", "The defaults is marked as original");
+assert.equal(themePresets[0].primary, "#B7785F", "Creamy Vanilla uses the original clay primary");
+assert.equal(themePresets[0].accent, "#B7785F", "Creamy Vanilla uses the original clay accent");
+assert.equal(themePresets[0].secondary, "#E7E9DC", "Creamy Vanilla uses the original sage-pale support");
+assert.equal(themePresets[0].highlight, "#C4A269", "Creamy Vanilla uses the original gold highlight");
+assert.equal(themePresets[0].recommended, true, "Creamy Vanilla is recommended");
+assert.equal(themePresets[0].canDelete, false, "Creamy Vanilla cannot be deleted");
+assert.match(app, /theme:\{name:"creamy-vanilla"/, "starter theme defaults to Creamy Vanilla");
 for (const theme of themePresets) {
   assert.equal("japaneseName" in theme, false, `${theme.id} is English-only in the theme system`);
   assert.ok(theme.description, `${theme.id} has a mood description`);
@@ -123,14 +123,14 @@ assert.match(app, /card\.onkeydown=.*Enter.* /s, "theme cards can be selected wi
 assert.match(app, /theme-active-badge/, "active theme has an explicit non-colour badge");
 assert.doesNotMatch(app, /data-theme-name|theme-apply-button|Apply Theme|Copy HEX|theme-hex-row|palette hex codes/, "theme gallery does not expose Apply buttons or visible HEX details");
 assert.match(css, /\.theme-preview-card:focus-visible/, "theme gallery keeps a visible keyboard focus state");
-assert.match(css, /\.theme-preview-card\.active[^}]+border-width:3px/, "active theme card has a strong selected border");
-assert.match(css, /\.theme-preview-card:hover[^}]+translateY\(-3px\)/, "theme cards lift on hover");
+assert.match(declarations('.theme-preview-card.active')['box-shadow'],/var\(--focus\)/,'Selected theme has a visible non-layout-shifting focus ring');
+assert.equal(declarations('.theme-preview-card:hover')['box-shadow'],'var(--shadow-soft)','Theme hover uses the shared subtle elevation');
 assert.doesNotMatch(app, /theme-japanese-name|japaneseName|Morning Orchard|morning-orchard/, "theme UI no longer exposes Japanese subtitles or Morning Orchard");
 assert.match(app, /Palette inspiration: @Lux Design Studio from Pinterest\./, "theme selector shows the requested palette credit");
-assert.match(css, /\.danger-button \{[^}]*background:var\(--danger\) !important;[^}]*color:#FFFFFF !important;/, "danger buttons keep red backgrounds with white text");
-assert.match(css, /\.danger-button \.ui-icon,\.danger-button svg \{[^}]*#FFFFFF/, "danger button icons are white");
-assert.match(css, /#9F3836/, "danger button hover state uses the requested darker red");
+assert.equal(declarations('.danger-button')['background'],'var(--danger-surface)','Danger actions use a semantic tinted surface');
+assert.equal(declarations('.danger-button svg')['color'],'var(--danger-ink)','Danger icons inherit the readable danger ink');
+assert.equal(declarations('.danger-button:hover')['background'],'var(--danger-hover)','Danger hover uses the same semantic system');
 assert.doesNotMatch(app, /Row 42 · soft card|Active tab|Row 42 · readable card/, "Light/Dark preview contains no fake app text");
-assert.match(css, /\.theme-compare-top,\.theme-compare-content \{ display:none; \}/, "lower information section is hidden from theme preview");
+assert.equal(declarations('.theme-compare-content').display,'none','Theme comparison keeps its concise visual preview');
 
 console.log("Theme contrast contract passed.");
