@@ -15,14 +15,20 @@ for (const service of [
 }
 
 assert.doesNotMatch(source, /data-chart-mode="assistant"/, "Yarncha Assistant is not a Chart mode");
-assert.match(source, /<h2>Yarncha Assistant<\/h2>/, "Assistant section has Yarncha Assistant title");
-assert.match(source, /Ask for help with stitches, symbols, patterns, and mistakes\./, "Assistant section explains tutor purpose");
-assert.match(source, /function projectAssistantTabHtml\(p\)[\s\S]*\$\{yarnchaAssistantChartHtml\(p\)\}/, "Assistant renders in the project Assistant section");
+assert.match(source, /<h2>Ask Yarncha<\/h2>/, "the unified Assistant has one Yarncha identity");
+assert.match(source, /Ask about your current project, chart, stitches, symbols, pattern, or mistakes\./, "Assistant section explains its unified project-aware purpose");
+assert.match(source, /function projectAssistantTabHtml\(p\)[\s\S]*assistant-tab-shell[\s\S]*\$\{yarnchaAssistantChartHtml\(p\)\}/, "the project Assistant section renders one chat shell");
+assert.doesNotMatch(source, /function projectAssistantHtml|PROJECT ASSISTANT/, "the competing Project Assistant panel is removed");
 assert.match(source, /chartMode==="flow"\?\`<div class="manual-chart-tools">\$\{friendlyChartBetaHtml\(p\)\}<\/div>\`:""\}/, "Flow Mode rendering remains separate");
 assert.match(source, /Yarncha Assistant lives in the Assistant section/, "Chart copy points to Assistant section");
-assert.match(source, /Ask about a stitch, symbol, row, mistake, or pattern line\.\.\./, "Assistant has the practical ask placeholder");
-assert.match(source, /Using row \$\{context\.currentRow\} context/, "Assistant can show row context");
-assert.match(source, /No chart context available/, "Assistant handles missing chart context");
+assert.match(source, /Ask about this project, row, stitch, symbol, repeat, or mistake\.\.\./, "Assistant has one practical composer");
+assert.match(source, /Using \$\{context\.projectName\}[\s\S]*Row \$\{context\.currentRow\}/, "Assistant identifies the active project and row context");
+assert.match(source, /Attached project context/, "verified chart and OCR text lives in collapsible attached context");
+assert.match(source, /role="log"[\s\S]*id="assistant-question"[\s\S]*id="ask-assistant"/, "Assistant has one conversation area and one composer");
+assert.match(source, /const assistantProviderAdapters=Object\.freeze/, "assistant providers are isolated behind an adapter registry");
+assert.match(source, /async function sendAssistantMessage\(\{message,projectContext,conversationHistory=\[\],provider="local"\}/, "chat sends through a provider-agnostic interface");
+assert.match(source, /await sendAssistantMessage\(\{message:question,projectContext,conversationHistory\}\)/, "the UI passes message, project context, and history to the adapter");
+assert.match(source, /attachedProjectContext:reviewedChartText[\s\S]*verifiedChartText:reviewedChartText[\s\S]*ocrText:/, "project context includes reviewed chart and OCR text");
 assert.match(source, /classifyQuestion\(question/, "Assistant classifies the user question first");
 assert.match(source, /const techniqueGuideDatabase=\[/, "Technique Help uses a structured guide database");
 assert.match(source, /function buildTechniqueHelp/, "Technique Help has a dedicated response builder");
@@ -41,11 +47,10 @@ for (const copy of [
   "Related techniques",
   "Library links",
   "My stitch count is wrong",
-  "Explain this symbol",
-  "Help me read this row",
-  "Fix a dropped stitch",
-  "What does this abbreviation mean?",
-  "Why does my project look different?",
+  "Explain this row",
+  "What does this symbol mean?",
+  "Explain this repeat",
+  "Help me fix a mistake",
   "Technique Help",
   "Choose a technique first",
   "Merge New Yarn",
@@ -106,5 +111,7 @@ assert.match(styles, /\.yarncha-assistant-panel/, "Assistant has dedicated mobil
 assert.match(styles, /\.assistant-control-grid/, "Assistant controls are structured");
 assert.match(styles, /\.assistant-count-check/, "Technique count checks have a dedicated card style");
 assert.match(styles, /\.assistant-step-accordion/, "Technique steps are readable on mobile");
+assert.match(styles, /\.assistant-conversation/, "the unified chat conversation is styled");
+assert.match(styles, /\.assistant-tab-shell[^}]*max-width:1200px/, "the unified Assistant uses the available desktop width");
 
 console.log("Yarncha Assistant contract passed");

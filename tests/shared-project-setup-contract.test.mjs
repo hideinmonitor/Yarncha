@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 
 assert.match(source, /function buildSetupFromLegacyProjectFields\b/, "legacy project fields migrate into shared setup");
 assert.match(source, /function projectSetupPanelHtml\b/, "ProjectSetupPanel component exists");
@@ -16,5 +17,7 @@ assert.match(source, /Your setup is shared across this project, Flow Mode, and p
 assert.doesNotMatch(source, /class="studio-tabs"/, "duplicate Rendering Studio Grid/Stripe/Pooling tabs are not rendered");
 assert.doesNotMatch(source, /These details are used by Flow Mode and project tools/, "old duplicated setup explanation is removed");
 assert.doesNotMatch(source, /Saved project settings/, "old read-only saved settings card label is removed");
+assert.match(styles, /\.project-info-grid > \.project-setup-panel \{[^}]*grid-column:1\/-1;[^}]*max-width:1200px;/, "desktop Project Setup spans the available project grid width");
+assert.match(styles, /@media \(max-width:900px\)[\s\S]*\.project-setup-grid \{ grid-template-columns:1fr; \}/, "Project Setup still stacks on smaller screens");
 
 console.log("Shared project setup contract passed.");

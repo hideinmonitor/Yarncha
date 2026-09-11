@@ -14,7 +14,10 @@ assert.match(html, /sidebar-new-project[^>]*id="new-project"/, "New project live
 assert.doesNotMatch(html, /id="voice-top"/, "global voice was removed from the header");
 assert.doesNotMatch(html, /id="quick-add-project"/, "the duplicate project plus was removed");
 
-assert.match(html, /sidebar-foot[\s\S]*id="account-button"[\s\S]*data-view="settings"/, "account and settings live in the sidebar footer");
+assert.match(html, /sidebar-foot[\s\S]*id="account-button"/, "the account trigger lives in the sidebar footer");
+assert.doesNotMatch(html, /sidebar-foot[\s\S]*data-view="settings"/, "Settings is not a permanent sidebar row");
+assert.match(html, /id="account-button"[^>]*aria-haspopup="dialog"[^>]*aria-expanded="false"/, "the account trigger exposes dialog state");
+assert.match(app, /function openMobileMoreMenu\(\)[\s\S]*Appearance[\s\S]*Settings/, "mobile More keeps preferences available");
 assert.match(html, /data-view="today" aria-current="page"/, "the initial current navigation destination is announced");
 assert.match(app, /item\.setAttribute\("aria-current","page"\)/, "navigation updates the announced current destination");
 assert.match(app, /state\.projects\.slice\(0,5\)/, "sidebar project shortcuts are intentionally limited to recent work");

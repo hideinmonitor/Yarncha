@@ -5,9 +5,11 @@ const app = readFileSync("app.js", "utf8");
 const html = readFileSync("index.html", "utf8");
 const css = readFileSync("styles.css", "utf8");
 
-for (const pageId of ["today", "projects", "market", "library", "tools", "settings"]) {
+for (const pageId of ["today", "projects", "market", "library", "tools"]) {
   assert.match(html, new RegExp(`data-view="${pageId}"`), `Main navigation includes ${pageId}`);
 }
+assert.match(app, /settings:\{viewId:"settings",component:"SettingsPage"/, "Settings remains a routed page");
+assert.doesNotMatch(html, /sidebar-foot[\s\S]*data-view="settings"/, "Settings is reached from the account area instead of a permanent sidebar row");
 
 for (const pageId of ["flow", "assistant"]) {
   assert.doesNotMatch(html, new RegExp(`data-view="${pageId}"`), `${pageId} is not a global navigation item`);

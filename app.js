@@ -1015,8 +1015,6 @@ async function showView(name) {
       item.classList.toggle("active", navId === requested);
       if(item.dataset.view){if(navId===requested)item.setAttribute("aria-current","page");else item.removeAttribute("aria-current");}
     });
-    const settingsLink=document.querySelector(".sidebar-settings");
-    if(settingsLink){if(requested==="settings")settingsLink.setAttribute("aria-current","page");else settingsLink.removeAttribute("aria-current");}
     document.querySelectorAll(".side-project").forEach(item=>{
       if(route.viewId==="project-detail"&&String(item.dataset.project)===String(currentProjectId))item.setAttribute("aria-current","page");
       else item.removeAttribute("aria-current");
@@ -1104,6 +1102,7 @@ function renderAccountControl(){
   document.getElementById("account-meta").textContent=details.meta;
   document.getElementById("account-avatar").textContent=details.initial;
   control.setAttribute("aria-label",details.label==="Log in"?"Log in or create an account":`Manage account for ${details.label}`);
+  if(!document.getElementById("modal-backdrop")?.classList.contains("open"))control.setAttribute("aria-expanded","false");
 }
 function openSettingsSection(sectionId=""){
   closeModal(true);
@@ -1420,27 +1419,32 @@ function friendlyChartBetaHtml(p){
   const voiceLabels={short:"Read only",teaching:"Read & explain",beginner:"Beginner friendly"};
   const sizeOptions=["XXS","XS","S","M","L","XL","XXL","Custom"];
   const projectTypes=["Scarf","Socks","Hat / Beanie","Shawl","Bag","Blanket","Amigurumi","Top","Cardigan","Jumper / Sweater","Vest","Dress","Other"];
+  const noticeMessages=[
+    !hasChart?"Add a chart so Yarncha can guide you row by row.":hasUnclear?"Please review the unclear symbols before Yarncha reads them as instructions.":"",
+    ...plan.warnings,
+    plan.estimateOnly&&!plan.warnings.length?"Add your gauge for a more accurate finished-size estimate.":""
+  ].filter(Boolean);
+  const noticeTitle=!hasChart?"Chart needed":hasUnclear?"Quick check needed":plan.estimateOnly?"Estimate only":"Ready to follow";
   return `<div class="chart-analysis ai-beta-safe flow-reader-card card workspace-card" id="flow-ai-reader">
     <div class="flow-hero"><p class="eyebrow">PROJECT CHART</p><h3>Flow Mode</h3><p>Let Yarncha help you follow your pattern one row at a time.</p><p class="muted-copy">Yarncha looks at your chart and helps you keep track of your place. If something looks unclear, we'll ask you to confirm it before continuing.</p></div>
-    <section class="flow-ready-card ${ready?"ready":"almost"}"><h4>${ready?"Your chart is ready.":"You're almost ready."}</h4>${ready?`<p>✓ Chart added</p><p>✓ Ready to start</p>`:`<p>${hasChart?"Please review a few symbols before we begin.":"Add a chart, then Yarncha can guide you row by row."}</p>`}</section>
-    <section class="flow-reader-panel flow-project-card"><p class="eyebrow">YOUR PROJECT</p><h4>${escapeHtml(p.name||"Current project")}</h4><p>${escapeHtml(setup.craft||p.type||"Pattern")} · You are on row ${p.row}${p.chartRows||p.totalRows?` of ${p.chartRows||p.totalRows}`:""}</p></section>
-    ${flowProjectSetupSummaryHtml(p)}
-    <section class="flow-reader-panel flow-setup-results-panel">
-      ${plan.warnings.length?`<div class="flow-warning-card"><strong>Before you begin</strong>${plan.warnings.map(w=>`<p>${escapeHtml(w)}</p>`).join("")}</div>`:`<div class="flow-ready-card ready"><p>✓ Your hook or needle and yarn look close enough to the pattern to begin.</p></div>`}
-      <div class="flow-ready-card ${plan.estimateOnly?"almost":"ready"}"><p>${plan.estimateOnly?"Estimate only":"Ready"} · ${escapeHtml(plan.summary||"Project setup summary is ready.")}</p></div>
-      ${resultSummaryHtml("Project Setup Summary",flowCalculationItems(plan),"flow-calculation-summary")}
-      <div class="flow-setup-save-row"><button class="secondary-button manual-save-button" data-manual-save="Flow Mode" type="button">Save now</button><span id="flow-setup-save-status" class="setup-save-status saved" data-save-indicator>Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
-      <button class="primary-button flow-start-button" id="start-flow-mode" type="button">Start Flow Mode</button>
-    </section>
-    <section class="flow-reader-panel flow-reading-mode-panel"><h4>Reading Progress</h4>
-      <div class="flow-current-row-card"><label for="flow-current-row">I'm currently on</label><div class="flow-row-line"><span>Row</span><input id="flow-current-row" type="number" min="0" max="${p.chartRows||reader.grid.rows||999}" value="${p.row}"></div><p>${escapeHtml(rowInstruction)}</p><small>${escapeHtml(flowCurrentStitchStep(p,setup))}</small></div>
+    <section class="flow-project-context"><div><p class="eyebrow">YOUR PROJECT</p><h4>${escapeHtml(p.name||"Current project")}</h4><p>${escapeHtml(setup.craft||p.type||"Pattern")} · Row ${p.row}${p.chartRows||p.totalRows?` of ${p.chartRows||p.totalRows}`:""}</p></div><div class="flow-project-context-actions"><span class="flow-chart-status ${ready?"ready":"almost"}">${ready?"Chart ready":"Setup needed"}</span><button class="mini-button" id="start-flow-mode" type="button">Start Flow Mode</button></div></section>
+    ${noticeMessages.length?`<div class="flow-notice ${ready&&!plan.estimateOnly?"ready":"almost"}" role="status"><span aria-hidden="true">${ready&&!plan.estimateOnly?"✓":"!"}</span><div><strong>${escapeHtml(noticeTitle)}</strong>${noticeMessages.map(message=>`<p>${escapeHtml(message)}</p>`).join("")}</div></div>`:""}
+    <section class="flow-section flow-reading-mode-panel"><p class="eyebrow">READING PROGRESS</p>
+      <div class="flow-current-row-card"><span class="flow-current-row-label">I'm currently on</span><output id="flow-current-row" aria-live="polite">Row <strong>${p.row}</strong></output><p>${escapeHtml(rowInstruction)}</p><small>${escapeHtml(flowCurrentStitchStep(p,setup))}</small></div>
       <div class="flow-row-buttons"><button class="secondary-button" id="flow-prev-row" type="button">Previous Row</button><button class="primary-button" id="flow-next-row" type="button">Next Row</button></div>
-      <div class="flow-next-card"><strong>What's next?</strong><p>${flowReadingSummary(p,reader)}</p></div>
-      <label class="flow-direction-field">Pattern Language<select id="flow-pattern-language">${options(["abbreviations","full"],setup.patternLanguage,{abbreviations:"Abbreviations",full:"Full wording"})}</select><small>Choose whether Yarncha shows short pattern notation or spells each stitch out.</small></label>
-      <label class="flow-direction-field">How do you read this chart?<select id="flow-row-direction">${options(["left-to-right","right-to-left","alternating-rs-ws"],reader.rowDirection,directionLabels)}</select><small>Choose the direction your eyes move across each row. Alternating Rows is common when right-side and wrong-side rows switch direction.</small></label>
+      <p class="flow-next-line"><strong>Next:</strong> ${flowReadingSummary(p,reader)}</p>
+    </section>
+    <section class="flow-section flow-pattern-guidance"><div class="flow-section-heading"><p class="eyebrow">PATTERN GUIDANCE</p><h4>Keep the chart easy to follow</h4></div>
+      <div class="flow-guidance-controls"><label class="flow-direction-field">Pattern language<select id="flow-pattern-language">${options(["abbreviations","full"],setup.patternLanguage,{abbreviations:"Abbreviations",full:"Full wording"})}</select><small>Show short notation or spell each stitch out.</small></label>
+      <label class="flow-direction-field">Reading direction<select id="flow-row-direction">${options(["left-to-right","right-to-left","alternating-rs-ws"],reader.rowDirection,directionLabels)}</select><small>Alternating rows is common when right-side and wrong-side rows switch direction.</small></label></div>
       <div class="analysis-actions"><button class="mini-button" id="flow-align-mask">Show current row</button><button class="mini-button" id="flow-cover-completed">${reader.coverCompletedRows?"Update finished cover":"Cover finished rows"}</button><button class="mini-button" id="flow-clear-cover">Remove cover</button></div>
     </section>
-    <section class="flow-read-aloud">
+    ${flowProjectSetupSummaryHtml(p)}
+    <section class="flow-section flow-setup-results-panel">
+      ${resultSummaryHtml("Project Setup Summary",flowCalculationItems(plan),"flow-calculation-summary result-summary-plain")}
+      <div class="flow-setup-save-row"><button class="secondary-button manual-save-button" data-manual-save="Flow Mode" type="button">Save now</button><span id="flow-setup-save-status" class="setup-save-status saved" data-save-indicator>Saved · Last saved on this device ${escapeHtml(formatSavedTime(lastSaved))}</span></div>
+    </section>
+    <section class="flow-section flow-read-aloud">
       <div><strong>Voice Assistant</strong><p class="muted-copy">Yarncha can read the current row while you knit or crochet.</p></div>
       <div class="flow-read-controls"><button class="primary-button" id="flow-read-row">▶ Read Current Row</button><button class="secondary-button" id="flow-read-play">Play</button><button class="secondary-button" id="flow-read-pause">Pause</button><button class="secondary-button" id="flow-read-stop">Stop</button></div>
       <div class="flow-reading-controls flow-voice-settings">
@@ -1449,7 +1453,7 @@ function friendlyChartBetaHtml(p){
         <label>Reading style <select id="flow-voice-mode">${options(["short","teaching","beginner"],reader.readAloud.mode,voiceLabels)}</select></label>
       </div>
     </section>
-    <details class="flow-advanced-tools"><summary>Advanced tools</summary>
+    <details class="flow-section flow-advanced-tools"><summary>Advanced tools</summary>
       <div class="flow-reader-grid">
         <section class="flow-reader-panel"><h4>Chart setup</h4><div class="form-grid compact-form">
           <div class="field"><label for="flow-chart-type">Craft type</label><select id="flow-chart-type">${options(["Knitting","Crochet","Tunisian Crochet","Unknown"],reader.chartType)}</select></div>
@@ -1663,7 +1667,7 @@ function projectSetupPanelHtml(p,{context="project",embedded=false}={}){
   const easeText=check.ease===null?"Add body and finished width":`${check.ease>0?"+":""}${check.ease.toFixed(1)} cm`;
   const lengthText=check.lengthGap===null?"Add current length":`${check.lengthGap>0?`${check.lengthGap.toFixed(1)} cm to go`:`${Math.abs(check.lengthGap).toFixed(1)} cm over`}`;
   const lastSaved=setup.updatedAt||p.updatedAt;
-  return `<section class="card mobile-card project-setup-panel ${embedded?"embedded":""}" data-project-setup-form="${escapeHtml(context)}">
+  return `<section class="${embedded?"project-setup-panel embedded":"card mobile-card project-setup-panel"}" data-project-setup-form="${escapeHtml(context)}">
     <div class="section-heading compact-row"><div><p class="eyebrow">PROJECT SETUP</p><h2>Project Setup</h2><p class="muted-copy">Your setup is shared across this project, Flow Mode, and project tools.</p></div><span class="fit-check-status ${check.status==="Looks close"?"ok":"warn"}">${escapeHtml(check.status)}</span></div>
     <div class="project-setup-subsection">
       <h3>Basic setup</h3>
@@ -1718,7 +1722,7 @@ function projectSetupPanelHtml(p,{context="project",embedded=false}={}){
 function flowProjectSetupSummaryHtml(p){
   const setup=ensureProjectSetup(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup);
   const summary=[setup.craft,setup.projectType,setup.startStitches?`${setup.startStitches} cast-on`:plan.castOnOrChain?`${plan.castOnOrChain} start`:"Add start count",setup.rows?`${setup.rows} rows`:plan.rowCount?`${plan.rowCount} rows`:"Add rows"].filter(Boolean).join(" · ");
-  return collapsibleSectionHtml({eyebrow:"PROJECT SETUP",title:"Project guide",description:"Saved craft, project type, yarn, hook/needle, start, and rows for Flow Mode and project tools.",rightMeta:summary,className:"flow-reader-panel flow-setup-panel flow-project-setup-card",children:`<div id="flow-project-setup-editor">${projectSetupPanelHtml(p,{context:"flow",embedded:true})}</div>`});
+  return collapsibleSectionHtml({eyebrow:"PROJECT DETAILS",title:"Project guide",description:"Saved craft, project type, yarn, hook/needle, start, and rows for Flow Mode and project tools.",rightMeta:summary,className:"flow-section flow-setup-panel flow-project-setup-card",children:`<div id="flow-project-setup-editor">${projectSetupPanelHtml(p,{context:"flow",embedded:true})}</div>`});
 }
 function collectProjectSetupPanel(form){
   const value=name=>form.querySelector(`[data-project-setup-field="${name}"]`)?.value?.trim()||"";
@@ -1905,7 +1909,19 @@ const projectContextService={
   },
   getCurrentProjectContext(){
     const project=this.getCurrentProject(),setup=ensureProjectSetup(project||{}),chart=this.getCurrentChartContext(project),row=this.getCurrentRowContext(project),symbol=this.getCurrentSymbolContext(project),memory=learningMemoryService.getLearningMemory(project?.id||"");
-    return {projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),projectType:setup.projectType||project?.projectKind||project?.type||"",yarnWeight:setup.yarnWeight||project?.yarnWeight||"",fibreContent:setup.fibreContent||project?.fibreContent||"",toolSize:setup.toolSize||setup.hookSize||setup.needleSize||project?.hookSize||project?.needleSize||"",patternGauge:setup.patternGauge||setup.patternStitchesPer10cm||"",userGauge:setup.userGauge||setup.userStitchesPer10cm||"",targetMeasurement:setup.targetMeasurement||setup.targetLengthCm||project?.fitCheck?.targetLength||"",currentMeasurement:setup.currentMeasurement||project?.fitCheck?.currentLength||"",blockedState:setup.blockedState||project?.fitCheck?.blockedState||"",measurements:setup.bodyMeasurements||project?.fitCheck||null,skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",savedProgress:row.savedProgress,subCounters:this.getSubCounterContext(project),verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}};
+    const patternSource=normalizePatternSource(project?.patternSource||{},project||{});
+    const reviewedChartText=String(patternSource.userCorrectedText||project?.pdfReference||patternSource.extractedText||"").trim();
+    return {
+      projectId:project?.id||"",projectName:project?.name||"",craftType:normalizeAssistantCraft(setup.craft||chart.chartType||project?.type),projectType:setup.projectType||project?.projectKind||project?.type||"",
+      yarnWeight:setup.yarnWeight||project?.yarnWeight||"",fibreContent:setup.fibreContent||project?.fibreContent||"",toolSize:setup.hookNeedle||setup.userToolSize||setup.patternToolSize||project?.hookSize||project?.needleSize||"",
+      patternGauge:setup.patternGauge||setup.gauge||"",userGauge:setup.userGauge||setup.userGaugeStitches||"",targetMeasurement:setup.targetLengthCm||project?.fitCheck?.targetLength||"",currentMeasurement:setup.currentLengthCm||project?.fitCheck?.currentLength||"",
+      blockedState:setup.blockedState||project?.fitCheck?.blockedState||"",measurements:{bodyMeasurementCm:setup.bodyMeasurementCm,finishedWidthCm:setup.finishedWidthCm,intendedEaseCm:setup.intendedEaseCm,targetLengthCm:setup.targetLengthCm,currentLengthCm:setup.currentLengthCm,fitFeeling:setup.fitFeeling},
+      projectSetup:setup,skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",
+      attachedProjectContext:reviewedChartText,verifiedChartText:reviewedChartText,ocrText:String(patternSource.extractedText||"").trim(),ocrStatus:patternSource.ocrStatus,ocrConfidence:patternSource.ocrConfidence,
+      savedProgress:row.savedProgress,subCounters:this.getSubCounterContext(project),verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,
+      selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",
+      stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}
+    };
   }
 };
 function subCounterRowsUntilNext(counter,currentRow=0){
@@ -2132,6 +2148,29 @@ const yarnchaAssistantService={
     return {...base,questionType,contextNote:this.contextNote(context),generalLibraryAdvice:base.quickAnswer||"Use the Library guide as general technique help first.",projectSpecificAdvice:context.projectName?`For ${context.projectName}, check the current row, count, gauge, yarn, and measurement notes before changing the work.`:"Project-specific advice needs more project details before Yarncha can be exact.",assumptions:diagnostic.assumptions,missingInformation:diagnostic.missingInformation,whatToDoNow:`${missing}${base.whatToDoNow||"Start by checking the exact stitch, row, or symbol involved, then compare it with the pattern notes."}`,checkBeforeContinuing,libraryLinks,relatedTools,approvedLibraryEntries:approvedEntries.map(entry=>entry.title),confidence:context.currentRow||context.rowInstruction||context.currentSymbol?"medium":"general",sourceType:"local-library-rule-based"};
   }
 };
+const assistantProviderAdapters=Object.freeze({
+  local:{
+    id:"local-yarncha-guide",
+    async sendMessage({message,projectContext,conversationHistory=[]}){
+      const skillLevel=normalizeAssistantSkill(projectContext.skillLevel||"beginner");
+      const craftType=normalizeAssistantCraft(projectContext.craftType||"knitting");
+      const answer=await yarnchaAssistantService.askYarnchaAssistant({question:message,projectContext,skillLevel,craftType});
+      const attachedMatch=findPdfReference(projectContext.attachedProjectContext||"",message,projectContext.currentRow);
+      if(attachedMatch){
+        answer.projectSpecificAdvice=`From the attached project context: “${attachedMatch}” ${answer.projectSpecificAdvice||""}`.trim();
+        answer.attachedContextMatch=attachedMatch;
+        answer.sourceType="local-project-context-and-library-rules";
+      }
+      answer.conversationTurn=conversationHistory.length+1;
+      return answer;
+    }
+  }
+});
+async function sendAssistantMessage({message,projectContext,conversationHistory=[],provider="local"}={}){
+  const adapter=assistantProviderAdapters[provider];
+  if(!adapter)throw new Error(`Assistant provider “${provider}” is not available.`);
+  return adapter.sendMessage({message,projectContext,conversationHistory});
+}
 function yarnchaAssistantAnswerHtml(answer){
   if(!answer)return `<div class="empty-state">Ask Yarncha Assistant for stitch, symbol, pattern, or mistake help.</div>`;
   const labels=techniqueHelpLabels.en;
@@ -2141,22 +2180,31 @@ function yarnchaAssistantAnswerHtml(answer){
   const basedOn=answer.approvedLibraryEntries?.length?`Based on: ${answer.approvedLibraryEntries.join(", ")}.`:"Based on: Yarncha local guide rules.";
   return `<article class="yarncha-assistant-answer">${answer.contextNote?`<section class="assistant-project-context"><h4>${labels.projectContext}</h4><p>${escapeHtml(answer.contextNote)}</p></section>`:""}${answer.techniqueName?`<section class="assistant-technique-card"><h4>${labels.technique}</h4><p>${escapeHtml(answer.techniqueName)}${answer.techniqueCategory?` · ${escapeHtml(titleCaseTechnique(answer.techniqueCategory))}`:""}</p></section>`:""}<section><h4>${labels.quickAnswer}</h4><p>${escapeHtml(answer.quickAnswer||"")}</p></section>${answer.generalLibraryAdvice?`<section><h4>General Library advice</h4><p>${escapeHtml(answer.generalLibraryAdvice)}</p></section>`:""}${answer.projectSpecificAdvice?`<section><h4>Project-specific advice</h4><p>${escapeHtml(answer.projectSpecificAdvice)}</p></section>`:""}<section><h4>${labels.whatToDoNow}</h4><p>${escapeHtml(answer.whatToDoNow||"")}</p></section>${answer.assumptions?.length?list("Assumptions",answer.assumptions):""}${answer.missingInformation?.length?list("Missing information",answer.missingInformation,"assistant-count-check"):""}${answer.steps?.length?`<details class="assistant-step-accordion" open><summary>${labels.stepByStep}</summary><ol>${answer.steps.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></details>`:""}${list(labels.checkBeforeContinuing,answer.checkBeforeContinuing,"assistant-count-check")}${list(labels.commonMistakes,answer.commonMistakes)}${related}${tools}<section><h4>Library links</h4><div class="assistant-library-links">${(answer.libraryLinks||[]).map(link=>`<button class="chip" data-library-link="${escapeHtml(link.target)}">${escapeHtml(link.title)}</button>`).join("")}</div></section><p class="assistant-source-note">${escapeHtml(basedOn)} ${escapeHtml(answer.questionType||"generalQuestion")} · ${escapeHtml(answer.sourceType||"local-rule-based")} · confidence ${escapeHtml(answer.confidence||"general")}</p></article>`;
 }
+function assistantConversationHtml(p){
+  const assistant=p.yarnchaAssistant||{};
+  const legacy=assistant.lastAnswer&&!p.assistantMessages?.length?[{role:"user",text:assistant.lastQuestion||"Previous question"},{role:"assistant",text:assistant.lastAnswer.quickAnswer||"",answer:assistant.lastAnswer}]:[];
+  const messages=(p.assistantMessages?.length?p.assistantMessages:legacy).slice(-10);
+  if(!messages.length)return `<div class="assistant-conversation-empty"><strong>Yarncha is ready.</strong><p>Ask a question or choose a suggestion below. Your active project details are included automatically.</p></div>`;
+  return messages.map(message=>`<article class="assistant-chat-message ${message.role==="user"?"user":"assistant"}"><span class="assistant-message-label">${message.role==="user"?"You":"Yarncha"}</span>${message.answer?yarnchaAssistantAnswerHtml(message.answer):`<p>${escapeHtml(message.text||"")}</p>`}</article>`).join("");
+}
 function yarnchaAssistantChartHtml(p){
-  const assistant=p.yarnchaAssistant||{},context=projectContextService.getCurrentProjectContext(),skill=normalizeAssistantSkill(assistant.skillLevel||context.skillLevel),craft=normalizeAssistantCraft(assistant.craftType||context.craftType),answer=assistant.lastAnswer;
-  const contextText=context.currentRow?`Using row ${context.currentRow} context`:(context.currentChart?"Using current chart":"No chart context available");
+  const assistant=p.yarnchaAssistant||{},context=projectContextService.getCurrentProjectContext(),skill=normalizeAssistantSkill(assistant.skillLevel||context.skillLevel),craft=normalizeAssistantCraft(assistant.craftType||context.craftType);
+  const contextText=context.projectName?`Using ${context.projectName}${context.currentRow?` · Row ${context.currentRow}`:""}`:"Project context active";
   const selectedTechnique=assistant.selectedTechnique||"",techniqueOptions=techniqueOptionsForCraft(craft);
-  const suggestions=["My stitch count is wrong","Explain this symbol","Help me read this row","Fix a dropped stitch","What does this abbreviation mean?","Why does my project look different?"];
-  return `<section class="yarncha-assistant-panel card workspace-card">
-    <div class="section-heading compact-row"><div><p class="eyebrow">YARNCHA ASSISTANT</p><h2>Yarncha Assistant</h2><p>Ask for help with stitches, symbols, patterns, and mistakes.</p></div><span class="assistant-context-pill">${escapeHtml(contextText)}</span></div>
-    <div class="assistant-control-grid">
+  const suggestions=["Explain this row","What does this symbol mean?","My stitch count is wrong","Explain this repeat","Help me fix a mistake"];
+  const attachedText=p.pdfReference||context.verifiedChartText||context.ocrText||"";
+  return `<section class="yarncha-assistant-panel unified-assistant card workspace-card">
+    <div class="section-heading compact-row unified-assistant-heading"><div><p class="eyebrow">YARNCHA ASSISTANT</p><h2>Ask Yarncha</h2><p>Ask about your current project, chart, stitches, symbols, pattern, or mistakes.</p></div><div class="assistant-heading-actions"><span class="assistant-context-pill">${escapeHtml(contextText)}</span><button class="mini-button" id="open-chatgpt" type="button">Open in ChatGPT ↗</button></div></div>
+    <details class="assistant-attached-context"><summary>Attached project context${attachedText?` · ${escapeHtml(p.chart?.name||context.currentChart||"verified text")}`:""}</summary><p>Checked chart legends, abbreviations, and OCR text are available to Yarncha with each message. Edit this text if the scan needs a correction.</p><textarea aria-label="Attached project context" id="pdf-reference" rows="6" placeholder="Paste checked pattern text, symbols, a legend, or row instructions...">${escapeHtml(attachedText)}</textarea>${context.ocrStatus&&context.ocrStatus!=="not-started"?`<small>OCR ${escapeHtml(context.ocrStatus)}${context.ocrConfidence?` · ${Math.round(context.ocrConfidence)}% confidence`:""}. Verify unclear symbols against the original chart.</small>`:""}</details>
+    <details class="assistant-preferences"><summary>Assistant preferences</summary><div class="assistant-control-grid">
       <label class="field">Craft type<select id="chart-assistant-craft">${["knitting","crochet","tunisian"].map(value=>`<option value="${value}" ${craft===value?"selected":""}>${assistantCraftLabel(value)}</option>`).join("")}</select></label>
       <label class="field">Skill level<select id="chart-assistant-skill">${["beginner","intermediate","advanced"].map(value=>`<option value="${value}" ${skill===value?"selected":""}>${value[0].toUpperCase()+value.slice(1)}</option>`).join("")}</select></label>
       <label class="field full">Technique Help<select id="chart-assistant-technique"><option value="">Choose a technique first</option>${techniqueOptions.map(item=>`<option value="${escapeHtml(item.label)}" ${selectedTechnique===item.label?"selected":""}>${escapeHtml(item.label)} · ${escapeHtml(titleCaseTechnique(item.category))}</option>`).join("")}</select></label>
-    </div>
-    <div class="assistant-suggestion-row">${suggestions.map(text=>`<button class="chip" data-assistant-suggestion="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div>
-    <div class="assistant-ask-row"><textarea aria-label="Ask Yarncha Assistant" id="chart-assistant-question" rows="3" placeholder="Ask about a stitch, symbol, row, mistake, or pattern line...">${escapeHtml(assistant.draftQuestion||"")}</textarea><button class="primary-button" id="ask-chart-assistant">Ask</button></div>
-    <div id="chart-assistant-answer" aria-live="polite">${yarnchaAssistantAnswerHtml(answer)}</div>
+    </div></details>
+    <div class="assistant-conversation" id="assistant-conversation" role="log" aria-live="polite" aria-label="Conversation with Yarncha">${assistantConversationHtml(p)}</div>
     <div class="assistant-memory-actions"><button class="mini-button" data-assistant-memory="save-explanation">Save explanation</button><button class="mini-button" data-assistant-memory="add-notes">Add to project notes</button><button class="mini-button" data-assistant-memory="add-checklist">Add checklist</button><button class="mini-button" data-assistant-memory="save-troubleshooting">Save troubleshooting</button><button class="mini-button" data-assistant-memory="create-calculator-input">Create calculator input</button><button class="mini-button" data-assistant-memory="link-library">Link Library entries</button><button class="mini-button" data-assistant-memory="remember-correction">Remember correction</button><button class="mini-button" data-assistant-memory="verify-symbol">Mark symbol as verified</button></div>
+    <div class="assistant-suggestion-row" aria-label="Suggested questions">${suggestions.map(text=>`<button class="chip" type="button" data-assistant-suggestion="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div>
+    <div class="assistant-ask-row"><textarea aria-label="Ask Yarncha" id="assistant-question" rows="3" placeholder="Ask about this project, row, stitch, symbol, repeat, or mistake...">${escapeHtml(assistant.draftQuestion||"")}</textarea><button class="primary-button" id="ask-assistant" type="button">Ask</button></div>
   </section>`;
 }
 
@@ -2180,7 +2228,7 @@ function openToolHistoryModal(id){
   document.getElementById("save-history-modal").onclick=()=>{item.notes=document.getElementById("history-modal-notes").value;saveProjectTouch(p);closeModal();renderProjectDetail();};
 }
 function projectAssistantTabHtml(p){
-  return `<div class="assistant-tab-grid">${yarnchaAssistantChartHtml(p)}${projectAssistantHtml(p)}<div class="card mobile-card"><p class="eyebrow">BETA SAFETY</p><h2>Chart reader</h2><p>Flow Mode stays focused on chart reading, row highlighting, progress tracking, and read-aloud row help. Yarncha Assistant is the separate teaching and troubleshooting space.</p><p>The assistant can use your uploaded text, project notes, and personal symbol references, but it should never guess an unclear symbol.</p></div></div>`;
+  return `<div class="assistant-tab-shell">${yarnchaAssistantChartHtml(p)}</div>`;
 }
 function themeLabel(t){return themePresets.find(theme=>theme.id===normalizeThemeName(t))?.name||t;}
 function themeComparePreviewHtml(theme){
@@ -2468,13 +2516,6 @@ function rowRemindersPanelHtml(p){
       <label>Volume <input id="row-reminder-volume" type="range" min="0" max="1" step=".05" value="${voice.volume}"><span>${Math.round(voice.volume*100)}%</span></label>
     </div>
     <div class="row-reminder-list">${reminders.length?reminders.map(rowReminderHtml).join(""):`<p class="muted-copy">Add reminders for increases, decreases, cable rows, colour changes, stitch counts, or try-on checks.</p>`}</div></div>`;
-}
-function projectAssistantHtml(p) {
-  const messages = p.assistantMessages.length ? p.assistantMessages : [];
-  return `<div class="assistant-card card"><div class="section-heading" style="margin:0"><div><p class="eyebrow">PROJECT ASSISTANT</p><h3>Ask about this chart</h3><p class="assistant-helper">Ask about the current row, abbreviations, repeats, translation, or where you are stuck. Visual symbol recognition is paused; verify chart symbols manually.</p></div><button class="mini-button" id="open-chatgpt">Open in ChatGPT ↗</button></div>
-    <div class="pdf-context"><strong>PDF reference: ${p.chart?.name ? escapeHtml(p.chart.name) : "No chart uploaded"}</strong><br>Paste chart legend, abbreviations or extracted instructions here so the local assistant can quote and reason from them.<textarea aria-label="Pattern reference text" id="pdf-reference" placeholder="Pattern text, symbols, legend, row instructions...">${escapeHtml(p.pdfReference)}</textarea></div>
-    <div class="assistant-messages">${messages.length?messages.slice(-6).map(m => `<div class="assistant-message ${m.role === "user" ? "user" : ""}">${escapeHtml(m.text)}</div>`).join(""):`<p class="muted-copy">Your project assistant is ready. Add checked chart text or ask a pattern question.</p>`}</div>
-    <div class="assistant-input"><textarea aria-label="Ask about the current chart" id="assistant-question" placeholder="What does this repeat mean? What should I do on row ${p.row}?"></textarea><button class="primary-button" id="ask-assistant">Ask</button></div></div>`;
 }
 function projectBuyListHtml(p){
   const total=p.buyList.reduce((sum,i)=>sum+(Number(i.quantity)||0)*(Number(i.price)||0),0);
@@ -3103,7 +3144,6 @@ function bindProjectDetail() {
   document.getElementById("manual-row-input")?.addEventListener("change",()=>setManualRowFromInput());
   document.getElementById("reset-main")?.addEventListener("click", () => { setMainRow(0,{render:false}); p.subCounters=p.subCounters.map(counter=>{const s=normalizeSubCounter(counter);s.count=s.resetValue??s.start??0;s.syncRow=0;s.syncCount=s.count;s.lastVoiceRow=null;return s;}); p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[]; saveProjectTouch(p); renderProjectDetail(); toast("Counters reset"); });
   document.getElementById("edit-project-rows")?.addEventListener("click", () => openRowPlanModal());
-  document.getElementById("ask-assistant")?.addEventListener("click", askProjectAssistant);
   document.getElementById("open-chatgpt")?.addEventListener("click", openInChatGPT);
   document.getElementById("project-tool-category")?.addEventListener("change",e=>{
     const category=e.target.value;
@@ -3177,36 +3217,42 @@ function bindYarnchaAssistant(p=getProject()){
     p.yarnchaAssistant.skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
     p.yarnchaAssistant.craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
     p.yarnchaAssistant.selectedTechnique=document.getElementById("chart-assistant-technique")?.value||"";
-    p.yarnchaAssistant.draftQuestion=document.getElementById("chart-assistant-question")?.value||"";
+    p.yarnchaAssistant.draftQuestion=document.getElementById("assistant-question")?.value||"";
     saveProjectTouch(p);
   };
   document.getElementById("chart-assistant-skill")?.addEventListener("change",()=>{savePrefs();renderProjectDetail();});
   document.getElementById("chart-assistant-craft")?.addEventListener("change",()=>{const technique=document.getElementById("chart-assistant-technique");if(technique)technique.value="";p.yarnchaAssistant.selectedTechnique="";savePrefs();renderProjectDetail();});
   document.getElementById("chart-assistant-technique")?.addEventListener("change",()=>{savePrefs();});
-  document.getElementById("chart-assistant-question")?.addEventListener("input",()=>{p.yarnchaAssistant.draftQuestion=document.getElementById("chart-assistant-question").value;saveStateSoon();});
+  document.getElementById("assistant-question")?.addEventListener("input",()=>{p.yarnchaAssistant.draftQuestion=document.getElementById("assistant-question").value;saveStateSoon();});
   const suggestionPrompts={
+    "Explain this row":"Explain this row. Break down the stitches and repeats, then tell me what to do first.",
+    "What does this symbol mean?":"What does this symbol mean? Tell me how to check it against my chart legend.",
     "My stitch count is wrong":"My stitch count is wrong on this row. Help me check what I should do next.",
-    "Explain this symbol":"Explain this chart symbol and tell me how to check it against the legend.",
-    "Help me read this row":"Help me read this row. Break down the repeats and tell me what to do first.",
-    "Fix a dropped stitch":"I dropped a stitch. Help me fix it step by step.",
-    "What does this abbreviation mean?":"What does this abbreviation mean, and does it change my stitch count?",
-    "Why does my project look different?":"Why does my project look different from the pattern photo? Help me check gauge, yarn, and stitch count."
+    "Explain this repeat":"Explain the repeat on this row, including its start, end, and expected stitch count.",
+    "Help me fix a mistake":"Help me diagnose and fix a mistake in my current row without losing more work."
   };
-  document.querySelectorAll("[data-assistant-suggestion]").forEach(button=>button.onclick=()=>{const box=document.getElementById("chart-assistant-question");if(box){box.value=suggestionPrompts[button.dataset.assistantSuggestion]||button.dataset.assistantSuggestion;box.focus();p.yarnchaAssistant.draftQuestion=box.value;saveStateSoon();}});
-  document.getElementById("ask-chart-assistant")?.addEventListener("click",()=>askChartYarnchaAssistant(p));
+  document.querySelectorAll("[data-assistant-suggestion]").forEach(button=>button.onclick=()=>{const box=document.getElementById("assistant-question");if(box){box.value=suggestionPrompts[button.dataset.assistantSuggestion]||button.dataset.assistantSuggestion;box.focus();p.yarnchaAssistant.draftQuestion=box.value;saveStateSoon();}});
+  document.getElementById("ask-assistant")?.addEventListener("click",()=>askChartYarnchaAssistant(p));
+  document.getElementById("assistant-question")?.addEventListener("keydown",event=>{if((event.metaKey||event.ctrlKey)&&event.key==="Enter"){event.preventDefault();askChartYarnchaAssistant(p);}});
   document.querySelectorAll("[data-assistant-memory]").forEach(button=>button.onclick=()=>handleAssistantMemoryAction(button.dataset.assistantMemory,p));
   document.querySelectorAll("[data-library-link]").forEach(button=>button.onclick=()=>openLibraryWikiEntry(button.dataset.libraryLink));
   document.querySelectorAll("[data-assistant-tool]").forEach(button=>button.onclick=()=>{const match=toolkitToolDefs.find(tool=>tool.name===button.dataset.assistantTool||tool.name.includes(button.dataset.assistantTool.split(" ")[0]));if(match){showView("tools");renderTool(match.id);}else toast(`${button.dataset.assistantTool} is in the Tool Manual.`);});
+  const conversation=document.getElementById("assistant-conversation");
+  if(conversation)conversation.scrollTop=conversation.scrollHeight;
 }
 async function askChartYarnchaAssistant(p=getProject()){
   p.yarnchaAssistant=p.yarnchaAssistant||{};
-  const question=document.getElementById("chart-assistant-question")?.value.trim();
+  p.assistantMessages=Array.isArray(p.assistantMessages)?p.assistantMessages:[];
+  const question=document.getElementById("assistant-question")?.value.trim();
   if(!question)return toast("Ask Yarncha Assistant a question first.");
   const skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
   const craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
   const selectedTechnique=document.getElementById("chart-assistant-technique")?.value||p.yarnchaAssistant.selectedTechnique||"";
   const projectContext={...projectContextService.getCurrentProjectContext(),skillLevel,craftType,selectedTechnique};
-  const answer=await yarnchaAssistantService.askYarnchaAssistant({question,projectContext,skillLevel,craftType});
+  const conversationHistory=p.assistantMessages.slice(-10);
+  const answer=await sendAssistantMessage({message:question,projectContext,conversationHistory});
+  p.assistantMessages.push({role:"user",text:question,createdAt:new Date().toISOString()},{role:"assistant",text:answer.quickAnswer||answer.whatToDoNow||"",answer,provider:"local",createdAt:new Date().toISOString()});
+  p.assistantMessages=p.assistantMessages.slice(-40);
   p.yarnchaAssistant={...p.yarnchaAssistant,skillLevel,craftType,selectedTechnique,lastQuestion:question,draftQuestion:"",lastAnswer:answer,recentQuestions:[question,...(p.yarnchaAssistant.recentQuestions||[])].slice(0,8)};
   saveProjectTouch(p);
   renderProjectDetail();
@@ -4116,22 +4162,6 @@ const projectReferenceData={
 function sizeReferenceHtml(type){
   const rows=projectReferenceData[type]||projectReferenceData["Mixed / Other"];
   return `<div class="reference-disclaimer">Yarn usage varies by gauge, stitch pattern, yarn weight, hook/needle size, ease, and personal tension. Use these as planning ranges, not promises.</div><div class="size-reference-list">${rows.map(([project,size,weight,amount,note])=>`<article class="reference-row"><h3>${escapeHtml(project)}</h3><p><strong>Common sizes:</strong> ${escapeHtml(size)}</p><p><strong>Typical yarn weight:</strong> ${escapeHtml(weight)}</p><p><strong>Approx. yarn amount:</strong> ${escapeHtml(amount)}</p><small>${escapeHtml(note)}</small></article>`).join("")}</div>`;
-}
-function askProjectAssistant() {
-  const p=getProject(), input=document.getElementById("assistant-question"), question=input.value.trim(); if(!question)return;
-  p.assistantMessages.push({role:"user",text:question});
-  const reference=findPdfReference(`${p.pdfReference||""}\n\n${techniqueKnowledgeText()}`,question,p.row);
-  const calculation=/group|stitch|chain|panel|组|针|锁针|花样|グループ|目|鎖編み|パネル/i.test(question)&&p.patternPlan?.result?` Saved checked calculation: ${p.patternPlan.result}`:"";
-  const chartContext=chartReadingContext(p),rowQuestion=/what row|which row|what.*next|do next|where am i|row am i|下一|下一步|第幾|做咩|做什么/i.test(question);
-  const chinese=/[\u3400-\u9fff]|唔|嘅|咩|點|係|喺|冇|嗰|佢/.test(question),context=chinese?`你目前在第 ${p.row} 行${p.chartRows?`，圖表共有 ${p.chartRows} 行`:""}。${chartContext} `:`You are on row ${p.row}${p.chartRows?` of a ${p.chartRows}-row chart`:""}. ${chartContext} `;
-  if(rowQuestion){
-    const guidance=buildRowGuidance(p);
-    p.assistantMessages.push({role:"assistant",text:chinese?`${context}${guidance}`:`${context}${guidance}`}); saveState(); renderProjectDetail(); return;
-  }
-  const answer=reference ? (chinese?`${context}我在已上載檔案的文字中找到：「${reference}」${calculation?` 已儲存的核對計算：${p.patternPlan.result}`:""} 請同時對照目前反白的圖表行及你的專案筆記。`:`${context}I found this in the uploaded PDF text: “${reference}”${calculation} Check it against the highlighted chart row and your project notes.`)
-    : /repeat|重複|重复|循環|循环|リピート/i.test(question) ? (chinese?`${context}請檢查重複段落的起點、終點及已連結的副計數器。已擷取文字中暫時找不到相符指示。`:`${context}Check the repeat boundary and your linked sub-counters. I could not find a matching instruction in the extracted PDF text.`)
-    : (chinese?`${context}${calculation?`已儲存的核對計算：${p.patternPlan.result}`:"我已儲存這條問題，但在已擷取文字中找不到接近的內容。"} 純圖像符號仍須在 ChatGPT 中作視覺分析和人工核對。`:`${context}${calculation||"I saved this question, but could not find a close match in the extracted PDF text."} Image-only symbols still need visual analysis in ChatGPT.`);
-  p.assistantMessages.push({role:"assistant",text:answer}); saveState(); renderProjectDetail();
 }
 function findPdfReference(text,question,row){
   if(!text)return "";
@@ -6032,9 +6062,9 @@ function toolsPageDetailTool(tool){
   if(tool==="rendering-studio")return currentGlobalRenderingTool||"grid";
   return tool;
 }
-function toolCardHtml(tool,selected){
+function toolCardHtml(tool){
   const status=tool.id==="pooling"||tool.id==="rendering-studio"?"Planning":Number(tool.confidence||0)<0?"Beta":"";
-  return `<button class="toolbox-card card ${selected===tool.id?"active":""}" data-open-tool="${escapeHtml(tool.id)}"><span class="toolbox-icon">${uiIcon(toolIconMap[tool.id]||"calculator","toolbox-card-icon")}</span><span class="toolbox-copy"><strong class="content-title tool-card-title">${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
+  return `<button class="toolbox-card card" type="button" data-open-tool="${escapeHtml(tool.id)}" aria-controls="project-tool-content"><span class="toolbox-icon">${uiIcon(toolIconMap[tool.id]||"calculator","toolbox-card-icon")}</span><span class="toolbox-copy"><strong class="content-title tool-card-title">${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.desc)}</small></span><span class="toolbox-tags"><em>${escapeHtml(toolCraftLabel(tool))}</em>${status?`<em>${escapeHtml(status)}</em>`:""}</span></button>`;
 }
 function renderTool(tool=currentProjectTool) {
   const panel=document.getElementById("tool-panel");
@@ -6050,7 +6080,7 @@ function renderTool(tool=currentProjectTool) {
   const categoryPanels=toolsPageCategories.filter(c=>c.id!=="All").map(category=>{
     const tools=visible.filter(t=>toolsPageCategoryForTool(t)===category.id);
     if(!tools.length)return "";
-    const content=`<div class="toolbox-grid">${tools.map(t=>toolCardHtml(t,selected)).join("")}</div>`;
+    const content=`<div class="toolbox-grid">${tools.map(toolCardHtml).join("")}</div>`;
     return collapsibleSectionHtml({eyebrow:"TOOLS",title:category.label,titleClass:"major-section-title",description:toolsPageCategoryDescription(category.id),rightMeta:`${tools.length} tool${tools.length===1?"":"s"}`,defaultOpen:search?true:selectedCategory===category.id,className:"toolbox-category-panel",children:content});
   }).join("");
   panel.innerHTML=`<div class="tools-page-shell">
@@ -6182,9 +6212,10 @@ function openModal(html,options={}) {
   content.querySelectorAll("[data-close-modal]").forEach(button=>button.addEventListener("click",()=>closeModal()));
   modalBeforeClose=options.beforeClose||null;
   modal.classList.toggle("edit-project-modal",!!content.querySelector(".edit-project-form"));
-  modal.dataset.size=content.querySelector(".symbol-detail,.symbol-edit-form,.ocr-review-layout,.chart-cell-editor,.sync-compare-grid")?"wide":"normal";
+  modal.dataset.size=content.querySelector(".account-menu-sheet")?"menu":content.querySelector(".symbol-detail,.symbol-edit-form,.ocr-review-layout,.chart-cell-editor,.sync-compare-grid")?"wide":"normal";
   modal.setAttribute("aria-label",options.label||content.querySelector("h2")?.textContent||"Dialog");
   document.getElementById("modal-backdrop").classList.add("open");
+  if(modalLastFocus?.id==="account-button")modalLastFocus.setAttribute("aria-expanded","true");
   const firstFocus=content.querySelector("input:not([type=hidden]),select,textarea,button");
   firstFocus?.focus({preventScroll:true});
   requestAnimationFrame(()=>{if(!modal.contains(document.activeElement))firstFocus?.focus({preventScroll:true});});
@@ -6194,6 +6225,7 @@ function closeModal(force=false) {
   document.getElementById("modal-backdrop")?.classList.remove("open");
   modalBeforeClose=null;
   const target=modalLastFocus;modalLastFocus=null;
+  if(target?.id==="account-button")target.setAttribute("aria-expanded","false");
   if(target?.isConnected)target.focus?.({preventScroll:true});
   requestAnimationFrame(()=>{if(target?.isConnected&&document.activeElement!==target)target.focus?.({preventScroll:true});});
   return true;

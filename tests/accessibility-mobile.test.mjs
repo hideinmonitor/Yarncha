@@ -23,5 +23,8 @@ for(const [,id] of app.matchAll(/<(?:input|select) id=\"([^\"]+)\" data-studio-s
 assert.match(css, /:focus-visible/, "keyboard focus has a visible style");
 assert.match(html, /<nav class="nav-list" aria-label="Main navigation">/, "the primary navigation is labelled");
 assert.match(html, /<main>/, "the page exposes a main landmark");
+assert.match(html, /id="account-button"[^>]*aria-haspopup="dialog"[^>]*aria-expanded="false"[^>]*aria-controls="modal-backdrop"/, "the account trigger announces its controlled dialog and closed state");
+assert.match(app, /modalLastFocus\?\.id==="account-button"[\s\S]*setAttribute\("aria-expanded","true"\)/, "opening the account dialog updates its expanded state");
+assert.match(app, /target\?\.id==="account-button"[\s\S]*setAttribute\("aria-expanded","false"\)/, "closing the account dialog restores its expanded state");
 
 console.log("Mobile accessibility contract passed.");
