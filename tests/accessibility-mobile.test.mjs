@@ -15,6 +15,11 @@ assert.equal(declarations('.subcounter-menu')['min-height'],'var(--button-height
 assert.match(app, /focusable=\[\.\.\.backdrop\.querySelectorAll[\s\S]*event\.shiftKey[\s\S]*last\.focus\(\)/, "dialogs trap keyboard focus");
 assert.match(app, /const firstFocus=content\.querySelector[\s\S]*firstFocus\?\.focus\(\{preventScroll:true\}\)/, "dialogs synchronously move focus inside with a frame fallback");
 assert.match(app, /const target=modalLastFocus[\s\S]*if\(target\?\.isConnected\)target\.focus/, "dialogs synchronously restore focus to their opener with a frame fallback");
+assert.match(app, /id=\"symbol-detail-close\" aria-label=\"Close symbol details\"/, "the full-page symbol reference has a named close action");
+assert.match(app, /standardOpen\?modalBackdrop:document\.querySelector\(\"\.symbol-detail-overlay\"\)/, "symbol details and standard dialogs share the keyboard focus loop");
+for(const [,id] of app.matchAll(/<(?:input|select) id=\"([^\"]+)\" data-studio-setting=/g)) {
+  assert.match(app,new RegExp(`<label for=\"${id}\">`),`rendering studio control ${id} has a programmatic label`);
+}
 assert.match(css, /:focus-visible/, "keyboard focus has a visible style");
 assert.match(html, /<nav class="nav-list" aria-label="Main navigation">/, "the primary navigation is labelled");
 assert.match(html, /<main>/, "the page exposes a main landmark");
