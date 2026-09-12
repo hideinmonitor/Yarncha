@@ -17,7 +17,9 @@ assert.match(app,/questionType:"castOnHelp"/,"Cast-on questions use a distinct a
 for(const context of ["project type","edge purpose","whether the edge needs stretch","yarn type","needle size","whether you are working flat or in the round","skill level"]){
   assert.match(app,new RegExp(context),`Assistant checks ${context}`);
 }
-assert.match(app,/data-assistant-memory="add-notes"/,"Assistant can save a cast-on choice to project notes");
-assert.match(app,/data-assistant-memory="add-checklist"/,"Assistant can add a stretch test to the checklist");
+assert.match(app,/data-wiki-project-note/,"Cast-on guides can still be saved directly to project notes");
+assert.match(app,/data-wiki-checklist/,"Cast-on checks can still be added directly to the project checklist");
+assert.match(app,/function askAssistantAboutLibraryEntry/,"Cast-on guides can seed the AI question composer");
+assert.match(app,/draftQuestion:/,"Library-to-Assistant handoff preserves the prepared question");
 
 console.log("Cast-on Library contract passed.");

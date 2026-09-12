@@ -67,19 +67,14 @@ for (const query of ["crochet circle wavy","knitting rolling","too tight cast on
   assert.match(app, new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), `${query} smart search example is present`);
 }
 
-assert.match(app, /findLibraryEntriesForAssistant/, "Assistant can search approved Library entries");
-assert.match(app, /approvedLibraryEntries/, "Assistant cites approved Library entries");
-assert.match(app, /Based on:/, "Assistant UI shows source references");
-assert.match(app, /data-library-link/, "Assistant answers link back to Library entries");
-assert.match(app, /General Library advice/, "Assistant separates general Library advice");
-assert.match(app, /Project-specific advice/, "Assistant separates project-specific advice");
-assert.match(app, /Assumptions/, "Assistant displays assumptions when context is incomplete");
-assert.match(app, /Missing information/, "Assistant displays missing information instead of guessing");
-for (const action of ["add-checklist","save-troubleshooting","create-calculator-input","link-library","data-wiki-project-note","data-wiki-checklist","data-wiki-save","data-wiki-note"]) {
-  assert.match(app, new RegExp(action), `${action} save-to-project action exists`);
+assert.match(app, /function askAssistantAboutLibraryEntry/, "Library entries can seed the AI question composer");
+assert.match(app, /draftQuestion:/, "Library entry context becomes an inspectable user question");
+assert.match(app, /data-project-tab="assistant"/, "Library-to-Assistant navigation opens the one Assistant area");
+for (const action of ["data-wiki-project-note","data-wiki-checklist","data-wiki-save","data-wiki-note"]) {
+  assert.match(app, new RegExp(action), action + " save-to-project action exists");
 }
-for (const contextField of ["project type","target measurement","current measurement","user skill level"]) {
-  assert.match(app, new RegExp(contextField.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${contextField} is part of Assistant diagnostic context`);
+for (const contextField of ["projectType","targetMeasurement","currentMeasurement","skillLevel"]) {
+  assert.match(app, new RegExp(contextField), contextField + " remains available to the reusable project context service");
 }
 
 for (const className of [".wiki-shell",".wiki-filter-grid",".wiki-entry-card",".wiki-detail",".wiki-hub-card",".wiki-notes",".wiki-path-grid",".wiki-visual-grid",".wiki-decision-tree",".wiki-source-banner",".wiki-copyright-note",".wiki-version-card"]) {

@@ -839,14 +839,25 @@ function saveStateSoon(delay=350){
 }
 function updateSaveStatus(text,tone=""){const el=document.getElementById("save-status");if(el){el.textContent=text;el.dataset.tone=tone;}updateSaveIndicators(text,tone);}
 function formatSavedTime(value){try{return new Date(value).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch{return "now";}}
-function collapsibleSectionHtml({eyebrow="",title="",titleClass="",description="",defaultOpen=false,children="",rightMeta="",className="",summaryClass=""}={}){
-  return `<details class="collapsible-section ${escapeHtml(className)}" ${defaultOpen?"open":""}>
-    <summary class="collapsible-summary ${escapeHtml(summaryClass)}">
+function collapsibleSectionHtml({eyebrow="",title="",titleClass="",description="",defaultOpen=false,children="",rightMeta="",className="",summaryClass="",id=""}={}){
+  const contentId=id?`${id}-content`:"";
+  return `<details class="collapsible-section ${escapeHtml(className)}" ${id?`id="${escapeHtml(id)}"`:""} ${defaultOpen?"open":""}>
+    <summary class="collapsible-summary ${escapeHtml(summaryClass)}" aria-expanded="${defaultOpen?"true":"false"}" ${contentId?`aria-controls="${escapeHtml(contentId)}"`:""}>
       <span class="collapsible-summary-copy">${eyebrow?`<span class="eyebrow">${escapeHtml(eyebrow)}</span>`:""}<strong class="${escapeHtml(titleClass)}">${escapeHtml(title)}</strong>${description?`<span>${escapeHtml(description)}</span>`:""}</span>
       <span class="collapsible-summary-side">${rightMeta?`<em>${escapeHtml(rightMeta)}</em>`:""}<i class="collapsible-chevron" aria-hidden="true"></i></span>
     </summary>
-    <div class="collapsible-content">${children}</div>
+    <div class="collapsible-content" ${contentId?`id="${escapeHtml(contentId)}"`:""}>${children}</div>
   </details>`;
+}
+function bindCollapsibleSectionState(root=document){
+  root.querySelectorAll("details.collapsible-section").forEach(section=>{
+    const summary=section.querySelector(":scope > summary.collapsible-summary");
+    if(!summary||section.dataset.stateBound==="true")return;
+    const syncExpandedState=()=>summary.setAttribute("aria-expanded",section.open?"true":"false");
+    syncExpandedState();
+    section.addEventListener("toggle",syncExpandedState);
+    section.dataset.stateBound="true";
+  });
 }
 async function manualSave(context="Project"){
   const hadPending=saveDirty||!!saveDebounceTimer||!!saveInFlight||lastSaveFailed;
@@ -1894,11 +1905,12 @@ const projectContextService={
   getCurrentProject(){return getProject();},
   getCurrentChartContext(project=this.getCurrentProject()){
     const reader=normalizeChartReaderConfig(project?.chartReader,project||{});
-    return {chartType:reader.chartType,currentChart:project?.activeChartAssetId||project?.chart?.name||project?.attachments?.[0]?.name||"",grid:reader.grid,verifiedSymbols:learningMemoryService.getLearningMemory(project?.id||"").verifiedSymbols||[]};
+    return {chartType:reader.chartType,currentChart:project?.activeChartAssetId||project?.chart?.name||project?.attachments?.[0]?.name||"",grid:reader.grid,readingDirection:reader.readingDirection,verifiedSymbols:learningMemoryService.getLearningMemory(project?.id||"").verifiedSymbols||[]};
   },
   getCurrentRowContext(project=this.getCurrentProject()){
-    const rowNumber=Number(project?.row)||0,row=(project?.chartAnalysis?.rows||[]).find(item=>Number(item.number)===rowNumber);
-    return {currentRow:rowNumber,rowInstruction:row?.sequence||flowCurrentRowInstruction(project||{},ensureProjectSetup(project||{})),expectedStitchCount:row?.stitchCount||project?.projectCalculations?.stitchCount||null,savedProgress:{row:rowNumber,totalRows:project?.chartRows||project?.totalRows||null}};
+    const rowNumber=Number(project?.row)||0,rows=project?.chartAnalysis?.rows||[],row=rows.find(item=>Number(item.number)===rowNumber);
+    const nearbyRows=rows.filter(item=>Math.abs(Number(item.number)-rowNumber)<=1).map(item=>({number:Number(item.number),sequence:item.sequence||"",stitchCount:item.stitchCount||null}));
+    return {currentRow:rowNumber,rowInstruction:row?.sequence||flowCurrentRowInstruction(project||{},ensureProjectSetup(project||{})),nearbyRows,expectedStitchCount:row?.stitchCount||project?.projectCalculations?.stitchCount||null,savedProgress:{row:rowNumber,totalRows:project?.chartRows||project?.totalRows||null}};
   },
   getCurrentSymbolContext(project=this.getCurrentProject()){
     const recognition=highlightedRowRecognition(project||{})[0]||project?.chartReader?.recognitionResults?.[0]||null;
@@ -1916,9 +1928,9 @@ const projectContextService={
       yarnWeight:setup.yarnWeight||project?.yarnWeight||"",fibreContent:setup.fibreContent||project?.fibreContent||"",toolSize:setup.hookNeedle||setup.userToolSize||setup.patternToolSize||project?.hookSize||project?.needleSize||"",
       patternGauge:setup.patternGauge||setup.gauge||"",userGauge:setup.userGauge||setup.userGaugeStitches||"",targetMeasurement:setup.targetLengthCm||project?.fitCheck?.targetLength||"",currentMeasurement:setup.currentLengthCm||project?.fitCheck?.currentLength||"",
       blockedState:setup.blockedState||project?.fitCheck?.blockedState||"",measurements:{bodyMeasurementCm:setup.bodyMeasurementCm,finishedWidthCm:setup.finishedWidthCm,intendedEaseCm:setup.intendedEaseCm,targetLengthCm:setup.targetLengthCm,currentLengthCm:setup.currentLengthCm,fitFeeling:setup.fitFeeling},
-      projectSetup:setup,skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",
+      projectSetup:setup,skillLevel:normalizeAssistantSkill(project?.yarnchaAssistant?.skillLevel||"beginner"),currentChart:chart.currentChart,currentRow:row.currentRow,currentSymbol:symbol.currentSymbol,projectNotes:project?.notes||"",patternLanguage:setup.patternLanguage,readingDirection:chart.readingDirection,
       attachedProjectContext:reviewedChartText,verifiedChartText:reviewedChartText,ocrText:String(patternSource.extractedText||"").trim(),ocrStatus:patternSource.ocrStatus,ocrConfidence:patternSource.ocrConfidence,
-      savedProgress:row.savedProgress,subCounters:this.getSubCounterContext(project),verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,expectedStitchCount:row.expectedStitchCount,
+      savedProgress:row.savedProgress,subCounters:this.getSubCounterContext(project),verifiedSymbols:memory.verifiedSymbols||[],recentAssistantQuestions:(project?.yarnchaAssistant?.recentQuestions||[]),rowInstruction:row.rowInstruction,nearbyRows:row.nearbyRows,expectedStitchCount:row.expectedStitchCount,
       selectedTechnique:project?.yarnchaAssistant?.selectedTechnique||"",selectedStitch:project?.yarnchaAssistant?.selectedStitch||"",techniqueCategory:project?.yarnchaAssistant?.techniqueCategory||"",workingLocation:project?.yarnchaAssistant?.workingLocation||"",
       stitchCountBefore:project?.yarnchaAssistant?.stitchCountBefore||"",stitchCountAfter:project?.yarnchaAssistant?.stitchCountAfter||"",language:project?.yarnchaAssistant?.language||"en",projectMemory:memory.projectMemory||{}
     };
@@ -2148,63 +2160,51 @@ const yarnchaAssistantService={
     return {...base,questionType,contextNote:this.contextNote(context),generalLibraryAdvice:base.quickAnswer||"Use the Library guide as general technique help first.",projectSpecificAdvice:context.projectName?`For ${context.projectName}, check the current row, count, gauge, yarn, and measurement notes before changing the work.`:"Project-specific advice needs more project details before Yarncha can be exact.",assumptions:diagnostic.assumptions,missingInformation:diagnostic.missingInformation,whatToDoNow:`${missing}${base.whatToDoNow||"Start by checking the exact stitch, row, or symbol involved, then compare it with the pattern notes."}`,checkBeforeContinuing,libraryLinks,relatedTools,approvedLibraryEntries:approvedEntries.map(entry=>entry.title),confidence:context.currentRow||context.rowInstruction||context.currentSymbol?"medium":"general",sourceType:"local-library-rule-based"};
   }
 };
-const assistantProviderAdapters=Object.freeze({
-  local:{
-    id:"local-yarncha-guide",
-    async sendMessage({message,projectContext,conversationHistory=[]}){
-      const skillLevel=normalizeAssistantSkill(projectContext.skillLevel||"beginner");
-      const craftType=normalizeAssistantCraft(projectContext.craftType||"knitting");
-      const answer=await yarnchaAssistantService.askYarnchaAssistant({question:message,projectContext,skillLevel,craftType});
-      const attachedMatch=findPdfReference(projectContext.attachedProjectContext||"",message,projectContext.currentRow);
-      if(attachedMatch){
-        answer.projectSpecificAdvice=`From the attached project context: “${attachedMatch}” ${answer.projectSpecificAdvice||""}`.trim();
-        answer.attachedContextMatch=attachedMatch;
-        answer.sourceType="local-project-context-and-library-rules";
-      }
-      answer.conversationTurn=conversationHistory.length+1;
-      return answer;
-    }
-  }
-});
-async function sendAssistantMessage({message,projectContext,conversationHistory=[],provider="local"}={}){
-  const adapter=assistantProviderAdapters[provider];
-  if(!adapter)throw new Error(`Assistant provider “${provider}” is not available.`);
-  return adapter.sendMessage({message,projectContext,conversationHistory});
+const aiHandoffService=globalThis.YarnchaAIHandoff;
+const {AI_PROVIDERS,buildAssistantContext,buildAssistantPrompt}=aiHandoffService;
+
+function assistantPreparedRequest(p=getProject(),question){
+  const draft=question===undefined?(p?.yarnchaAssistant?.draftQuestion||""):question;
+  const projectContext=projectContextService.getCurrentProjectContext();
+  const preparedContext=buildAssistantContext(projectContext,projectContext.currentRow,draft);
+  return {question:String(draft||"").trim(),projectContext,preparedContext,prompt:buildAssistantPrompt(preparedContext,draft)};
 }
-function yarnchaAssistantAnswerHtml(answer){
-  if(!answer)return `<div class="empty-state">Ask Yarncha Assistant for stitch, symbol, pattern, or mistake help.</div>`;
-  const labels=techniqueHelpLabels.en;
-  const list=(title,items,extraClass="")=>items?.length?`<section class="${extraClass}"><h4>${title}</h4><ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`:"";
-  const related=answer.relatedTechniques?.length?`<section><h4>${labels.relatedTechniques}</h4><div class="assistant-library-links">${answer.relatedTechniques.map(label=>`<button class="chip" data-library-link="library:${escapeHtml(label)}">${escapeHtml(label)}</button>`).join("")}</div></section>`:"";
-  const tools=answer.relatedTools?.length?`<section><h4>Related tools</h4><div class="assistant-library-links">${answer.relatedTools.map(tool=>`<button class="chip" data-assistant-tool="${escapeHtml(tool)}">${escapeHtml(tool)}</button>`).join("")}</div></section>`:"";
-  const basedOn=answer.approvedLibraryEntries?.length?`Based on: ${answer.approvedLibraryEntries.join(", ")}.`:"Based on: Yarncha local guide rules.";
-  return `<article class="yarncha-assistant-answer">${answer.contextNote?`<section class="assistant-project-context"><h4>${labels.projectContext}</h4><p>${escapeHtml(answer.contextNote)}</p></section>`:""}${answer.techniqueName?`<section class="assistant-technique-card"><h4>${labels.technique}</h4><p>${escapeHtml(answer.techniqueName)}${answer.techniqueCategory?` · ${escapeHtml(titleCaseTechnique(answer.techniqueCategory))}`:""}</p></section>`:""}<section><h4>${labels.quickAnswer}</h4><p>${escapeHtml(answer.quickAnswer||"")}</p></section>${answer.generalLibraryAdvice?`<section><h4>General Library advice</h4><p>${escapeHtml(answer.generalLibraryAdvice)}</p></section>`:""}${answer.projectSpecificAdvice?`<section><h4>Project-specific advice</h4><p>${escapeHtml(answer.projectSpecificAdvice)}</p></section>`:""}<section><h4>${labels.whatToDoNow}</h4><p>${escapeHtml(answer.whatToDoNow||"")}</p></section>${answer.assumptions?.length?list("Assumptions",answer.assumptions):""}${answer.missingInformation?.length?list("Missing information",answer.missingInformation,"assistant-count-check"):""}${answer.steps?.length?`<details class="assistant-step-accordion" open><summary>${labels.stepByStep}</summary><ol>${answer.steps.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></details>`:""}${list(labels.checkBeforeContinuing,answer.checkBeforeContinuing,"assistant-count-check")}${list(labels.commonMistakes,answer.commonMistakes)}${related}${tools}<section><h4>Library links</h4><div class="assistant-library-links">${(answer.libraryLinks||[]).map(link=>`<button class="chip" data-library-link="${escapeHtml(link.target)}">${escapeHtml(link.title)}</button>`).join("")}</div></section><p class="assistant-source-note">${escapeHtml(basedOn)} ${escapeHtml(answer.questionType||"generalQuestion")} · ${escapeHtml(answer.sourceType||"local-rule-based")} · confidence ${escapeHtml(answer.confidence||"general")}</p></article>`;
+function assistantContextPreviewHtml(prompt){
+  return collapsibleSectionHtml({
+    title:"Preview context",
+    titleClass:"content-title",
+    description:"Inspect the exact prompt Yarncha will copy.",
+    className:"assistant-context-preview",
+    id:"assistant-context-preview",
+    children:`<p class="assistant-preview-note">This is the complete text prepared for your chosen AI.</p><pre id="assistant-prompt-preview" aria-label="Prepared AI prompt">${escapeHtml(prompt)}</pre>`
+  });
 }
-function assistantConversationHtml(p){
-  const assistant=p.yarnchaAssistant||{};
-  const legacy=assistant.lastAnswer&&!p.assistantMessages?.length?[{role:"user",text:assistant.lastQuestion||"Previous question"},{role:"assistant",text:assistant.lastAnswer.quickAnswer||"",answer:assistant.lastAnswer}]:[];
-  const messages=(p.assistantMessages?.length?p.assistantMessages:legacy).slice(-10);
-  if(!messages.length)return `<div class="assistant-conversation-empty"><strong>Yarncha is ready.</strong><p>Ask a question or choose a suggestion below. Your active project details are included automatically.</p></div>`;
-  return messages.map(message=>`<article class="assistant-chat-message ${message.role==="user"?"user":"assistant"}"><span class="assistant-message-label">${message.role==="user"?"You":"Yarncha"}</span>${message.answer?yarnchaAssistantAnswerHtml(message.answer):`<p>${escapeHtml(message.text||"")}</p>`}</article>`).join("");
-}
-function yarnchaAssistantChartHtml(p){
-  const assistant=p.yarnchaAssistant||{},context=projectContextService.getCurrentProjectContext(),skill=normalizeAssistantSkill(assistant.skillLevel||context.skillLevel),craft=normalizeAssistantCraft(assistant.craftType||context.craftType);
-  const contextText=context.projectName?`Using ${context.projectName}${context.currentRow?` · Row ${context.currentRow}`:""}`:"Project context active";
-  const selectedTechnique=assistant.selectedTechnique||"",techniqueOptions=techniqueOptionsForCraft(craft);
-  const suggestions=["Explain this row","What does this symbol mean?","My stitch count is wrong","Explain this repeat","Help me fix a mistake"];
-  const attachedText=p.pdfReference||context.verifiedChartText||context.ocrText||"";
-  return `<section class="yarncha-assistant-panel unified-assistant card workspace-card">
-    <div class="section-heading compact-row unified-assistant-heading"><div><p class="eyebrow">YARNCHA ASSISTANT</p><h2>Ask Yarncha</h2><p>Ask about your current project, chart, stitches, symbols, pattern, or mistakes.</p></div><div class="assistant-heading-actions"><span class="assistant-context-pill">${escapeHtml(contextText)}</span><button class="mini-button" id="open-chatgpt" type="button">Open in ChatGPT ↗</button></div></div>
-    <details class="assistant-attached-context"><summary>Attached project context${attachedText?` · ${escapeHtml(p.chart?.name||context.currentChart||"verified text")}`:""}</summary><p>Checked chart legends, abbreviations, and OCR text are available to Yarncha with each message. Edit this text if the scan needs a correction.</p><textarea aria-label="Attached project context" id="pdf-reference" rows="6" placeholder="Paste checked pattern text, symbols, a legend, or row instructions...">${escapeHtml(attachedText)}</textarea>${context.ocrStatus&&context.ocrStatus!=="not-started"?`<small>OCR ${escapeHtml(context.ocrStatus)}${context.ocrConfidence?` · ${Math.round(context.ocrConfidence)}% confidence`:""}. Verify unclear symbols against the original chart.</small>`:""}</details>
-    <details class="assistant-preferences"><summary>Assistant preferences</summary><div class="assistant-control-grid">
-      <label class="field">Craft type<select id="chart-assistant-craft">${["knitting","crochet","tunisian"].map(value=>`<option value="${value}" ${craft===value?"selected":""}>${assistantCraftLabel(value)}</option>`).join("")}</select></label>
-      <label class="field">Skill level<select id="chart-assistant-skill">${["beginner","intermediate","advanced"].map(value=>`<option value="${value}" ${skill===value?"selected":""}>${value[0].toUpperCase()+value.slice(1)}</option>`).join("")}</select></label>
-      <label class="field full">Technique Help<select id="chart-assistant-technique"><option value="">Choose a technique first</option>${techniqueOptions.map(item=>`<option value="${escapeHtml(item.label)}" ${selectedTechnique===item.label?"selected":""}>${escapeHtml(item.label)} · ${escapeHtml(titleCaseTechnique(item.category))}</option>`).join("")}</select></label>
-    </div></details>
-    <div class="assistant-conversation" id="assistant-conversation" role="log" aria-live="polite" aria-label="Conversation with Yarncha">${assistantConversationHtml(p)}</div>
-    <div class="assistant-memory-actions"><button class="mini-button" data-assistant-memory="save-explanation">Save explanation</button><button class="mini-button" data-assistant-memory="add-notes">Add to project notes</button><button class="mini-button" data-assistant-memory="add-checklist">Add checklist</button><button class="mini-button" data-assistant-memory="save-troubleshooting">Save troubleshooting</button><button class="mini-button" data-assistant-memory="create-calculator-input">Create calculator input</button><button class="mini-button" data-assistant-memory="link-library">Link Library entries</button><button class="mini-button" data-assistant-memory="remember-correction">Remember correction</button><button class="mini-button" data-assistant-memory="verify-symbol">Mark symbol as verified</button></div>
-    <div class="assistant-suggestion-row" aria-label="Suggested questions">${suggestions.map(text=>`<button class="chip" type="button" data-assistant-suggestion="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div>
-    <div class="assistant-ask-row"><textarea aria-label="Ask Yarncha" id="assistant-question" rows="3" placeholder="Ask about this project, row, stitch, symbol, repeat, or mistake...">${escapeHtml(assistant.draftQuestion||"")}</textarea><button class="primary-button" id="ask-assistant" type="button">Ask</button></div>
+function yarnchaAssistantComposerHtml(p){
+  const assistant=p.yarnchaAssistant||{},request=assistantPreparedRequest(p,assistant.draftQuestion||"");
+  const context=request.projectContext,total=context.savedProgress?.totalRows;
+  const contextTitle=context.projectName||p.name||"Current project";
+  const progress=context.currentRow?`Row ${context.currentRow}${total?` of ${total}`:""}`:"Progress not set";
+  const suggestions=["Explain this row","My stitch count is wrong","What does this symbol mean?","Explain this repeat"];
+  const providerButtons=AI_PROVIDERS.map(provider=>`<button class="assistant-provider-button" type="button" data-ai-provider="${escapeHtml(provider.id)}" aria-label="Copy the prepared project prompt and continue in ${escapeHtml(provider.label)}"><strong>${escapeHtml(provider.label)}</strong><span>Copy prompt &amp; open</span></button>`).join("");
+  return `<section class="yarncha-assistant-panel assistant-composer card workspace-card">
+    <header class="assistant-composer-header"><p class="eyebrow">YARNCHA ASSISTANT</p><h2>Ask with AI</h2><p>Get help with your current project using the AI assistant you already use.</p></header>
+    <div class="assistant-project-context-bar">
+      <span class="assistant-context-state">Project context active</span>
+      <strong>${escapeHtml(contextTitle)} · ${escapeHtml(progress)}</strong>
+    </div>
+    <section class="assistant-question-section" aria-labelledby="assistant-question-label">
+      <label id="assistant-question-label" for="assistant-question">What do you need help with?</label>
+      <textarea id="assistant-question" rows="5" placeholder="Ask about your current row, stitch, symbol, repeat, or mistake...">${escapeHtml(assistant.draftQuestion||"")}</textarea>
+      <div class="assistant-suggestions"><span>Suggested prompts</span><div class="assistant-suggestion-row" aria-label="Suggested prompts">${suggestions.map(text=>`<button class="chip" type="button" data-assistant-suggestion="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div></div>
+    </section>
+    ${assistantContextPreviewHtml(request.prompt)}
+    <section class="assistant-provider-section" aria-labelledby="assistant-provider-title">
+      <div class="assistant-provider-heading"><h3 id="assistant-provider-title">Continue with your AI</h3><p>Yarncha copies the prepared prompt, then opens your chosen service.</p></div>
+      <div class="assistant-provider-grid">${providerButtons}</div>
+      <div class="assistant-copy-row"><span aria-hidden="true">or</span><button class="secondary-button" id="copy-assistant-prompt" type="button">Copy prompt</button><small>Use the copied prompt with any AI assistant.</small></div>
+      <p class="assistant-privacy-note">Only the project context shown in Preview context will be copied. Nothing leaves Yarncha until you choose an action.</p>
+      <p class="assistant-handoff-status" id="assistant-handoff-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
   </section>`;
 }
 
@@ -2228,7 +2228,7 @@ function openToolHistoryModal(id){
   document.getElementById("save-history-modal").onclick=()=>{item.notes=document.getElementById("history-modal-notes").value;saveProjectTouch(p);closeModal();renderProjectDetail();};
 }
 function projectAssistantTabHtml(p){
-  return `<div class="assistant-tab-shell">${yarnchaAssistantChartHtml(p)}</div>`;
+  return `<div class="assistant-tab-shell">${yarnchaAssistantComposerHtml(p)}</div>`;
 }
 function themeLabel(t){return themePresets.find(theme=>theme.id===normalizeThemeName(t))?.name||t;}
 function themeComparePreviewHtml(theme){
@@ -3144,7 +3144,6 @@ function bindProjectDetail() {
   document.getElementById("manual-row-input")?.addEventListener("change",()=>setManualRowFromInput());
   document.getElementById("reset-main")?.addEventListener("click", () => { setMainRow(0,{render:false}); p.subCounters=p.subCounters.map(counter=>{const s=normalizeSubCounter(counter);s.count=s.resetValue??s.start??0;s.syncRow=0;s.syncCount=s.count;s.lastVoiceRow=null;return s;}); p.repeatRules=repeatEngine()?.migrateRepeatRules([p])?.[0]?.repeatRules||p.repeatRules||[]; saveProjectTouch(p); renderProjectDetail(); toast("Counters reset"); });
   document.getElementById("edit-project-rows")?.addEventListener("click", () => openRowPlanModal());
-  document.getElementById("open-chatgpt")?.addEventListener("click", openInChatGPT);
   document.getElementById("project-tool-category")?.addEventListener("change",e=>{
     const category=e.target.value;
     const first=category==="rendering"?"grid":projectToolkitToolOptions(p,category)[0]?.id||"swatch";
@@ -3210,66 +3209,82 @@ function bindProjectDetail() {
   document.getElementById("redo-annotation")?.addEventListener("click",redoAnnotation);
   document.getElementById("clear-annotations")?.addEventListener("click",()=>{pushAnnotationHistory(p);p.annotations=[];p.annotationRedo=[];saveProjectTouch(p);renderProjectDetail();});
 }
-function bindYarnchaAssistant(p=getProject()){
-  if(!document.querySelector(".yarncha-assistant-panel"))return;
-  p.yarnchaAssistant=p.yarnchaAssistant||{};
-  const savePrefs=()=>{
-    p.yarnchaAssistant.skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
-    p.yarnchaAssistant.craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
-    p.yarnchaAssistant.selectedTechnique=document.getElementById("chart-assistant-technique")?.value||"";
-    p.yarnchaAssistant.draftQuestion=document.getElementById("assistant-question")?.value||"";
+function setAssistantHandoffStatus(message,tone=""){
+  const status=document.getElementById("assistant-handoff-status");
+  if(status){status.textContent=message;status.dataset.tone=tone;}
+}
+function currentAssistantRequest(p=getProject()){
+  const input=document.getElementById("assistant-question");
+  const question=input?.value.trim()||"";
+  if(!question){setAssistantHandoffStatus("Add a question before continuing.","error");input?.focus();return null;}
+  return assistantPreparedRequest(p,question);
+}
+function updateAssistantPromptPreview(p=getProject()){
+  const input=document.getElementById("assistant-question");
+  const request=assistantPreparedRequest(p,input?.value||"");
+  const preview=document.getElementById("assistant-prompt-preview");
+  if(preview)preview.textContent=request.prompt;
+}
+async function copyCurrentAssistantPrompt(p=getProject()){
+  const request=currentAssistantRequest(p);if(!request)return;
+  const result=await aiHandoffService.copyAssistantPrompt(request.prompt);
+  if(result.copied){
+    p.yarnchaAssistant={...(p.yarnchaAssistant||{}),draftQuestion:request.question,lastQuestion:request.question,lastPreparedAt:new Date().toISOString()};
     saveProjectTouch(p);
-  };
-  document.getElementById("chart-assistant-skill")?.addEventListener("change",()=>{savePrefs();renderProjectDetail();});
-  document.getElementById("chart-assistant-craft")?.addEventListener("change",()=>{const technique=document.getElementById("chart-assistant-technique");if(technique)technique.value="";p.yarnchaAssistant.selectedTechnique="";savePrefs();renderProjectDetail();});
-  document.getElementById("chart-assistant-technique")?.addEventListener("change",()=>{savePrefs();});
-  document.getElementById("assistant-question")?.addEventListener("input",()=>{p.yarnchaAssistant.draftQuestion=document.getElementById("assistant-question").value;saveStateSoon();});
+    setAssistantHandoffStatus("Prompt copied. Use it with any AI assistant.","success");
+    toast("Prompt copied.");
+  }else{
+    setAssistantHandoffStatus("Yarncha could not copy the prompt. Open Preview context and copy it manually.","error");
+    toast("Prompt could not be copied.");
+  }
+}
+async function handoffAssistantToProvider(providerId,p=getProject()){
+  const request=currentAssistantRequest(p);if(!request)return;
+  const provider=AI_PROVIDERS.find(item=>item.id===providerId);if(!provider)return;
+  setAssistantHandoffStatus(`Preparing ${provider.label}…`);
+  const result=await aiHandoffService.handoffToAI({provider:providerId,prompt:request.prompt});
+  p.yarnchaAssistant={...(p.yarnchaAssistant||{}),draftQuestion:request.question,lastQuestion:request.question,lastProvider:providerId,lastPreparedAt:new Date().toISOString()};
+  saveProjectTouch(p);
+  if(result.copied&&result.opened){
+    setAssistantHandoffStatus(`Project context copied. Paste it into ${provider.label} to continue.`,"success");
+    toast(`Project context copied for ${provider.label}.`);
+  }else if(result.copied){
+    setAssistantHandoffStatus(`Project context copied, but ${provider.label} could not be opened. Open it manually and paste the prompt.`,"error");
+    toast(`${provider.label} could not be opened.`);
+  }else if(result.opened){
+    setAssistantHandoffStatus(`${provider.label} opened, but Yarncha could not copy the prompt. Open Preview context and copy it manually.`,"error");
+    toast("Prompt could not be copied.");
+  }else{
+    setAssistantHandoffStatus(`Yarncha could not copy the prompt or open ${provider.label}. Use Preview context to copy it manually.`,"error");
+    toast("AI handoff could not be completed.");
+  }
+}
+function bindYarnchaAssistant(p=getProject()){
+  if(!document.querySelector(".assistant-composer"))return;
+  p.yarnchaAssistant=p.yarnchaAssistant||{};
+  const input=document.getElementById("assistant-question");
+  input?.addEventListener("input",()=>{
+    p.yarnchaAssistant.draftQuestion=input.value;
+    updateAssistantPromptPreview(p);
+    saveStateSoon();
+  });
   const suggestionPrompts={
     "Explain this row":"Explain this row. Break down the stitches and repeats, then tell me what to do first.",
-    "What does this symbol mean?":"What does this symbol mean? Tell me how to check it against my chart legend.",
-    "My stitch count is wrong":"My stitch count is wrong on this row. Help me check what I should do next.",
-    "Explain this repeat":"Explain the repeat on this row, including its start, end, and expected stitch count.",
-    "Help me fix a mistake":"Help me diagnose and fix a mistake in my current row without losing more work."
+    "My stitch count is wrong":"My stitch count is wrong on this row. Help me find the likely cause and what to check next.",
+    "What does this symbol mean?":"What does this symbol mean? Explain how to verify it against the pattern legend.",
+    "Explain this repeat":"Explain this repeat, including where it starts and ends and how it affects the stitch count."
   };
-  document.querySelectorAll("[data-assistant-suggestion]").forEach(button=>button.onclick=()=>{const box=document.getElementById("assistant-question");if(box){box.value=suggestionPrompts[button.dataset.assistantSuggestion]||button.dataset.assistantSuggestion;box.focus();p.yarnchaAssistant.draftQuestion=box.value;saveStateSoon();}});
-  document.getElementById("ask-assistant")?.addEventListener("click",()=>askChartYarnchaAssistant(p));
-  document.getElementById("assistant-question")?.addEventListener("keydown",event=>{if((event.metaKey||event.ctrlKey)&&event.key==="Enter"){event.preventDefault();askChartYarnchaAssistant(p);}});
-  document.querySelectorAll("[data-assistant-memory]").forEach(button=>button.onclick=()=>handleAssistantMemoryAction(button.dataset.assistantMemory,p));
-  document.querySelectorAll("[data-library-link]").forEach(button=>button.onclick=()=>openLibraryWikiEntry(button.dataset.libraryLink));
-  document.querySelectorAll("[data-assistant-tool]").forEach(button=>button.onclick=()=>{const match=toolkitToolDefs.find(tool=>tool.name===button.dataset.assistantTool||tool.name.includes(button.dataset.assistantTool.split(" ")[0]));if(match){showView("tools");renderTool(match.id);}else toast(`${button.dataset.assistantTool} is in the Tool Manual.`);});
-  const conversation=document.getElementById("assistant-conversation");
-  if(conversation)conversation.scrollTop=conversation.scrollHeight;
-}
-async function askChartYarnchaAssistant(p=getProject()){
-  p.yarnchaAssistant=p.yarnchaAssistant||{};
-  p.assistantMessages=Array.isArray(p.assistantMessages)?p.assistantMessages:[];
-  const question=document.getElementById("assistant-question")?.value.trim();
-  if(!question)return toast("Ask Yarncha Assistant a question first.");
-  const skillLevel=normalizeAssistantSkill(document.getElementById("chart-assistant-skill")?.value||p.yarnchaAssistant.skillLevel);
-  const craftType=normalizeAssistantCraft(document.getElementById("chart-assistant-craft")?.value||p.yarnchaAssistant.craftType);
-  const selectedTechnique=document.getElementById("chart-assistant-technique")?.value||p.yarnchaAssistant.selectedTechnique||"";
-  const projectContext={...projectContextService.getCurrentProjectContext(),skillLevel,craftType,selectedTechnique};
-  const conversationHistory=p.assistantMessages.slice(-10);
-  const answer=await sendAssistantMessage({message:question,projectContext,conversationHistory});
-  p.assistantMessages.push({role:"user",text:question,createdAt:new Date().toISOString()},{role:"assistant",text:answer.quickAnswer||answer.whatToDoNow||"",answer,provider:"local",createdAt:new Date().toISOString()});
-  p.assistantMessages=p.assistantMessages.slice(-40);
-  p.yarnchaAssistant={...p.yarnchaAssistant,skillLevel,craftType,selectedTechnique,lastQuestion:question,draftQuestion:"",lastAnswer:answer,recentQuestions:[question,...(p.yarnchaAssistant.recentQuestions||[])].slice(0,8)};
-  saveProjectTouch(p);
-  renderProjectDetail();
-}
-function handleAssistantMemoryAction(action,p=getProject()){
-  const assistant=p.yarnchaAssistant||{},answer=assistant.lastAnswer,context=projectContextService.getCurrentProjectContext();
-  if(!answer)return toast("Ask Yarncha Assistant first.");
-  const summary=answer.quickAnswer||assistant.lastQuestion||"Yarncha Assistant explanation";
-  if(action==="save-explanation"){learningMemoryService.saveProjectNote(p.id,summary);toast("Explanation saved to local learning memory.");}
-  if(action==="add-notes"){p.notes=`${p.notes||""}${p.notes?"\n\n":""}Yarncha Assistant: ${summary}`;saveProjectTouch(p);toast("Added to project notes.");}
-  if(action==="add-checklist"){state.libraryProjectChecklist=[{id:`assistant-check${Date.now()}`,projectId:p.id,text:summary,source:"Yarncha Assistant",createdAt:new Date().toISOString()},...(state.libraryProjectChecklist||[])];saveState();toast("Assistant advice added as a checklist item.");}
-  if(action==="save-troubleshooting"){p.troubleshootingNotes=[{id:`trouble${Date.now()}`,question:assistant.lastQuestion||"",summary,missingInformation:answer.missingInformation||[],relatedTools:answer.relatedTools||[],createdAt:new Date().toISOString()},...(p.troubleshootingNotes||[])];saveProjectTouch(p);toast("Troubleshooting result saved to this project.");}
-  if(action==="create-calculator-input"){p.assistantCalculatorInputs=[{id:`calc-input${Date.now()}`,source:"Yarncha Assistant",question:assistant.lastQuestion||"",suggestedTool:(answer.relatedTools||[])[0]||"Gauge / Swatch Adapter",summary,createdAt:new Date().toISOString()},...(p.assistantCalculatorInputs||[])];saveProjectTouch(p);toast("Calculator input draft saved to this project.");}
-  if(action==="link-library"){p.linkedLibraryEntries=[...new Set([...(p.linkedLibraryEntries||[]),...(answer.libraryLinks||[]).map(link=>String(link.target||"").replace("library:","")).filter(Boolean)])];saveProjectTouch(p);toast("Library entries linked to this project.");}
-  if(action==="remember-correction"){learningMemoryService.saveUserCorrection({projectId:p.id,question:assistant.lastQuestion,correction:summary,craftType:assistant.craftType});toast("Correction remembered locally.");}
-  if(action==="verify-symbol"){learningMemoryService.saveVerifiedSymbol(p.id,{symbol:context.currentSymbol||assistant.lastQuestion,meaning:summary,question:assistant.lastQuestion});toast("Symbol marked as verified locally.");}
-  renderProjectDetail();
+  document.querySelectorAll("[data-assistant-suggestion]").forEach(button=>button.onclick=()=>{
+    if(!input)return;
+    input.value=suggestionPrompts[button.dataset.assistantSuggestion]||button.dataset.assistantSuggestion;
+    input.focus();
+    p.yarnchaAssistant.draftQuestion=input.value;
+    updateAssistantPromptPreview(p);
+    saveStateSoon();
+  });
+  document.querySelectorAll("[data-ai-provider]").forEach(button=>button.onclick=()=>handoffAssistantToProvider(button.dataset.aiProvider,p));
+  document.getElementById("copy-assistant-prompt")?.addEventListener("click",()=>copyCurrentAssistantPrompt(p));
+  bindCollapsibleSectionState(document.querySelector(".assistant-composer"));
 }
 function saveProjectFitCheck(){
   const p=getProject();
@@ -4178,23 +4193,6 @@ function techniqueKnowledgeText(){
   const saved=(state.techniqueKnowledge||[]).map(i=>`${i.name}: ${i.text}`).join("\n");
   return [items,saved].filter(Boolean).join("\n");
 }
-function openInChatGPT() {
-  const p=getProject();if(!state.aiAccessConfirmed)return openAiAccessModal();
-  if(p.chatPreference==="ask")return openChatPreferenceModal();
-  launchChatGPT(p);
-}
-function openAiAccessModal(){
-  openModal(`<p class="eyebrow">AI ACCOUNT REQUIRED</p><h2>Connect through your own ChatGPT account</h2><p>Yarncha does not collect your password and cannot see whether another website has authenticated you. Sign in to ChatGPT first, then confirm here before sending project context.</p><div class="privacy-note">Only the text shown in the handoff prompt is sent when you open ChatGPT. Uploaded files remain on this device unless you personally attach them there.</div><div class="modal-actions"><button class="secondary-button" id="open-ai-login">Open ChatGPT sign-in</button><button class="primary-button" id="confirm-ai-login">I am signed in</button></div>`);
-  document.getElementById("open-ai-login").onclick=()=>window.open("https://chatgpt.com/auth/login","_blank","noopener");
-  document.getElementById("confirm-ai-login").onclick=()=>{state.aiAccessConfirmed=true;saveState();closeModal();openInChatGPT();};
-}
-function launchChatGPT(p){
-  const question=document.getElementById("assistant-question")?.value.trim() || p.assistantMessages.filter(m=>m.role==="user").at(-1)?.text || "Please help me understand my current chart row.";
-  const plan=p.patternPlan?.result||"No modification calculation saved.";
-  const prompt=`I am working on a ${p.type} project called "${p.name}". Reply in the language and register used by my question. Fully support English, Traditional Chinese (Hong Kong), written Cantonese, Simplified Chinese, and Japanese craft terminology. I am at row ${p.row}${p.chartRows?` of ${p.chartRows}`:""}. Project notes: ${p.notes||"none"}. Saved proportion calculation: ${plan}. Extracted PDF reference: ${(p.pdfReference||"none").slice(0,5000)}. Question: ${question}. Check every arithmetic step, repeat count, stitch multiple, edge stitch and panel total. Clearly separate facts from assumptions, and flag any chart symbol or scan detail that cannot be read confidently.`;
-  window.open(`https://chatgpt.com/?q=${encodeURIComponent(prompt)}`,"_blank","noopener");
-}
-function openChatPreferenceModal(){const p=getProject();openModal(`<p class="eyebrow">CHAT ORGANISATION</p><h2>How should this open?</h2><p>Browsers cannot reliably reopen one exact ChatGPT conversation, but Yarncha can keep one in-app history per project or treat each handoff separately.</p><div class="form-grid"><button class="secondary-button" id="chat-same">Keep one project history</button><button class="secondary-button" id="chat-separate">Separate handoffs</button></div><label class="check-row"><input id="remember-chat-choice" type="checkbox"> Remember for this project</label>`);document.getElementById("chat-same").onclick=()=>finishChatChoice("same");document.getElementById("chat-separate").onclick=()=>finishChatChoice("separate");function finishChatChoice(choice){if(document.getElementById("remember-chat-choice").checked)p.chatPreference=choice;saveState();closeModal();launchChatGPT(p);}}
 function handleChart(file) {
   if (!file) return;
   if (file.size > 3_500_000) return toast("Please choose a chart smaller than 3.5 MB for this local version.");
@@ -6081,7 +6079,8 @@ function renderTool(tool=currentProjectTool) {
     const tools=visible.filter(t=>toolsPageCategoryForTool(t)===category.id);
     if(!tools.length)return "";
     const content=`<div class="toolbox-grid">${tools.map(toolCardHtml).join("")}</div>`;
-    return collapsibleSectionHtml({eyebrow:"TOOLS",title:category.label,titleClass:"major-section-title",description:toolsPageCategoryDescription(category.id),rightMeta:`${tools.length} tool${tools.length===1?"":"s"}`,defaultOpen:search?true:selectedCategory===category.id,className:"toolbox-category-panel",children:content});
+    const categoryId=`tool-category-${category.id.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`;
+    return collapsibleSectionHtml({eyebrow:"TOOLS",title:category.label,titleClass:"major-section-title",description:toolsPageCategoryDescription(category.id),rightMeta:`${tools.length} tool${tools.length===1?"":"s"}`,defaultOpen:search?true:selectedCategory===category.id,className:"toolbox-category-panel",id:categoryId,children:content});
   }).join("");
   panel.innerHTML=`<div class="tools-page-shell">
     <div class="page-title tools-page-title"><p class="eyebrow">YARNCHA TOOLKIT</p><h1 class="page-title-text">Maker’s Toolkit</h1><p>Calculators, planners, and yarn math for knitting and crochet.</p></div>
@@ -6097,6 +6096,7 @@ function renderTool(tool=currentProjectTool) {
       <div id="project-tool-content" class="tools-detail-content">${activeDef?projectToolContent(getProject(),currentProjectTool):`<div class="empty-state"><h3>Choose a tool to start calculating.</h3></div>`}</div>
     </section>
   </div>`;
+  bindCollapsibleSectionState(panel);
   document.querySelectorAll("[data-tool-tab]").forEach(b=>b.classList.remove("active"));
   document.getElementById("tool-search")?.addEventListener("input",e=>{currentToolSearch=e.target.value;renderTool(selected);});
   document.querySelectorAll("[data-open-tool]").forEach(b=>b.onclick=()=>{const picked=b.dataset.openTool;if(picked==="rendering-studio")currentGlobalRenderingTool=currentGlobalRenderingTool||"grid";renderTool(picked);});

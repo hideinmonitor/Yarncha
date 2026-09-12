@@ -15,13 +15,28 @@ assert.doesNotMatch(css, /\.tools-detail-content \.toolkit-tool \{[^}]*grid-temp
 assert.match(app, /function toolCardHtml\(tool\)/, "all tools render through one shared card helper");
 assert.match(app, /class="toolbox-card card" type="button" data-open-tool=/, "tool cards share one idle class list");
 assert.match(app, /tools\.map\(toolCardHtml\)/, "every category uses the shared tool card helper");
+assert.match(app, /collapsibleSectionHtml\(\{eyebrow:"TOOLS"[\s\S]*className:"toolbox-category-panel"/, "tool categories reuse the shared accordion primitive");
+assert.match(app, /aria-expanded="\$\{defaultOpen\?"true":"false"\}"/, "accordion triggers expose their initial expanded state");
+assert.match(app, /function bindCollapsibleSectionState\(root=document\)/, "accordion aria-expanded state stays synchronized");
+assert.match(app, /aria-controls="\$\{escapeHtml\(contentId\)\}"/, "accordion triggers identify their controlled content");
 assert.doesNotMatch(app, /toolbox-card card \$\{selected===tool\.id/, "the default Gauge card is not permanently marked active");
 assert.doesNotMatch(css, /\.toolbox-card\.active/, "tool cards do not keep a stale selected outline");
+assert.equal(declarations('.toolbox-category-panel > .collapsible-summary')['padding'],'var(--spacing-lg)','desktop category headers use compact design-system padding');
+assert.equal(declarations('.toolbox-category-panel > .collapsible-summary')['border'],'var(--panel-border)','category headers reuse the shared card border');
+assert.equal(declarations('.toolbox-category-panel > .collapsible-summary')['border-radius'],'var(--radius-card)','category headers reuse the shared card radius');
+assert.equal(declarations('.toolbox-category-panel > .collapsible-summary')['background'],'var(--surface)','category headers reuse the shared card surface');
+assert.equal(declarations('.toolbox-category-panel > .collapsible-summary')['box-shadow'],'var(--shadow-soft)','category headers reuse the shared card shadow');
+assert.equal(declarations('.toolbox-category-panel > .collapsible-content')['border'],'0','expanded tool grids have no nested container border');
+assert.equal(declarations('.toolbox-category-panel > .collapsible-content')['background'],'transparent','expanded tool grids remain visually attached without another surface');
+assert.equal(declarations('.toolbox-accordion-grid')['gap'],'var(--spacing-lg)','category cards use design-system separation');
+assert.equal(declarations('.toolbox-category-panel .toolbox-grid','(max-width:1100px)')['grid-template-columns'],'repeat(2,minmax(0,1fr))','tablet tool grids use two columns');
+assert.equal(declarations('.toolbox-category-panel .toolbox-grid','(max-width:760px)')['grid-template-columns'],'1fr','mobile tool grids use one column');
 assert.equal(declarations('.toolbox-card')['background'],'var(--surface)','idle tool cards share the surface token');
 assert.equal(declarations('.toolbox-card')['border'],'1px solid var(--border)','idle tool cards share the same border');
 assert.equal(declarations('.toolbox-card')['border-radius'],'var(--radius-card)','idle tool cards share the card radius');
 assert.equal(declarations('.toolbox-card')['box-shadow'],'var(--shadow-soft)','idle tool cards share the same shadow');
 assert.equal(declarations('.toolbox-card')['padding'],'var(--card-padding)','idle tool cards share the same padding');
+assert.equal(declarations('.toolbox-card')['height'],'100%','tool cards remain equal height within each grid row');
 assert.equal(declarations('.toolbox-card:focus-visible')['outline'],'3px solid var(--focus)','keyboard focus remains visible');
 
 console.log("Tool layout contract passed.");

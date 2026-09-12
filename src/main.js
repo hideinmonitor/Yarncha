@@ -9,4 +9,5 @@ import "./security/backup-schema.js";
 import "./cloud/sync-protocol.js";
 import "./document-tools-loader.js";
 import "./cloud/bootstrap.js";
+import "./services/ai-handoff.js";
 import "virtual:yarncha-application";
