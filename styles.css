@@ -4697,3 +4697,52 @@ textarea::placeholder { color:var(--text-secondary); opacity:1; font-weight:500;
 *::after { scroll-behavior:auto; transition-duration:0.01ms; animation-duration:0.01ms; animation-iteration-count:1; }
 
 }
+
+/* Chart annotation controls */
+.annotation-toolbar-topline { display:flex; align-items:stretch; min-width:0; border-bottom:1px solid var(--border); }
+.project-workspace-page .annotation-primary-tools { flex:1 1 auto; width:auto; min-width:0; margin:0; padding:var(--spacing-xs); gap:4px; border:0; border-radius:0; background:transparent; box-shadow:none; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scrollbar-width:thin; }
+.project-workspace-page .annotation-primary-tools button { display:grid; grid-template-rows:24px auto; place-items:center; gap:3px; flex:0 0 58px; width:58px; min-width:58px; max-width:58px; min-height:56px; padding:6px 3px; overflow:hidden; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--secondary-button); color:var(--text-primary); }
+.project-workspace-page .annotation-primary-tools button span { min-width:0; font-size:10px; line-height:1.15; white-space:nowrap; }
+.project-workspace-page .annotation-primary-tools button[aria-pressed="true"] { outline:2px solid currentColor; outline-offset:-3px; background:var(--primary-button); color:var(--button-text); border-color:transparent; }
+.annotation-utility-bar { flex:0 0 auto; display:flex; align-items:center; gap:var(--spacing-xs); padding:var(--spacing-xs); border-left:1px solid var(--border); background:color-mix(in srgb,var(--bg-secondary) 72%,var(--surface)); }
+.annotation-utility-bar > button,
+.annotation-context-bar > button,
+.annotation-toolbar-shell .zoom-tools button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:0 var(--spacing-sm); border:1px solid var(--border); border-radius:var(--radius-md); background:var(--secondary-button); color:var(--text-primary); cursor:pointer; white-space:nowrap; }
+.annotation-utility-bar > button span { font-size:var(--text-meta); }
+.annotation-utility-bar .zoom-tools { display:grid; grid-template-columns:44px 56px 44px; align-items:center; gap:4px; margin-left:0; }
+.annotation-utility-bar .zoom-tools button { min-width:44px; width:44px; padding:0; font-size:20px; }
+.annotation-utility-bar .zoom-tools output { color:var(--text-secondary); font-size:var(--text-meta); font-weight:800; text-align:center; font-variant-numeric:tabular-nums; }
+.annotation-context-bar { display:flex; align-items:center; gap:var(--spacing-xs); min-width:0; min-height:60px; padding:var(--spacing-xs); background:var(--surface); overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin; }
+.annotation-context-title { display:inline-flex; align-items:center; gap:7px; flex:0 0 auto; padding-right:var(--spacing-xs); color:var(--text-primary); font-size:var(--text-meta); white-space:nowrap; }
+.annotation-context-title .annotation-button-icon { width:20px; height:20px; }
+.annotation-context-bar .annotation-control { min-height:44px; background:var(--surface-elevated); }
+.annotation-context-bar .preview-lock-toggle { border-color:color-mix(in srgb,var(--primary) 40%,var(--border)); }
+.annotation-context-bar .preview-lock-toggle.is-locked { background:var(--primary-button); color:var(--button-text); border-color:transparent; }
+.annotation-toolbar-shell > .annotation-mode-hint { margin:0; padding:8px var(--spacing-sm) 10px; border-top:1px solid var(--border); color:var(--text-secondary); font-size:var(--text-meta); line-height:1.4; }
+.project-workspace-page .annotation-toolbar-shell button:focus-visible,
+.project-workspace-page .annotation-toolbar-shell input:focus-visible,
+.project-workspace-page .annotation-toolbar-shell select:focus-visible { outline:3px solid color-mix(in srgb,var(--primary) 72%,transparent); outline-offset:2px; }
+.project-workspace-page .og-chart-stage:not(.is-preview-locked) { overflow:auto; overscroll-behavior:contain; touch-action:none; }
+.project-workspace-page .og-chart-stage:not(.is-preview-locked) .chart-canvas,
+.project-workspace-page .og-chart-stage:not(.is-preview-locked) .annotation-layer,
+.project-workspace-page .og-chart-stage:not(.is-preview-locked) .row-mask { touch-action:none; }
+.project-workspace-page .og-chart-stage.is-preview-locked { overflow:hidden; overscroll-behavior:auto; touch-action:pan-y pinch-zoom; cursor:default; }
+.project-workspace-page .og-chart-stage.is-preview-locked .chart-canvas,
+.project-workspace-page .og-chart-stage.is-preview-locked .annotation-layer,
+.project-workspace-page .og-chart-stage.is-preview-locked .row-mask { touch-action:pan-y pinch-zoom; }
+.project-workspace-page .og-chart-stage.is-preview-locked .annotation-layer,
+.project-workspace-page .og-chart-stage.is-preview-locked .row-mask,
+.project-workspace-page .og-chart-stage.is-preview-locked iframe { pointer-events:none; }
+
+@media (max-width:1000px) {
+  .annotation-toolbar-topline { display:grid; grid-template-columns:minmax(0,1fr); }
+  .annotation-utility-bar { width:100%; min-width:0; overflow-x:auto; border-top:1px solid var(--border); border-left:0; }
+}
+
+@media (max-width:760px) {
+  .project-workspace-page .annotation-primary-tools { padding:var(--spacing-xs); }
+  .project-workspace-page .annotation-primary-tools button { flex-basis:64px; width:64px; min-width:64px; max-width:64px; min-height:54px; }
+  .annotation-context-bar { flex-wrap:nowrap; }
+  .annotation-context-title { position:sticky; left:0; z-index:1; min-height:44px; padding:0 var(--spacing-xs); background:var(--surface); }
+  .annotation-toolbar-shell > .annotation-mode-hint { padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
+}

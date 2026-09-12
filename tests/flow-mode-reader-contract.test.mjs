@@ -5,6 +5,14 @@ import { readFile } from "node:fs/promises";
 const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 const cloud = await readFile(new URL("../src/cloud/bootstrap.js", import.meta.url), "utf8");
+const backupSchema = await readFile(new URL("../src/security/backup-schema.js", import.meta.url), "utf8");
+
+function functionSource(name) {
+  const start = source.indexOf(`function ${name}`);
+  assert.notEqual(start, -1, `${name} exists`);
+  const end = source.indexOf("\nfunction ", start + 10);
+  return source.slice(start, end === -1 ? source.length : end);
+}
 
 assert.match(source, /function escapeHtml\(value = ""\) \{ return String\(value \?\? ""\)\.replace/, "HTML escaping accepts numeric setup values without crashing project navigation");
 
@@ -150,6 +158,12 @@ assert.match(source, /row-counter-card/, "row counter uses a dedicated responsiv
 assert.match(source, /row-stepper/, "row counter stepper keeps minus, row input, and plus together");
 assert.match(source, /class="row-counter-label">Row<\/span><input class="row-counter-input"/, "row counter label and input have mobile-safe hooks");
 assert.match(source, /annotation-toolbar-shell/, "annotation toolbar has an overflow-safe shell");
+assert.match(source, /annotation-primary-tools/, "primary annotation tools have their own toolbar row");
+assert.match(source, /annotation-context-bar/, "the selected tool has a dedicated context row");
+assert.match(source, /annotation-utility-bar/, "history and zoom actions are separated from the primary tools");
+assert.match(source, /function annotationContextControlsHtml/, "context controls are generated from the selected tool");
+assert.match(source, /activeAnnotationTool==="eraser"[^\n]*eraser-mode/, "eraser mode and size appear only for Eraser");
+assert.match(source, /activeAnnotationTool==="row-mask"[^\n]*row-mask-color/, "mask controls appear only for Row Mask");
 assert.match(source, /function bindAnnotationToolbar/, "annotation toolbar has delegated click handling");
 assert.match(source, /function setActiveAnnotationTool/, "annotation tools update from one source of truth");
 assert.match(source, /const selectAnnotationTool=setActiveAnnotationTool/, "legacy annotation helper aliases the single source of truth");
@@ -161,6 +175,15 @@ assert.match(source, /let rowMaskDragState = null/, "Row mask drag state has a u
 assert.match(source, /const canOpen=activeAnnotationTool==="touch"&&!tap\.moved&&distance<8&&duration<500&&!drawingStroke&&!rowMaskDragState&&!arrowDrag[\s\S]*handleTouchRead\(tap\.pt\)/, "Touch-to-Read opens only for a short still tap");
 assert.doesNotMatch(source, /activeAnnotationTool==="touch"\)\{\s*event\.preventDefault\(\);\s*handleTouchRead\(pt\);/, "Touch-to-Read does not open immediately on pointerdown");
 assert.match(source, /Tap a chart row to read or correct it\./, "Touch tool shows a deliberate tap hint");
+assert.match(source, /id="toggle-preview-lock" aria-pressed=/, "preview lock exposes its state accessibly");
+assert.match(source, /previewLocked:!!p\.previewLocked/, "preview interaction lock persists with the project");
+assert.match(backupSchema, /"previewLocked"/, "preview interaction lock survives backup import and export");
+assert.match(source, /if\(p\.previewLocked\)return;\s*const pt=pointFromEvent\(event\)/, "locked previews exit before any annotation event is cancelled");
+assert.match(source, /function updateChartZoomInPlace/, "zoom changes update the existing chart canvas");
+assert.match(source, /function paintRowMask\(p,\{rebuild=false\}=\{\}\)/, "row mask changes repaint only the mask overlay");
+for (const name of ["bindAnnotationToolbar","setAnnotationSetting","updateChartZoomInPlace","beginAnnotation","paintRowMask","eraseAt","undoAnnotation","redoAnnotation"]) {
+  assert.doesNotMatch(functionSource(name), /renderProjectDetail\(\)/, `${name} preserves the chart DOM and viewport`);
+}
 assert.match(source, /button type="button" class="\$\{activeAnnotationTool===tool\?"active":""\}" data-tool="\$\{tool\}" aria-pressed="\$\{activeAnnotationTool===tool\}"/, "annotation buttons use type button, data-tool and aria-pressed");
 assert.match(source, /tool&&!tool\.closest\("\.annotation-toolbar"\)/, "global Tools navigation ignores annotation toolbar buttons");
 assert.match(source, /setAnnotationSetting\("color"/, "annotation color control updates settings");
@@ -225,6 +248,11 @@ assert.match(styles, /\.chart-file-remove[\s\S]*min-height:44px/, "attachment ch
 assert.match(styles, /\.chart-file-text strong[\s\S]*text-overflow:ellipsis/, "attachment filenames truncate cleanly");
 assert.match(styles, /\.project-workspace-page \.annotation-toolbar button\[aria-pressed="true"\]/, "active toolbar button has non-colour focus/active outline");
 assert.match(styles, /\.project-workspace-page \.annotation-toolbar input,[\s\S]*\.project-workspace-page \.annotation-toolbar select/, "toolbar form controls remain flex items");
+assert.match(styles, /\.annotation-toolbar-topline/, "annotation toolbar rows share one card shell");
+assert.match(styles, /\.annotation-context-bar/, "selected-tool controls have a compact context layout");
+assert.match(styles, /\.annotation-utility-bar/, "utility controls have a distinct compact layout");
+assert.match(styles, /\.og-chart-stage\.is-preview-locked \{[^}]*overflow:hidden;[^}]*overscroll-behavior:auto;[^}]*touch-action:pan-y pinch-zoom;/, "locked preview lets wheel and touch scrolling reach the page");
+assert.match(styles, /\.og-chart-stage\.is-preview-locked \.annotation-layer,[\s\S]*pointer-events:none;/, "locked preview makes interactive overlays passive");
 assert.match(styles, /\.annotation-mode-hint/, "Touch-to-Read hint is styled");
 assert.match(styles, /\.project-workspace-page \.row-stepper[\s\S]*grid-template-columns:56px minmax\(88px,128px\) 56px 44px/, "row counter stepper keeps the voice button beside the plus button");
 assert.match(styles, /\.project-workspace-page \.row-counter-label[\s\S]*white-space:nowrap/, "row counter labels do not wrap on mobile");

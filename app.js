@@ -636,6 +636,7 @@ function normalizeProjectRecord(p={},index=0){
     activeTab:p.activeTab || "track",
     readingMode:!!p.readingMode,
     chartMode:p.chartMode || "og",
+    previewLocked:!!p.previewLocked,
     yarnchaAssistant:p.yarnchaAssistant || {},
     chartZoom:Number(p.chartZoom)||1,
     annotations:p.annotations || [],
@@ -911,6 +912,8 @@ const uiIconPaths={
   text:'<path d="M5 5h14M12 5v14M8.5 19h7"></path>',
   arrow:'<path d="M5 18 18 5M12 5h6v6"></path>',
   marker:'<path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle>',
+  lock:'<rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"></path>',
+  unlock:'<rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 7.4-2M12 14v2"></path>',
   close:'<path d="m6 6 12 12M18 6 6 18"></path>',
   undo:'<path d="M9 7 5 11l4 4"></path><path d="M6 11h7a6 6 0 0 1 6 6"></path>',
   redo:'<path d="m15 7 4 4-4 4"></path><path d="M18 11h-7a6 6 0 0 0-6 6"></path>',
@@ -1359,28 +1362,44 @@ function projectChartHtml(p){
       ${unifiedRepeatCountersHtml(p,{chart:true})}
     </div>
     <div class="annotation-toolbar-shell card workspace-card">
-    <div class="annotation-toolbar ${hasChart?"":"is-disabled"}" role="toolbar" aria-label="Annotation tools" aria-disabled="${!hasChart}">
-      ${annotationTools.map(tool=>`<button type="button" class="${activeAnnotationTool===tool?"active":""}" data-tool="${tool}" aria-pressed="${activeAnnotationTool===tool}" ${hasChart?"":"disabled"}>${toolIcon(tool)}<span>${toolLabel(tool)}</span></button>`).join("")}
-      <label class="annotation-control">Color <input id="annotation-color" type="color" value="${escapeHtml(p.annotationColor||"#d96572")}" ${hasChart?"":"disabled"}></label>
-      <label class="annotation-control">Size <select id="annotation-width" ${hasChart?"":"disabled"}>${[2,4,6,10,14,20].map(w=>`<option value="${w}" ${Number(p.annotationWidth)===w?"selected":""}>${w}</option>`).join("")}</select></label>
-      <label class="annotation-control">Opacity <input id="annotation-opacity" type="range" min=".2" max=".95" step=".05" value="${p.annotationOpacity??p.rowMask?.opacity??.72}" ${hasChart?"":"disabled"}></label>
-      <label class="annotation-control mask-only">Mask color <input id="row-mask-color" type="color" value="${escapeHtml(p.rowMask?.color||p.annotationColor||"#c9a66b")}" ${hasChart?"":"disabled"}></label>
-      <label class="annotation-control">Eraser <select id="eraser-mode" ${hasChart?"":"disabled"}>${["standard","precise","stroke"].map(v=>`<option value="${v}" ${p.eraserMode===v?"selected":""}>${v[0].toUpperCase()+v.slice(1)}</option>`).join("")}</select></label>
-      <label class="annotation-control">Eraser size <input id="eraser-size" type="range" min="8" max="80" step="2" value="${p.eraserSize||28}" ${hasChart?"":"disabled"}></label>
-      <button id="toggle-mask-position-lock" ${hasChart?"":"disabled"}>${p.maskLockPosition?"Unlock position":"Lock position"}</button><button id="toggle-mask-size-lock" ${hasChart?"":"disabled"}>${p.maskLockSize?"Unlock size":"Lock size"}</button><button id="toggle-mask-lock" ${hasChart?"":"disabled"}>${p.rowMask?.locked?"Unlock all":"Lock all"}</button><button id="mask-up" ${hasChart?"":"disabled"}>Mask ↑</button><button id="mask-down" ${hasChart?"":"disabled"}>Mask ↓</button><button id="mask-cover-done" ${hasChart?"":"disabled"}>Cover done</button><button class="danger-button" id="clear-mask" ${hasChart?"":"disabled"}>Clear mask</button>
-      <button id="undo-annotation" ${hasChart?"":"disabled"}>${uiIcon("undo","annotation-button-icon")}<span>Undo</span></button><button id="redo-annotation" ${hasChart?"":"disabled"}>${uiIcon("redo","annotation-button-icon")}<span>Redo</span></button><button class="danger-button" id="clear-annotations" ${hasChart?"":"disabled"}>Clear</button>
-      <div class="zoom-tools"><button data-zoom="-0.15">−</button><strong>${Math.round((p.chartZoom||1)*100)}%</strong><button data-zoom="0.15">+</button></div>
-    </div>
-    ${hasChart&&activeAnnotationTool==="touch"?`<p class="annotation-mode-hint">Tap a chart row to read or correct it.</p>`:""}
+      <div class="annotation-toolbar-topline">
+        <div class="annotation-toolbar annotation-primary-tools ${hasChart?"":"is-disabled"}" role="toolbar" aria-label="Annotation tools" aria-disabled="${!hasChart}">
+          ${annotationTools.map(tool=>`<button type="button" class="${activeAnnotationTool===tool?"active":""}" data-tool="${tool}" aria-pressed="${activeAnnotationTool===tool}" ${hasChart?"":"disabled"}>${toolIcon(tool)}<span>${toolLabel(tool)}</span></button>`).join("")}
+        </div>
+        <div class="annotation-utility-bar" role="group" aria-label="Annotation history and zoom">
+          <button type="button" id="undo-annotation" ${hasChart?"":"disabled"}>${uiIcon("undo","annotation-button-icon")}<span>Undo</span></button>
+          <button type="button" id="redo-annotation" ${hasChart?"":"disabled"}>${uiIcon("redo","annotation-button-icon")}<span>Redo</span></button>
+          <button type="button" class="danger-button" id="clear-annotations" ${hasChart?"":"disabled"}>Clear</button>
+          <div class="zoom-tools" aria-label="Preview zoom"><button type="button" data-zoom="-0.15" aria-label="Zoom out" ${hasChart?"":"disabled"}>−</button><output id="chart-zoom-value">${Math.round((p.chartZoom||1)*100)}%</output><button type="button" data-zoom="0.15" aria-label="Zoom in" ${hasChart?"":"disabled"}>+</button></div>
+        </div>
+      </div>
+      <div class="annotation-context-bar" role="group" aria-label="${escapeHtml(toolLabel(activeAnnotationTool))} controls">${annotationContextControlsHtml(p,hasChart)}</div>
+      <p class="annotation-mode-hint" id="annotation-mode-hint">${annotationModeHint(p)}</p>
     </div>
     ${chartHidden?`<div class="chart-reader card workspace-card collapsed-workspace-panel"><strong>Visual chart is hidden.</strong><p class="muted-copy">Your original upload is still saved for Manual Reading Mode.</p><button class="secondary-button" data-pattern-collapse="show-chart">Show visual chart</button></div>`:`<div class="chart-reader card workspace-card">
-      <div class="chart-stage og-chart-stage" id="chart-stage">${chartViewerHtml(p)}</div>
+      <div class="chart-stage og-chart-stage ${p.previewLocked?"is-preview-locked":""}" id="chart-stage" data-preview-locked="${!!p.previewLocked}" data-active-tool="${activeAnnotationTool}" aria-label="Chart preview. ${p.previewLocked?"Interaction locked; scrolling moves the page.":"Interaction enabled."}">${chartViewerHtml(p)}</div>
       <div class="attachment-strip">${p.attachments.map(a=>`<div class="chart-file-chip ${activeAssetId===a.id?"active":""}"><button class="chart-file-open" type="button" data-project-asset="${a.id}" aria-label="Open ${escapeHtml(a.name||"chart file")}"><span class="chart-file-icon" aria-hidden="true">${uiIcon("image","ui-icon")}</span><span class="chart-file-text"><strong>${escapeHtml(a.name||"Chart file")}</strong><small>Uploaded ✓</small></span></button><button class="chart-file-remove" type="button" data-delete-chart-asset="${a.id}" aria-label="Remove ${escapeHtml(a.name||"chart file")}">×</button></div>`).join("")}</div>
     </div>`}
     ${chartMode==="flow"?`<div class="manual-chart-tools">${friendlyChartBetaHtml(p)}</div>`:""}
     <div class="bottom-nav-spacer" aria-hidden="true"></div>
     </div>
   </div>`;
+}
+
+function annotationContextControlsHtml(p,hasChart=!!(p.chart||p.attachments?.length)){
+  const disabled=hasChart?"":"disabled";
+  const lockLabel=p.previewLocked?"Unlock preview":"Lock preview";
+  const previewControl=`<button type="button" class="preview-lock-toggle ${p.previewLocked?"is-locked":""}" id="toggle-preview-lock" aria-pressed="${!!p.previewLocked}" ${disabled}>${uiIcon(p.previewLocked?"lock":"unlock","annotation-button-icon")}<span>${lockLabel}</span></button>`;
+  const styleControls=`<label class="annotation-control">Color <input id="annotation-color" type="color" value="${escapeHtml(p.annotationColor||"#d96572")}" ${disabled}></label><label class="annotation-control">Size <select id="annotation-width" ${disabled}>${[2,4,6,10,14,20].map(w=>`<option value="${w}" ${Number(p.annotationWidth)===w?"selected":""}>${w}</option>`).join("")}</select></label><label class="annotation-control">Opacity <input id="annotation-opacity" type="range" min=".2" max=".95" step=".05" value="${p.annotationOpacity??p.rowMask?.opacity??.72}" ${disabled}></label>`;
+  let controls="";
+  if(activeAnnotationTool==="eraser")controls=`<label class="annotation-control">Mode <select id="eraser-mode" ${disabled}>${["standard","precise","stroke"].map(v=>`<option value="${v}" ${p.eraserMode===v?"selected":""}>${v[0].toUpperCase()+v.slice(1)}</option>`).join("")}</select></label><label class="annotation-control">Size <input id="eraser-size" type="range" min="8" max="80" step="2" value="${p.eraserSize||28}" ${disabled}></label>`;
+  else if(activeAnnotationTool==="row-mask")controls=`<label class="annotation-control">Mask color <input id="row-mask-color" type="color" value="${escapeHtml(p.rowMask?.color||p.annotationColor||"#c9a66b")}" ${disabled}></label><label class="annotation-control">Opacity <input id="annotation-opacity" type="range" min=".2" max=".95" step=".05" value="${p.annotationOpacity??p.rowMask?.opacity??.72}" ${disabled}></label><button type="button" id="toggle-mask-position-lock" ${disabled}>${p.maskLockPosition?"Unlock position":"Lock position"}</button><button type="button" id="toggle-mask-size-lock" ${disabled}>${p.maskLockSize?"Unlock size":"Lock size"}</button><button type="button" id="toggle-mask-lock" ${disabled}>${p.rowMask?.locked?"Unlock all":"Lock all"}</button><button type="button" id="mask-up" ${disabled}>Mask ↑</button><button type="button" id="mask-down" ${disabled}>Mask ↓</button><button type="button" id="mask-cover-done" ${disabled}>Cover done</button><button type="button" class="danger-button" id="clear-mask" ${disabled}>Clear mask</button>`;
+  else if(activeAnnotationTool!=="touch")controls=styleControls;
+  return `<strong class="annotation-context-title">${toolIcon(activeAnnotationTool)}<span>${escapeHtml(toolLabel(activeAnnotationTool))} controls</span></strong>${previewControl}${controls}`;
+}
+function annotationModeHint(p){
+  if(p.previewLocked)return "Preview locked. Scroll normally over the chart; unlock it to annotate or use Touch.";
+  return activeAnnotationTool==="touch"?"Tap a chart row to read or correct it.":`${toolLabel(activeAnnotationTool)} is active. Lock the preview when you want to scroll the page.`;
 }
 
 function chartViewerHtml(p){
@@ -1420,7 +1439,7 @@ function annotationSvg(a,selected=false){
   return `<circle class="annotation-object" data-ann-id="${a.id}" cx="${a.x||0}" cy="${a.y||0}" r="${Math.max(8,Number(a.width)||12)}" fill="${escapeHtml(a.color||"#d96572")}" opacity="${Number(a.opacity)||.9}"></circle>`;
 }
 function toolIcon(tool){return uiIcon(({touch:"touch",pen:"pen",highlighter:"highlighter",text:"text",arrow:"arrow",marker:"marker",eraser:"eraser","row-mask":"mask",rowMask:"mask"})[tool]||"calculator","annotation-button-icon");}
-function toolLabel(tool){return ({touch:"Touch","row-mask":"Row Mask",rowMask:"Row Mask",highlighter:"Highlighter"}[tool]||tool);}
+function toolLabel(tool){return ({touch:"Touch",pen:"Pen",highlighter:"Highlighter",eraser:"Eraser","row-mask":"Row Mask",rowMask:"Row Mask",text:"Text",arrow:"Arrow",marker:"Marker"}[tool]||tool);}
 
 function friendlyChartBetaHtml(p){
   const setup=ensureProjectSetup(p),plan=p.projectCalculations||calculateFlowProjectPlan(p,setup),reader=normalizeChartReaderConfig(p.chartReader,p),hasChart=p.chart||p.attachments.length,results=reader.recognitionResults||[],hasUnclear=results.some(cell=>cell.confidenceLabel==="Low"||Number(cell.confidence)<55),ready=!!hasChart&&!hasUnclear,rowInstruction=flowCurrentRowInstruction(p,setup);
@@ -3190,24 +3209,7 @@ function bindProjectDetail() {
   document.querySelectorAll("[data-delete-chart-asset]").forEach(b=>b.onclick=()=>removeProjectChartAsset(b.dataset.deleteChartAsset));
   bindAnnotationToolbar();
   syncAnnotationSettingsFromProject(p);
-  document.getElementById("annotation-color")?.addEventListener("input",e=>setAnnotationSetting("color",e.target.value));
-  document.getElementById("annotation-width")?.addEventListener("change",e=>setAnnotationSetting("size",Number(e.target.value)||4));
-  document.getElementById("annotation-opacity")?.addEventListener("input",e=>setAnnotationSetting("opacity",Number(e.target.value)||.72));
-  document.getElementById("row-mask-color")?.addEventListener("input",e=>{ensureRowMask(p);p.rowMask.color=e.target.value;saveProjectTouch(p);paintRowMask(p);});
-  document.getElementById("eraser-mode")?.addEventListener("change",e=>{p.eraserMode=e.target.value;saveProjectTouch(p);});
-  document.getElementById("eraser-size")?.addEventListener("input",e=>{p.eraserSize=Number(e.target.value)||28;saveProjectTouch(p);});
-  document.getElementById("toggle-mask-position-lock")?.addEventListener("click",()=>{p.maskLockPosition=!p.maskLockPosition;saveProjectTouch(p);renderProjectDetail();});
-  document.getElementById("toggle-mask-size-lock")?.addEventListener("click",()=>{p.maskLockSize=!p.maskLockSize;saveProjectTouch(p);renderProjectDetail();});
-  document.getElementById("toggle-mask-lock")?.addEventListener("click",()=>{ensureRowMask(p);p.rowMask.locked=!p.rowMask.locked;saveProjectTouch(p);renderProjectDetail();});
-  document.getElementById("mask-up")?.addEventListener("click",()=>moveRowMask(-1));
-  document.getElementById("mask-down")?.addEventListener("click",()=>moveRowMask(1));
-  document.getElementById("mask-cover-done")?.addEventListener("click",coverCompletedRows);
-  document.getElementById("clear-mask")?.addEventListener("click",()=>{p.rowMask=null;saveProjectTouch(p);renderProjectDetail();});
-  document.querySelectorAll("[data-zoom]").forEach(b=>b.onclick=()=>{p.chartZoom=Math.min(3,Math.max(.5,(p.chartZoom||1)+Number(b.dataset.zoom)));saveProjectTouch(p);renderProjectDetail();});
   bindAnnotationStage();
-  document.getElementById("undo-annotation")?.addEventListener("click",undoAnnotation);
-  document.getElementById("redo-annotation")?.addEventListener("click",redoAnnotation);
-  document.getElementById("clear-annotations")?.addEventListener("click",()=>{pushAnnotationHistory(p);p.annotations=[];p.annotationRedo=[];saveProjectTouch(p);renderProjectDetail();});
 }
 function setAssistantHandoffStatus(message,tone=""){
   const status=document.getElementById("assistant-handoff-status");
@@ -3443,7 +3445,7 @@ function bindFlowModeReader(p){
   document.getElementById("flow-align-mask")?.addEventListener("click",()=>{
     chartImageService.prepare(p,chartSetup());
     alignMaskToCurrentRow(p);
-    saveProjectTouch(p);renderProjectDetail();toast("Current row shown.");
+    saveProjectTouch(p);paintRowMask(p,{rebuild:true});toast("Current row shown.");
   });
   document.getElementById("flow-cover-completed")?.addEventListener("click",()=>{
     chartImageService.prepare(p,{...chartSetup(),coverCompletedRows:true});
@@ -3453,7 +3455,7 @@ function bindFlowModeReader(p){
     const reader=normalizeChartReaderConfig(p.chartReader,p);
     p.chartReader=normalizeChartReaderConfig({...reader,coverCompletedRows:false},p);
     p.rowMask=null;
-    saveProjectTouch(p);renderProjectDetail();toast("Finished-row cover removed.");
+    saveProjectTouch(p);paintRowMask(p);toast("Finished-row cover removed.");
   });
   document.getElementById("flow-read-row")?.addEventListener("click",()=>{
     chartImageService.prepare(p,chartSetup());
@@ -3502,6 +3504,7 @@ function pushAnnotationHistory(p){p.annotationHistory=[...(p.annotationHistory||
 function bindAnnotationStage(){
   const stage=document.getElementById("chart-stage");
   if(!stage)return;
+  applyPreviewInteractionState(getProject());
   stage.onpointerdown=beginAnnotation;
   stage.onpointermove=moveAnnotation;
   stage.onpointerup=endAnnotation;
@@ -3510,14 +3513,27 @@ function bindAnnotationStage(){
 }
 function bindAnnotationToolbar(){
   const toolbar=document.querySelector(".annotation-toolbar");
-  if(!toolbar)return;
-  toolbar.onclick=event=>{
-    const button=event.target.closest?.("button[data-tool]");
-    if(!button||button.disabled)return;
-    event.preventDefault();
-    event.stopPropagation();
-    setActiveAnnotationTool(button.dataset.tool);
-  };
+  if(toolbar)toolbar.onclick=event=>{
+      const button=event.target.closest?.("button[data-tool]");
+      if(!button||button.disabled)return;
+      event.preventDefault();
+      event.stopPropagation();
+      setActiveAnnotationTool(button.dataset.tool);
+    };
+  const p=getProject();
+  bindAnnotationContextControls(p);
+  document.querySelectorAll("[data-zoom]").forEach(button=>button.onclick=()=>{
+    p.chartZoom=Math.min(3,Math.max(.5,(p.chartZoom||1)+Number(button.dataset.zoom)));
+    updateChartZoomInPlace(p);
+    saveProjectTouch(p);
+  });
+  document.getElementById("undo-annotation")?.addEventListener("click",undoAnnotation);
+  document.getElementById("redo-annotation")?.addEventListener("click",redoAnnotation);
+  document.getElementById("clear-annotations")?.addEventListener("click",()=>{
+    if(!(p.annotations||[]).length)return toast("Nothing to clear.");
+    pushAnnotationHistory(p);p.annotations=[];p.annotationRedo=[];p.selectedAnnotationId=null;
+    paintAnnotations(p);saveProjectTouch(p);
+  });
 }
 function normalizeAnnotationTool(tool){
   const value=tool==="rowMask"?"row-mask":tool;
@@ -3531,6 +3547,7 @@ function setActiveAnnotationTool(tool){
     button.setAttribute("aria-pressed",String(active));
   });
   document.getElementById("chart-stage")?.setAttribute("data-active-tool",activeAnnotationTool);
+  updateAnnotationContextControls(getProject());
   if(typeof window!=="undefined"&&location.hostname==="127.0.0.1")console.debug(`Annotation tool selected: ${activeAnnotationTool}`);
 }
 const selectAnnotationTool=setActiveAnnotationTool;
@@ -3542,9 +3559,56 @@ function setAnnotationSetting(name,value){
   const p=getProject();
   if(name==="color"){annotationSettings.color=value;p.annotationColor=value;if(p.rowMask)p.rowMask.color=value;}
   if(name==="size"){annotationSettings.size=Number(value)||4;p.annotationWidth=annotationSettings.size;}
-  if(name==="opacity"){annotationSettings.opacity=Math.max(.2,Math.min(.95,Number(value)||.72));p.annotationOpacity=annotationSettings.opacity;if(p.rowMask)p.rowMask.opacity=annotationSettings.opacity;paintRowMask(p);}
+  if(name==="opacity"){annotationSettings.opacity=Math.max(.2,Math.min(.95,Number(value)||.72));p.annotationOpacity=annotationSettings.opacity;if(p.rowMask)p.rowMask.opacity=annotationSettings.opacity;}
+  if(p.rowMask)paintRowMask(p);
   saveProjectTouch(p);
   if(typeof window!=="undefined"&&location.hostname==="127.0.0.1")console.debug(`Annotation setting changed: ${name}`);
+}
+function bindAnnotationContextControls(p=getProject()){
+  document.getElementById("toggle-preview-lock")?.addEventListener("click",()=>setPreviewInteractionLocked(!p.previewLocked,p));
+  document.getElementById("annotation-color")?.addEventListener("input",event=>setAnnotationSetting("color",event.target.value));
+  document.getElementById("annotation-width")?.addEventListener("change",event=>setAnnotationSetting("size",Number(event.target.value)||4));
+  document.getElementById("annotation-opacity")?.addEventListener("input",event=>setAnnotationSetting("opacity",Number(event.target.value)||.72));
+  document.getElementById("row-mask-color")?.addEventListener("input",event=>{ensureRowMask(p);p.rowMask.color=event.target.value;saveProjectTouch(p);paintRowMask(p);});
+  document.getElementById("eraser-mode")?.addEventListener("change",event=>{p.eraserMode=event.target.value;saveProjectTouch(p);});
+  document.getElementById("eraser-size")?.addEventListener("input",event=>{p.eraserSize=Number(event.target.value)||28;saveProjectTouch(p);});
+  document.getElementById("toggle-mask-position-lock")?.addEventListener("click",()=>{p.maskLockPosition=!p.maskLockPosition;saveProjectTouch(p);paintRowMask(p,{rebuild:true});updateAnnotationContextControls(p);});
+  document.getElementById("toggle-mask-size-lock")?.addEventListener("click",()=>{p.maskLockSize=!p.maskLockSize;saveProjectTouch(p);paintRowMask(p,{rebuild:true});updateAnnotationContextControls(p);});
+  document.getElementById("toggle-mask-lock")?.addEventListener("click",()=>{ensureRowMask(p);p.rowMask.locked=!p.rowMask.locked;saveProjectTouch(p);paintRowMask(p,{rebuild:true});updateAnnotationContextControls(p);});
+  document.getElementById("mask-up")?.addEventListener("click",()=>moveRowMask(-1));
+  document.getElementById("mask-down")?.addEventListener("click",()=>moveRowMask(1));
+  document.getElementById("mask-cover-done")?.addEventListener("click",coverCompletedRows);
+  document.getElementById("clear-mask")?.addEventListener("click",()=>{p.rowMask=null;saveProjectTouch(p);paintRowMask(p);updateAnnotationContextControls(p);});
+}
+function updateAnnotationContextControls(p=getProject()){
+  const context=document.querySelector(".annotation-context-bar");
+  if(context){
+    context.setAttribute("aria-label",`${toolLabel(activeAnnotationTool)} controls`);
+    context.innerHTML=annotationContextControlsHtml(p,!!(p.chart||p.attachments?.length));
+    bindAnnotationContextControls(p);
+  }
+  const hint=document.getElementById("annotation-mode-hint");
+  if(hint)hint.textContent=annotationModeHint(p);
+}
+function setPreviewInteractionLocked(locked,p=getProject()){
+  p.previewLocked=!!locked;
+  drawingStroke=null;rowMaskDragState=null;arrowDrag=null;touchReadTap=null;
+  applyPreviewInteractionState(p);
+  updateAnnotationContextControls(p);
+  saveProjectTouch(p);
+}
+function applyPreviewInteractionState(p=getProject()){
+  const stage=document.getElementById("chart-stage");
+  if(!stage)return;
+  stage.classList.toggle("is-preview-locked",!!p.previewLocked);
+  stage.dataset.previewLocked=String(!!p.previewLocked);
+  stage.setAttribute("aria-label",`Chart preview. ${p.previewLocked?"Interaction locked; scrolling moves the page.":"Interaction enabled."}`);
+}
+function updateChartZoomInPlace(p=getProject()){
+  const canvas=document.querySelector("#chart-stage .chart-canvas");
+  if(canvas){canvas.style.transform=`scale(${p.chartZoom||1})`;canvas.style.transformOrigin="top left";}
+  const value=document.getElementById("chart-zoom-value");
+  if(value)value.textContent=`${Math.round((p.chartZoom||1)*100)}%`;
 }
 function ensureRowMask(p=getProject()){
   if(!p.rowMask)p.rowMask={type:"row-mask",x:50,y:420,width:900,height:90,color:annotationSettings.color||"#c9a66b",opacity:annotationSettings.opacity??.72,locked:false};
@@ -3562,7 +3626,9 @@ function pointFromEvent(event){
 }
 function beginAnnotation(event){
   if(event.button!==undefined&&event.button!==0)return;
-  const p=getProject(),pt=pointFromEvent(event);
+  const p=getProject();
+  if(p.previewLocked)return;
+  const pt=pointFromEvent(event);
   if(!pt)return;
   if(!(p.chart||p.attachments?.length))return;
   if(activeAnnotationTool==="touch"){
@@ -3599,7 +3665,7 @@ function beginAnnotation(event){
     event.preventDefault();
     const m=ensureRowMask(p);
     m.x=Math.max(0,Math.min(900,pt.x-450));m.y=Math.max(0,Math.min(940,pt.y-45));m.width=900;m.height=90;m.color=annotationSettings.color||p.annotationColor||m.color;m.opacity=annotationSettings.opacity??m.opacity??.72;
-    saveProjectTouch(p);renderProjectDetail();return;
+    saveProjectTouch(p);paintRowMask(p,{rebuild:true});return;
   }
   p.selectedAnnotationId=null;
   if(["pen","highlighter"].includes(activeAnnotationTool)){
@@ -3612,6 +3678,7 @@ function beginAnnotation(event){
   } else if(activeAnnotationTool==="eraser"){
     event.preventDefault();
     pushAnnotationHistory(p);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     eraseAt(pt,true);
   } else if(activeAnnotationTool==="arrow"){
     event.preventDefault();
@@ -3634,7 +3701,9 @@ function beginAnnotation(event){
   }
 }
 function moveAnnotation(event){
-  const p=getProject(),pt=pointFromEvent(event);
+  const p=getProject();
+  if(p.previewLocked)return;
+  const pt=pointFromEvent(event);
   if(!pt)return;
   if(!(p.chart||p.attachments?.length))return;
   if(touchReadTap&&event.pointerId===touchReadTap.pointerId){
@@ -3664,6 +3733,7 @@ function moveAnnotation(event){
   }
 }
 function endAnnotation(event){
+  if(getProject().previewLocked)return;
   if(touchReadTap&&event.pointerId===touchReadTap.pointerId){
     const tap=touchReadTap;
     touchReadTap=null;
@@ -3704,9 +3774,17 @@ function updateMaskDrag(p,pt){
   if(rowMaskDragState.action.includes("w")){const nx=Math.max(0,Math.min(o.x+dx,o.x+o.width-min));m.width=o.width+(o.x-nx);m.x=nx;}
   if(rowMaskDragState.action.includes("n")){const ny=Math.max(0,Math.min(o.y+dy,o.y+o.height-min));m.height=o.height+(o.y-ny);m.y=ny;}
 }
-function paintRowMask(p){
-  const el=document.querySelector("#chart-stage .row-mask"),m=p.rowMask;
-  if(!el||!m)return;
+function paintRowMask(p,{rebuild=false}={}){
+  const canvas=document.querySelector("#chart-stage .chart-canvas"),m=p.rowMask;
+  let el=canvas?.querySelector(".row-mask");
+  if(!m){el?.remove();return;}
+  if(!canvas)return;
+  if(!el||rebuild){
+    el?.remove();
+    canvas.insertAdjacentHTML("beforeend",rowMaskHtml(p));
+    el=canvas.querySelector(".row-mask");
+  }
+  if(!el)return;
   el.style.left=`${m.x/10}%`;el.style.top=`${m.y/10}%`;el.style.width=`${m.width/10}%`;el.style.height=`${m.height/10}%`;el.style.setProperty("--mask-color",m.color||"#c9a66b");el.style.setProperty("--mask-opacity",m.opacity??.72);
 }
 function alignMaskToCurrentRow(p=getProject()){
@@ -3720,14 +3798,14 @@ function alignMaskToCurrentRow(p=getProject()){
   return m;
 }
 function moveRowMask(direction){const p=getProject(),m=ensureRowMask(p),step=chartRowMetrics(p).rowHeight*10;m.y=Math.max(0,Math.min(1000-m.height,m.y+direction*step));saveProjectTouch(p);paintRowMask(p);}
-function coverCompletedRows({render=true}={}){
+function coverCompletedRows(){
   const p=getProject(),metrics=chartRowMetrics(p),m=ensureRowMask(p),completedHeight=Math.max(0,(metrics.row-1)*metrics.rowHeight*10);
   m.x=metrics.x*10;m.y=metrics.y*10;m.width=metrics.width*10;m.height=Math.min(1000-m.y,completedHeight);
   m.color=annotationSettings.color||p.annotationColor||m.color||"#c9a66b";m.opacity=Math.max(.28,Math.min(.72,annotationSettings.opacity??m.opacity??.42));
   const reader=normalizeChartReaderConfig(p.chartReader,p);
   p.chartReader=normalizeChartReaderConfig({...reader,coverCompletedRows:true},p);
   saveProjectTouch(p);
-  if(render)renderProjectDetail();else paintRowMask(p);
+  paintRowMask(p,{rebuild:true});
 }
 function paintAnnotations(p){
   const layer=document.querySelector("#chart-stage .annotation-layer");
@@ -3754,7 +3832,7 @@ function eraseAt(pt,deferSave=false){
   let changed=false;
   if(mode==="precise"){
     p.annotations=(p.annotations||[]).map(a=>{
-      if(!a.points?.length)return distanceToAnnotation(pt,a)<=radius?null:a;
+      if(!a.points?.length){if(distanceToAnnotation(pt,a)<=radius){changed=true;return null;}return a;}
       const points=a.points.filter(point=>Math.hypot(pt.x-point.x,pt.y-point.y)>radius);
       if(points.length!==a.points.length){changed=true;return points.length>1?{...a,points}:null;}
       return a;

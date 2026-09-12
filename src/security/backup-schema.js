@@ -35,7 +35,7 @@ const PROJECT_KEYS = new Set([
   "subCounters", "repeatRules", "rowReminders", "rowReminderVoice", "activeRowReminder", "markers", "chart",
   "activeChartAssetId", "assistantMessages", "assistantCalculatorInputs", "projectTools", "toolHistory", "buyList",
   "pdfReference", "attachments", "patternPlan", "chatPreference", "readerStatus", "flowMode", "activeTab",
-  "readingMode", "chartMode", "chartZoom", "annotations", "annotationHistory", "annotationRedo", "annotationColor",
+  "readingMode", "chartMode", "chartZoom", "previewLocked", "annotations", "annotationHistory", "annotationRedo", "annotationColor",
   "annotationWidth", "annotationOpacity", "eraserMode", "eraserSize", "selectedAnnotationId", "rowMask",
   "maskLockSize", "maskLockPosition", "coverAsset", "status", "startDate", "finishDate", "patternUrl", "yarn",
   "needles", "needleSize", "hookSize", "gauge", "size", "sizingNotes", "patternSource", "setup", "projectSetup",
